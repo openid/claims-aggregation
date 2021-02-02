@@ -129,8 +129,9 @@ OpenID Connect Claims Aggregation adds the following OpenID Provider Metadata to
 	* **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
 Additionally, the following OP Metadata MUST contain the following parameters:
+
 - *claim_types_supported*. The JSON array MUST contain the values *normal*, and *distributed* (client only).
--  *claims_supported*. A JSON array containing a list of the Claim Names of the Claims that the OpenID Provider MAY be able to supply values for.
+- *claims_supported*. A JSON array containing a list of the Claim Names of the Claims that the OpenID Provider MAY be able to supply values for.
 - *claims_parameter_supported*. The value MUST be *true* to support the *claims* request parameter.
 - *request_parameter_supported*. The value MUST be *true* to support the *request* request parameter.
 - *request_uri_parameter_supported*. The value MUST be *true* to support the *request_uri* request parameter.
@@ -226,10 +227,12 @@ This specification defines the following request parameters for the Claims Endpo
 
 The following is a non-normative example of a Aggregation Request:
 
+```
       GET /c_token?claims={"aggregation":{"uid":"id8837395937","email":{"essential":true},"email_verified":{"essential":true}}}&aud={["client1234"}      
       HTTP/1.1
       Host: server.example.com
       Authorization: Bearer SlAV32hkKG
+```
 
 #### 5.4.2 Claims Endpoint Response
 
@@ -258,10 +261,11 @@ The Claims Provider returns the requested claims as described in 5.3.2 of OpenID
 
 The following is a non-normative example of a Aggregation Error Response:
 
+```
     HTTP/1.1 401 Unauthorized
       WWW-Authenticate: error="invalid_token",
         error_description="The Access Token expired"
-
+```
  
 ### 5.5 Aggregate Claims Response
 The OpenID Provider returning aggregate claims shall fetch the claims from the Claims Provider's Claims Endpoint. Claims Provider's Claims Endpoint responses must be signed or signed and encrypted. 
