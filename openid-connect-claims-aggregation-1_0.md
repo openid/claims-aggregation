@@ -38,11 +38,12 @@ capitals, as shown here.
 
 This document specifies the methods for
 
-* an intermediate OP (client) to perform discovery for a Claims Provider Metadata;
-* an intermediate OP to register as a client to a Claims Provider;
-* an intermediate OP to obtain claims from the Claims Provider; 
-* an RP to ask for verified claims to the intermediate OP; and 
-* an intermediate OP returned aggregated claims from Claims Providers to requesting clients.
+* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
+* the OP to perform client registration to the Claims Provider;
+* the OP to obtain claims from the Claims Provider; 
+* an RP to ask for verified claims to the OP;  
+* the OP to return obtained claims from CP to the RP; and 
+* the RP to verify the claims.
 
 ## 2. Normative references
 The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
