@@ -36,11 +36,14 @@ capitals, as shown here.
 
 ## 1. Scope
 
-This document specifies the methods for an application to:
-* perform discovery for a Claims Provider;
-* register a client to a Claims Provider;
-* obtain claims from the Claims Provider; and 
-* returned aggregated claims from Claims Providers to requesting clients.
+This document specifies the methods for
+
+* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
+* the OP to perform client registration to the Claims Provider;
+* the OP to obtain claims from the Claims Provider; 
+* an RP to ask for verified claims to the OP;  
+* the OP to return obtained claims from CP to the RP; and 
+* the RP to verify the claims.
 
 ## 2. Normative references
 The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
