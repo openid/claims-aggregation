@@ -39,29 +39,25 @@ This document specifies the methods for
 * the OP to return obtained claims from CP to the RP; and 
 * the RP to verify the claims.
 
-{mainmatter}
-
-# 
-
-## Warning
+.# Warning
 
 This document is not an OIDF International Standard. It is distributed for review and comment. It is subject to change without notice and may not be referred to as an International Standard.
 
 Recipients of this draft are invited to submit, with their comments, notification of any relevant patent rights of which they are aware and to provide supporting documentation.
 
-## Copyright notice & license
+.# Copyright notice & license
+
 The OpenID Foundation (OIDF) grants to any Contributor, developer, implementer, or other interested party a non-exclusive, royalty free, worldwide copyright license to reproduce, prepare derivative works from, distribute, perform and display, this Implementers Draft or Final Specification solely for the purposes of (i) developing specifications, and (ii) implementing Implementers Drafts and Final Specifications based on such documents, provided that attribution be made to the OIDF as the source of the material, but that such attribution does not indicate an endorsement by the OIDF.
 
 The technology described in this specification was made available from contributions from various sources, including members of the OpenID Foundation and others. Although the OpenID Foundation has taken steps to help ensure that the technology is available for distribution, it takes no position regarding the validity or scope of any intellectual property or other rights that might be claimed to pertain to the implementation or use of the technology described in this specification or the extent to which any license under such rights might or might not be available; neither does it represent that it has made any independent effort to identify any such rights. The OpenID Foundation and the contributors to this specification make no (and hereby expressly disclaim any) warranties (express, implied, or otherwise), including implied warranties of merchantability, non-infringement, fitness for a particular purpose, or title, related to this specification, and the entire risk as to implementing this specification is assumed by the implementer. The OpenID Intellectual Property Rights policy requires contributors to offer a patent promise not to assert certain patent claims against other contributors and against implementers. The OpenID Foundation invites any interested party to bring to its attention any copyrights, patents, patent applications, or other proprietary rights that may cover technology that may be required to practice this specification.
 
-
-
-## Foreword
+.# Foreword
 
 The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.
 
 
-## Introduction
+.# Introduction
+
 OpenID Connect is a selective claims disclosure mechanism. When a set of claims included in its response is about 
 an entity authentication event, it works as an entity authentication federation mechanism, but it can deliver 
 other claims selected by the subject as well. 
@@ -156,7 +152,7 @@ Intended reader of this document is the developer and systems architect who buil
 
 
 
-### Notational Conventions
+.# Notational Conventions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -164,9 +160,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 14 [RFC2119] [RFC8174] when, and only when, they appear in all
 capitals, as shown here.
 
-# **OpenID Connect Claims Aggregation **
-
-[TOC]
+{mainmatter}
 
 ## Scope
 
@@ -270,12 +264,12 @@ They are topologically connected as in the following diagram.
                +---------+
     +----------| Subject |--------+
     | grants   +---------+        |
-	v               |             |
+    v               |             |
 +------+            | instructs   | allows
 |  CP  |----+       |             |
 +------+    |       v             v
    .        |    +------+     +------+
-   .		|----|  OP  |-----|  RP  | 
+   .        |----|  OP  |-----|  RP  | 
    .        |    +------+     +------+
 +------+    |
 |  CP  |----+
@@ -383,14 +377,10 @@ This information is obtained via Discovery, as described in OpenID Connect Disco
 
 This document adds the following OpenID Provider Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
 
-* `claims_endpoint`
-	* **Required**. Claims Endpoint. URL at the Claims Provider that provides signed claims.
-* `claims_signing_alg_values_supported`
-	* **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
-* `claims_encryption_alg_values_supported`
-	* **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
-* claims_encryption_enc_values_supported`
-	* **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
+* `claims_endpoint` **Required**. Claims Endpoint. URL at the Claims Provider that provides signed claims.
+* `claims_signing_alg_values_supported` **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
+* `claims_encryption_alg_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
+* claims_encryption_enc_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
 Additionally, the following OpenID Provider Metadata MUST contain the following parameters:
 
@@ -420,16 +410,15 @@ If the CP supports SCIM fromat, the CP MUST advertise it with the following meta
 
 Before starting to make requests to a CP, the OP MUST register itself to the CP. 
 The registration SHOULD be performed 
-via Dynamic Registration, as described in [OpenID Connect Dynamic Client Registration 1.0](https://openid.net/specs/openid-connect-core-1_0.html#OpenID.Registration) [OpenID.Registration], 
+via Dynamic Registration, as described in OpenID Connect Dynamic Client Registration 1.0.  
 
 This documents adds the following Client Metadata to the OpenID Connect Dynamic Client Registration :
 
-* `claims_signed_response_alg`
-	* **Required**. JWS *alg* algorithm JWA [JWA] REQUIRED for signing Claims Responses. The value *none* MUST NOT be used. If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. The default, if omitted, is *RS256*.
-* `claims_encrypted_response_alg`
-	* **Optional**. JWE *alg* algorithm JWA [JWA] REQUIRED for encrypting Claims responses to the client. If both signing and encryption are requested, the response will be signed then encrypted, with the result being a Nested JWT, as defined in JWT [JWT]. The default, if omitted, is that no encryption is performed.
-* `claims_encrypted_response_enc`
-	* **Optional**. JWE *enc* algorithm JWA [JWA] REQUIRED for encrypting Claims responses. If *claims_encrypted_response_enc* is specified, the default for this value is *A128CBC-HS256*. When *claims_encrypted_response_enc* is included, *claims_encrypted_response_alg* MUST also be provided.
+`claims_signed_response_alg` **Required**. JWS `alg` algorithm JWA [JWA] REQUIRED for signing Claims Responses. The value *none* MUST NOT be used. If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. The default, if omitted, is `RS256`.
+
+`claims_encrypted_response_alg` **Optional**. JWE `alg` algorithm JWA [JWA] REQUIRED for encrypting Claims responses to the client. If both signing and encryption are requested, the response will be signed then encrypted, with the result being a Nested JWT, as defined in JWT [JWT]. The default, if omitted, is that no encryption is performed.
+
+`claims_encrypted_response_enc` **Optional**. JWE `enc` algorithm JWA [JWA] REQUIRED for encrypting Claims responses. If `claims_encrypted_response_enc` is specified, the default for this value is `A128CBC-HS256`. When `claims_encrypted_response_enc` is included, `claims_encrypted_response_alg` MUST also be provided.
 
 Authentication requests to the Claims Provider's Authorization Endpoint should be signed or signed and encrypted. In order to support a more diverse set of claims, requests for claims should be made using  Request Objects which are signed or signed and encrypted by registering the appropriate values for the following Client Metadata registration parameters:
 
@@ -612,44 +601,3 @@ TBD
 TBD
 
 {backmatter}
-
-<reference anchor="OpenID" target="http://openid.net/specs/openid-connect-core-1_0.html">
-  <front>
-    <title>OpenID Connect Core 1.0 incorporating errata set 1</title>
-    <author initials="N." surname="Sakimura" fullname="Nat Sakimura">
-      <organization>NRI</organization>
-    </author>
-    <author initials="J." surname="Bradley" fullname="John Bradley">
-      <organization>Ping Identity</organization>
-    </author>
-    <author initials="M." surname="Jones" fullname="Mike Jones">
-      <organization>Microsoft</organization>
-    </author>
-    <author initials="B." surname="de Medeiros" fullname="Breno de Medeiros">
-      <organization>Google</organization>
-    </author>
-    <author initials="C." surname="Mortimore" fullname="Chuck Mortimore">
-      <organization>Salesforce</organization>
-    </author>
-   <date day="8" month="Nov" year="2014"/>
-  </front>
-</reference>
-
-<reference anchor="preload" target="https://hstspreload.org/">
-<front>
-<title>HSTS Preload List Submission</title>
-    <author fullname="Anonymous">
-      <organization></organization>
-    </author>
-</front>
-</reference>
-
-
-<reference anchor="ISODIR2" target="https://www.iso.org/sites/directives/current/part2/index.xhtml">
-<front>
-<title>ISO/IEC Directives Part 2 - </title>
-    <author fullname="International Organization for Standardization">
-      <organization></organization>
-    </author>
-</front>
-</reference>
