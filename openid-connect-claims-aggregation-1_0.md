@@ -168,7 +168,7 @@ capitals, as shown here.
 
 [TOC]
 
-## 1. Scope
+## Scope
 
 This document specifies the methods for
 
@@ -179,7 +179,7 @@ This document specifies the methods for
 * the OP to return obtained claims from CP to the RP; and 
 * the RP to verify the claims.
 
-## 2. Normative references
+## Normative references
 The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
 
 [BCP14] - Key words for use in RFCs to Indicate Requirement Levels
@@ -231,10 +231,10 @@ The following referenced documents are indispensable for the application of this
 [JWA]: http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms
 
 
-## 3. Terms and definitions
+## Terms and definitions
 For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] apply.
 
-## 4. Symbols and abbreviated terms
+## Symbols and abbreviated terms
 
 **RP** – Relying Party
 
@@ -246,7 +246,15 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 
 **TLS** - Transport Layer Security
 
-## 5. Actors
+**W3c** - World Wide Web Consortium
+
+**VC** - W3C Verifiable Credential
+
+**VP** - W3C Verifiable Presentation
+
+**DID** - Decentralized Identifier
+
+## Actors
 
 In this document, there are four main actors. 
 
