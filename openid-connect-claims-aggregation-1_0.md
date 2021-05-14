@@ -19,6 +19,97 @@ The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID communit
 
 
 ## Introduction
+OpenID Connect is a selective claims disclosure mechanism. When a set of claims included in its response is about 
+an entity authentication event, it works as an entity authentication federation mechanism, but it can deliver 
+other claims selected by the subject as well. 
+
+In the OpenID Connect specification, it is assumed that there are many sources of claims. 
+Each claim is associated with its authoritative source so there naturally will be many authoritative sources. 
+Claim sources can be corroborative, i.e., not authoritative, as well. 
+In total, there will be many Claim Set sources in OpenID Connect Framework. 
+These Claim sources are called Claims Provider in OpenID Connect. 
+Claims Provider (CP) is just an OpenID Provider (OP) but it does not provide the claims about the current authentication event 
+and its associated subject identifier authoritatively. Note that Claims Provider can act as an OpenID Provider in other transactions. 
+Whether it is called OP or CP is depending on their role in a particular transaction. 
+
+There are four main actors in OpenID Connect. 
+
+1. Subject (User)
+1. OpenID Provider (OP) that provides claims about the subject authentication event
+1. Claims Providers (CP) that provides other claims
+1. Relying Party (RP) that verifies and consumes the provided claim sets. 
+
+An OP can provide an RP the claims by value or by reference. 
+
+By value is the case where an OP collects claims and their values 
+from CPs and aggregate them in one package to provide to the RP. 
+This model is called Aggregated Claims Model. 
+
+By value is the case where the OP does not collect and provide the value 
+but just provide the reference and its access information to the RP. 
+This model is called Distributed Claims Model. 
+
+In either case, there has to be strong binding between the subject 
+in the claim sets provided by CPs and the subject in the ID Token provided by the OP. 
+Conceptually, it can be done through Subject value correlation or 
+through the correlation of signing key materials. 
+Regardless of the methods, there has to be this binding. 
+Otherwise, the provided claims cannot be trusted to be linked to the authenticated subject. 
+
+This document defines how to do this binding even in the case of ephemeral subject identifier 
+in which case the `sub` value of the ID Token will change every time the subject visits the RP. 
+This allows anonymous attribute based authentication where an RP cannot link two visits 
+by the subject without using other facilities. 
+
+By supporting the case of epehemeral subject identifier, pairwise pseudonymous identifier 
+and omni-directional identifier cases are also covered. 
+
+Another feature that this document provides is the way to avoid multipe consent screen 
+per RP authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
+naiively, it may results in many consent screens per RP request. 
+For example, if four CPs and one OP is involved in the request, then, there may be five consent screens. 
+This is too onerous. This document defines a mechanism to consolidate it into one consent screen. 
+This is done through one "OP User Setup Phase" per CP that the OP obtains the consent 
+from the subject to obtain claims from the CP for the purpose of creating aggregated and distributed 
+claims response for future RP requests in which OP will collect a new consent from the subject. 
+
+The mechanism used for this is to obtain an access token and a refresh token that corresponds 
+to a suitably wide scope for the purpose. While the claims at the time of an RP request can be 
+obtained from the UserInfo endpoint, this document defines a new endpoint called claims endpoint. 
+It is almost the same as the UserInfo endpoint, but there are a few important differences: 
+
+1. It allows collection minimization by supporting claims parameter. 
+1. It allows an identifier to correlate the claims it is returning and the ID Token the OP provides. 
+1. It include the `iss` claim. (Userinfo Endpoint does not)
+1. It returns signed response. 
+1. It allows multiple schema types for its response. (e.g, JWT and W3C Verifable Credentials formats)
+
+Note that while Userinfo Endpoint was conceived to support multiple response types, 
+e.g., support for SCIM schema, 
+the exact method was not specified at the time of the publication. 
+
+This new Claims Endpoint addresses it to allow the specification of schema and media type, 
+e.g., OIDC JWT, OIDC4IDA JWT, W3C Verifiable Claims in JWT and JSON-LD, SCIM 2.0 in JWT, etc. 
+It is done so in an extensible manner (using registry tbd). 
+
+This implies that there will be an impact to the authentication and claims request that an RP makes. 
+It may optionally want to specify its prefered format for the Claim Sets to be received. 
+Therefore, this document also defines a new parameter to express its preference. 
+
+There are four phases defined in this document. 
+
+1. CP Discovery Phase: OP discovers CP metadata. 
+1. OP Registration Phase: OP registers to CP as an RP. 
+1. Setup Phase: OP obtains the access and refresh tokens from CP by the permission of the subject. 
+1. RP Phase: 
+    1. RP makes autentication and claims request, 
+	1. OP fetches relevant claim sets from CPs, 
+	1. OP respond to the RP
+	1. the RP verifies the response. 
+
+Note that distribued claims model is out of scope of this document. 
+
+Intended reader of this document is the developer and systems architect who builds attributes and claims base systems. 
 
 
 
@@ -144,7 +235,9 @@ If the OpenID Provider supports  OpenID Connect for Identity Assurance 1.0 [Open
 
 ### 5.2 Registration
 
-This specification assumes that the Relying Party has already obtained sufficient credentials and provided information needed to use the OpenID Claims Provider. This is normally done via Dynamic Registration, as described in [OpenID Connect Dynamic Client Registration 1.0](https://openid.net/specs/openid-connect-core-1_0.html#OpenID.Registration) [OpenID.Registration], or may be obtained via other mechanisms.
+This specification assumes that the Relying Party has already obtained sufficient credentials 
+and provided information needed to use the OpenID Claims Provider. 
+This is normally done via Dynamic Registration, as described in [OpenID Connect Dynamic Client Registration 1.0](https://openid.net/specs/openid-connect-core-1_0.html#OpenID.Registration) [OpenID.Registration], or may be obtained via other mechanisms.
 
 OpenID Connect Claims Aggregation adds the following Client Metadata to the OpenID Connect  Dynamic Client Registration :
 
@@ -162,17 +255,31 @@ Authentication requests to the Claims Provider's Authorization Endpoint should b
 - *request_object_encryption_enc* 
 
 
-### 5.3 Authentication Request
-Authentication requests to Claims Providers are made using the OpenID Connect Code Authorization Flow as described in 3.1 of  OpenID Connect 1.0 [OIDC] along with PKCE [RFC7636].
+### 5.3 OP User Setup Phase at the CP
 
-Requests for specific claims MUST be made using *scope* values, *claims* values, or and/or Request Objects in the Authentication Request.
+Authentication requests to Claims Providers are made using the OpenID Connect Code Authorization Flow 
+as described in 3.1 of  OpenID Connect 1.0 [OIDC] along with PKCE [RFC7636].
 
-Since claims from Claims Providers are returned as aggregated claims, only signed or signed and encrypted responses from the Claims Endpoint can be returned as aggregated claims by the OpenID Provider. 
+Requests for specific claims MUST be made using *scope* values, *claims* values, 
+or and/or Request Objects in the Authentication Request.
+
+Since claims from Claims Providers are returned as aggregated claims, 
+only signed or signed and encrypted responses from the Claims Endpoint can be 
+returned as aggregated claims by the OpenID Provider. 
 
 The OpenID Provider should request a refresh token in the Authentication request to the Claims Provider to facilitate ease of retrieving individual claims from the Claim Provider's Claims Endpoint.
 
-#### 5.3.1 Requesting Claims Using Scope Values
-OpenID Connect Claims Aggregation supports the use of *scope* values in the Authentication Request to retrieve claims from the Claims Endpoint as specified in 5.4 of OpenID Connect 1.0 [OIDC].
+#### 5.3.1 The OP making an Authorization Request to the CP to obtain Access Token and Refresh Token
+
+In this phase, the OP obtains an access token (and optionally refresh token) that is bound to the current user so that the OP can obtain the claims about the current user from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.
+
+Authentication requests to the CP by the OP are made using the OpenID Connect Authorization Code Flow with PKCE [@RFC7636] or FAPI 1.0 Advanced Security Profile.
+
+Requests for specific claims MUST be made using scope values, claims values, or and/or Request Objects in the Authentication Request.
+
+The CP MUST show the dialogue to the user to obtain their grant.
+
+After obtaining the grant, the CP returns code that is used by the OP to access the token endpoint to obtain Access Token and Refresh Token if possible. These tokens are used in the RP Request Phase.
 
 #### 5.3.2 Requesting Claims Using the 'claims" Parameter
 OpenID Connect Claims Aggregation supports the use of *claims* parameter to retrieve claims from the Claims Endpoint as specified in 5.5 of OpenID Connect 1.0 [OIDC].
