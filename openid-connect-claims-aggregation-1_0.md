@@ -1,4 +1,47 @@
-# OpenID Connect Claims Aggregation
+%%%
+title = "OpenID Connect Claims Aggregation"
+abbrev = "oidc-ca"
+ipr = "none"
+workgroup = "connect"
+keyword = ["security", "openid", "w3c verifiable credential", "did", "privacy"]
+
+[seriesInfo]
+name = "OpenID-Draft"
+value = "fapi-2_0-baseline-00"
+status = "standard"
+
+[[author]]
+initials="N."
+surname="Sakimura"
+fullname="Nat Sakimura"
+organization="NAT.Consulting"
+    [author.address]
+    email = "nat@nat.consulting"
+
+[[author]]
+initials="J."
+surname="Edmund"
+fullname="Jay Edmund"
+organization="Illumila"
+    [author.address]
+    email = "ejay@nillumi.la"
+
+%%%
+
+.# Abstract 
+
+This document specifies the methods for
+
+* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
+* the OP to perform client registration to the Claims Provider;
+* the OP to obtain claims from the Claims Provider; 
+* an RP to ask for verified claims to the OP;  
+* the OP to return obtained claims from CP to the RP; and 
+* the RP to verify the claims.
+
+{mainmatter}
+
+# 
 
 ## Warning
 
@@ -193,25 +236,144 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 
 ## 4. Symbols and abbreviated terms
 
+**RP** – Relying Party
+
+**OP** – OpenID Provider
+
+**CP** – Claims Provider
+
 **HTTP** - Hyper Text Transfer Protocol
 
 **TLS** - Transport Layer Security
 
-## 5. OpenID Connect Claims Aggregation
+## 5. Actors
 
-### 5.1 Introduction
+In this document, there are four main actors. 
 
-Personal information can be stored in various places : locally or at various online claims providers. Commonly, different claims providers will store different types of personal information (e.g., a medical Claims Provider will store medical information and a school will store students' education history at the school). The decentralization of these various pieces of information makes it onerous for a person to share their information with other service providers. 
+1. Subject (User)
+1. CP
+1. OP 
+1. RP that verifies and consumes the provided claim sets. 
 
-OpenID Connect Claims Aggregation provides a way for an OpenID Connect Provider to provide aggregated claims from Claims Providers to OpenID Connect clients. This enables a more user-centric way for users to share their information from an OpenID Provider which gathers all their information in a centralized location. The OpenID Provider acts as a Relying Party to Claims Providers by registering as a client and then making OpenID authentication requests for the necessary user information. The authentication requests goes through the normal OpenID request flow of obtaining user authentication and authorization for the requested claims. The OpenID Provider then makes a request for an access token that can be used at the Aggregate Claims Endpoint to fetch the requested claims that are then returned as aggregate claims to the requesting Relying Party client.
+They are topologically connected as in the following diagram.
+
+!---
+~~~ ascii-art
+               +---------+
+    +----------| Subject |--------+
+    | grants   +---------+        |
+	v               |             |
++------+            | instructs   | allows
+|  CP  |----+       |             |
++------+    |       v             v
+   .        |    +------+     +------+
+   .		|----|  OP  |-----|  RP  | 
+   .        |    +------+     +------+
++------+    |
+|  CP  |----+
++------+  
+
+~~~
+Figure: Relationships among actors
 
 
+### Subject (User)
 
-### 5.2 Discovery
+Subject is the entity that grants access to the claims at CPs and the OP. 
+In this system, the Subject grants CP to provide OP the Claims for 
+the purpose of providing those claims with other claims to potentially 
+unspecified RPs under the Subject's direction. 
 
-This specification assumes that the Relying Party has already obtained configuration information about the OpenID Claims Provider, including its Authorization Endpoint and Token Endpoint locations. This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
+This request from the OP to the CP is sent by the Subject's instruction. 
+The Subject also allows OP to potentially store the obtained claims. 
 
-OpenID Connect Claims Aggregation adds the following OpenID Provider Metadata to  the OpenID Connect Discovery 1.0 [OpenID.Discovery] response when aggregatable  claims are supported by a Claims Provider :
+The Subject also allows RP to make a claims request to the OP, 
+typically for the Subject to receive some services from the RP. 
+
+### RP
+
+RP is an actor that typically provides some service to the Subject. 
+To perform the service, the RP obtains some claims about the Subject from OP. 
+The basis for the processing of the Subject's claims by the RP can be 
+performance of contract, consent, and other lawful basis. 
+
+### CP
+
+CP, Claims Provider, is a role assumed by an OpenID Provider 
+that supports signed claims according to this document.  
+Specifically, it supports an extension to bind the 
+authentication response that RPs received from the OP 
+to the claim sets that it provides. 
+
+The provision for the Claims Provider are as follows: 
+
+1. It MUST implement Claims Endpoint. 
+1. It MUST support the issuance of Access Tokens and Refresh Tokens for the Claims Endpoint. 
+1. It MUST support the Discovery Metadata extension defined by this document. 
+1. It MUST support the registration of the OPs with extensions defined in this document. 
+1. It SHOULD support the registration of the OPs through Dynamic Registration. 
+
+#### Claims Endpoint
+The Claims Endpoint is an OAuth 2.0 Protected Resource that returns Claims about the authenticated Subject. 
+To obtain the requested Claims about the Subject, 
+the Client makes a request to the Claims Endpoint using an Access Token obtained through OpenID Connect Authentication. 
+These Claims can be represented in variety of format as requested. 
+
+This document defines the following request parameters for the Claims Endpoint request:
+
+- *uid*  String value which identifies the end-user at the Client. The value is described in 5.3.2 of this specification. If this parameter is not supplied, the *uid* claims value MUST be supplied in the *claims* parameter.
+- *claims*  This parameter is used to request that specific Claims be returned. This is a JSON object with only the *c_token* top-level member defined in 5.3.2 of this specification. The *c_token* member requests that the listed individual Claims be returned from the Claims Endpoint. The requested claims MUST only be a subset of the claims bounded to the Access Token as requested in the Authentication Request's *scope*, *claims*, or *request* or *request_uri* parameters. The *c_token* member MUST contain the *uid* claim value if the *uid* request parameter is not supplied.
+- *aud*  JSON object containing a string array of client identifiers that will be added as additional *aud*  (audience) claims for the resulting JWT response from this endpoint.
+
+** Editor's NOTE ** Is there a way to specify the RPs that are registered to the OP? 
+
+The provision for the Claims Endpoint are as follows: 
+
+1. It MUST implement `uid`, `claims`, and `aud` as defined above. 
+1. It MUST implement OIDC4IDA response encoded in JWS signed JWT as its response. 
+1. It SHOULD support W3C Verified Credentials in JWT or JSON-LD representation as its response. 
+1. It MAY support other response format as advertised in the Discovery response. 
+1. It MUST enforce TLS for request and response. See  [Section 16.17](https://openid.net/specs/openid-connect-core-1_0.html#TLSRequirements)  for more information on using TLS.
+1. It MUST support the use of the HTTP  GET  and HTTP  POST  methods defined in  [RFC 2616](https://openid.net/specs/openid-connect-core-1_0.html#RFC2616)  [RFC2616].
+1. It MUST accept Access Tokens as  [OAuth 2.0 Bearer Token Usage](https://openid.net/specs/openid-connect-core-1_0.html#RFC6750)  [RFC6750].
+1. It SHOULD support the use of  [Cross Origin Resource Sharing (CORS)](https://openid.net/specs/openid-connect-core-1_0.html#CORS)  [CORS] and or other methods as appropriate to enable Java Script Clients to access the endpoint.
+
+** EDITOR'S NOTE ** I guess there are other provisions. The above probably needs to be tweaked as well. 
+
+
+### OP
+
+OP is an entity that acts as an OpenID Provider to the RP. 
+Also, OP acts as a relying party to CPs. 
+
+The provision for the OP is as follows: 
+
+1. It MUST support OpenID Connect Aggregated Claims as an OpenID Provider. 
+1. It MUST act as an OpenID Connect relying party to CPs to fetches claims from CPs according to instructions given by the Subject. 
+1. As an OpenID Provider, OP MUST implement mandatory to implement extensions that this document defines. 
+1. It MAY store the signed claims obtained from CPs with appropriate safeguarding controls. 
+1. To the authenticated Subject, it MUST provide a user interface to show what claims about the subject it stores. 
+1. It MUST NOT provide claims to RPs without the Subject's permission. 
+1. It MUST implement `c_token` authentication request parameter as a mechanism to request claims to CPs. 
+
+** EDITOR'S NOTE ** I guess there are other provisions. 
+
+#### c_token 
+
+`c_token` Authoriaztion Request parameter lists individual Claims 
+that the OP asks the CP to be returned from the Claims Endpoint. 
+This top-level member is a JSON object with the names of the individual Claims being requested 
+as the member names and the values are defined as in 5.5.1 of OpenID Connect 1.0 [OIDC].
+
+## Discovery Phase
+
+Before registering it self as an OAuth Client to a CP, the OP needs to obtain 
+configuration information from the CP, 
+including its Authorization Endpoint and Token Endpoint locations. 
+
+This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
+
+This document adds the following OpenID Provider Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
 
 * *claims_endpoint*
 	* **Required**. Claims Endpoint. URL at the Claims Provider that provides signed claims.
@@ -222,7 +384,7 @@ OpenID Connect Claims Aggregation adds the following OpenID Provider Metadata to
 * *claims_encryption_enc_values_supported*
 	* **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
-Additionally, the following OP Metadata MUST contain the following parameters:
+Additionally, the following OpenID Provider Metadata MUST contain the following parameters:
 
 - *claim_types_supported*. The JSON array MUST contain the values *normal*, and *distributed* (client only).
 - *claims_supported*. A JSON array containing a list of the Claim Names of the Claims that the OpenID Provider MAY be able to supply values for.
@@ -230,16 +392,29 @@ Additionally, the following OP Metadata MUST contain the following parameters:
 - *request_parameter_supported*. The value MUST be *true* to support the *request* request parameter.
 - *request_uri_parameter_supported*. The value MUST be *true* to support the *request_uri* request parameter.
 
-If the OpenID Provider supports  OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] supported features MUST be published as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.IDA].
+If the CP supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], 
+the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published 
+as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.IDA].
 
+If the CP suppports W3c Verifaiable Credeintial, the CP MUST advertise it with the following metadata: 
 
-### 5.2 Registration
+** Editors Note: Tobias, could you fill in here? **
 
-This specification assumes that the Relying Party has already obtained sufficient credentials 
-and provided information needed to use the OpenID Claims Provider. 
-This is normally done via Dynamic Registration, as described in [OpenID Connect Dynamic Client Registration 1.0](https://openid.net/specs/openid-connect-core-1_0.html#OpenID.Registration) [OpenID.Registration], or may be obtained via other mechanisms.
+If the CP supports mDL format, the CP MUST advertise it with the following metadata: 
 
-OpenID Connect Claims Aggregation adds the following Client Metadata to the OpenID Connect  Dynamic Client Registration :
+** Editors Note: Tony or Kristina, could you fill in here? **
+
+If the CP supports SCIM fromat, the CP MUST advertise it with the following metadata: 
+
+** Editors Note: SCIM experts, could you fill in here? **
+
+## Registration Phase
+
+Before starting to make requests to a CP, the OP MUST register itself to the CP. 
+The registration SHOULD be performed 
+via Dynamic Registration, as described in [OpenID Connect Dynamic Client Registration 1.0](https://openid.net/specs/openid-connect-core-1_0.html#OpenID.Registration) [OpenID.Registration], 
+
+This documents adds the following Client Metadata to the OpenID Connect Dynamic Client Registration :
 
 * *claims_signed_response_alg*
 	* **Required**. JWS *alg* algorithm JWA [JWA] REQUIRED for signing Claims Responses. The value *none* MUST NOT be used. If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. The default, if omitted, is *RS256*.
@@ -255,85 +430,88 @@ Authentication requests to the Claims Provider's Authorization Endpoint should b
 - *request_object_encryption_enc* 
 
 
-### 5.3 OP User Setup Phase at the CP
+## Setup Phase
 
-Authentication requests to Claims Providers are made using the OpenID Connect Code Authorization Flow 
-as described in 3.1 of  OpenID Connect 1.0 [OIDC] along with PKCE [RFC7636].
+** Editor's NOTE: Not sure if c_token is really needed. ** 
 
-Requests for specific claims MUST be made using *scope* values, *claims* values, 
-or and/or Request Objects in the Authentication Request.
+In this phase, the OP obtains an access token (and optionally refresh token) 
+that is bound to the current user so that the OP can obtain the claims about the current user 
+from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.
 
-Since claims from Claims Providers are returned as aggregated claims, 
-only signed or signed and encrypted responses from the Claims Endpoint can be 
-returned as aggregated claims by the OpenID Provider. 
+1. This has to be done at least onece per a user of OP who wishes to use the facility this document exaplains. 
+1. To obtain the grant, the OP MUST use OpenID Connect Authentication Request. 
+1. The Claims to be granted MUST be specified with `c_token` parameter. 
 
-The OpenID Provider should request a refresh token in the Authentication request to the Claims Provider to facilitate ease of retrieving individual claims from the Claim Provider's Claims Endpoint.
+The CP MUST show a dialogue to the Subject explaining that the OP will be 
+getting signed claims set from this CP as appropriate to provide claims to RPs as directed 
+by the Subject. 
 
-#### 5.3.1 The OP making an Authorization Request to the CP to obtain Access Token and Refresh Token
+The dialogue MUST provide the link to the `policy_url` provided by the OP during its registration. 
 
-In this phase, the OP obtains an access token (and optionally refresh token) that is bound to the current user so that the OP can obtain the claims about the current user from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.
+The actual act of granting MUST involve active user interaction. 
 
-Authentication requests to the CP by the OP are made using the OpenID Connect Authorization Code Flow with PKCE [@RFC7636] or FAPI 1.0 Advanced Security Profile.
+The grant that is to be obtained in this phase SHOULD be sufficiently large so that it will reduced the 
+number of times that OP needs to take the Subject to the CP to obtain additional grants. 
 
-Requests for specific claims MUST be made using scope values, claims values, or and/or Request Objects in the Authentication Request.
+## Delivery Phase (RP Phase)
 
-The CP MUST show the dialogue to the user to obtain their grant.
+In Delivery Phase, the claims are delivered to RP. 
+To do so, it typically goes through the following steps: 
 
-After obtaining the grant, the CP returns code that is used by the OP to access the token endpoint to obtain Access Token and Refresh Token if possible. These tokens are used in the RP Request Phase.
+1. (Claims Request) An RP makes an OpenID Connect Authentication Request with extension parameters defined in this document to the OP. 
+1. (Request Verification) The OP verifies if the request is valid. 
+1. (Subject Granting) The OP shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
+1. (Claims Collection) The OP accesses relevant Claims Endpoints with Access Tokens to collect signed claims. 
+1. (Claims Delivery) The OP delivers the collected claims through ID Token, UserInfo endpoint, and/or Claims Endpoint if it supports. 
+1. (Claims Verification) The RP verifies the recieved response. 
 
-#### 5.3.2 Requesting Claims Using the 'claims" Parameter
-OpenID Connect Claims Aggregation supports the use of *claims* parameter to retrieve claims from the Claims Endpoint as specified in 5.5 of OpenID Connect 1.0 [OIDC].
+Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the RP requests. 
+This is typically the case when claims are provided through the W3C Verifiable Credentials container. 
 
-To support  additional claims and provide claims assurance, OpenID Claims Aggregation supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] for the Claims request JSON object and defines the following new Claims in addition to the Claims defined in the OpenID Connect specification OpenID Connect 1.0 [OIDC]:
+### Claims Request by RP to OP
 
-* **uid** *string* The value is the base64url encoded representation of the thumbprint of the Client's public key for signing. This thumbprint value is computed as the SHA-256 hash of the octets of the UTF-8 representation of a JWK constructed containing only the REQUIRED members to represent the key, with the member names sorted into lexicographic order, and with no white space or line breaks. For instance, when the  kty  value is  RSA, the member names  e,  kty, and  n  are the ones present in the constructed JWK used in the thumbprint computation and appear in that order; when the  kty  value is  EC, the member names  crv,  kty,  x, and  y  are present in that order. Note that this thumbprint calculation is the same as that defined in the JWK Thumbprint  [[JWK.Thumbprint]](https://openid.net/specs/openid-connect-core-1_0.html#JWK.Thumbprint)  specification.
-* **cp_sub** *string* The Claim Providers *sub* identifier for the authenticated user.
+For an RP to request claims according to this document, the RP 
 
+1. MUST use the OpenID Connect Authentication Request with extension parameters defined in this document to the OP; and 
+1. MAY use Pushed Authorization Request. 
 
-In addition, OpenID Connect Claims Aggregation defines the following top-level member to the Claims request JSON object:
+### RP authentication and the request verification
 
-- *c_token*
-	- **Optional**. Requests that the listed individual Claims be returned from the Claims Endpoint. If present, the listed Claims are being requested to be added to any Claims that are being requested using  scope  values. If not present, the Claims being requested from the Claims Endpoint are only those requested using  scope  values. This top-level member is a JSON object with the names of the individual Claims being requested as the member names and the values are defined as in 5.5.1 of OpenID Connect 1.0 [OIDC].
+Upon receit of the request, the OP 
 
-OpenID Claims Aggregation supports the requesting of additional claims and verified claims defined in OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] for the *c_token* member of the Claims request JSON object. 
+1. MUST vierify that the request is not tampered and is from a valid registered RP if the request is signed; and 
+1. MUST at least verify that the client_id is valid and make sure 
+   that the autorization code that it is going to return will be bound to this client_id if the request is not signed. 
 
-When the  *c_token*  member is used, the request MUST also use a  *response_type*  value that results in an Access Token being issued to the Client for use at the claims endpoint. 
+NOTE: RP MUST be authenticated at one point or another befor completion of the transaction. 
 
-#### 5.3.3 Requesting Claims Using Request Object
-OpenID Connect Claims Aggregation is a superset of OpenID Connect 1.0 [OIDC]; it fully supports requesting claims via Request Objects as specified in 6 of OpenID Connect 1.0 [OIDC] in conjunction with the additional *c_token* member as defined in 5.3.2 of this specification. 
+### Subject Granting
 
+After verifying the request, the OP 
 
-### 5.4 Token Endpoint
-The OpenID Provider acting as Relying Party to the Claims Provider makes a request to the Claims Provider's Token Endpoint  to retrieve an access token as described in 3.1.3 of OpenID Connect 1.0 [OIDC].
+1. MUST authenticate the Subject if it has not yet been; 
+1. MUST show the Subject what is being requested from the RP; 
+1. MUST show the Subject the link to the RP provided policy_url; and 
+1. MUST obtain grant from the Subject through explicit action. 
 
-The Token Endpoint request should limit the scope if less information is desired than the initial Authentication request.
+### Claims Collection
 
-### 5.4 Claims Endpoint
-The Claims Endpoint is an OAuth 2.0 Protected Resource that returns Claims about the authenticated End-User. To obtain the requested Claims about the End-User, the Client makes a request to the Claims Endpoint using an Access Token obtained through OpenID Connect Authentication. These Claims are normally represented by a JSON object that contains a collection of name and value pairs for the Claims.
+The OP collects the required claims from relvant Claims Endpoints. 
+This process can be performed before the RP's requst. 
 
-Communication with the Claims Endpoint MUST utilize TLS. See  [Section 16.17](https://openid.net/specs/openid-connect-core-1_0.html#TLSRequirements)  for more information on using TLS.
+#### Claims Endpoint Request
 
-The Claims Endpoint MUST support the use of the HTTP  GET  and HTTP  POST  methods defined in  [RFC 2616](https://openid.net/specs/openid-connect-core-1_0.html#RFC2616)  [RFC2616].
+For claims collection, the OP 
 
-The Claims Endpoint MUST accept Access Tokens as  [OAuth 2.0 Bearer Token Usage](https://openid.net/specs/openid-connect-core-1_0.html#RFC6750)  [RFC6750].
+1. MUST send OAuth protected resource request to the Claims Endpoint using previously obtained Access Token; 
+1. MUST send `claims` parameter to minimize the collected claims to what is necessary; 
+1. MUST send `uid` parameter if binding between the claim set and the response to the RP is sought; and 
+1. SHOULD send `aud` parameter. 
 
-The Claims Endpoint SHOULD support the use of  [Cross Origin Resource Sharing (CORS)](https://openid.net/specs/openid-connect-core-1_0.html#CORS)  [CORS] and or other methods as appropriate to enable Java Script Clients to access the endpoint.
+Addionally, 
 
-
-#### 5.4.1 Claims Endpoint Request
-
-Using the access token retrieved from the Claims Provider's Token Endpoint, the OpenID Provider acting as Relying Party to the Claims Provider, makes a request to the Claims Provider's Claims Endpoint for the requested claims as described in 5.3.1 of OpenID Connect 1.0 [OIDC].
-
-The Client sends the Claims Request using either HTTP  GET  or HTTP  POST. If using the HTTP  GET  method, the request parameters are serialized using URI Query String Serialization, per  [Section 13.1](https://openid.net/specs/openid-connect-core-1_0.html#QuerySerialization). If using the HTTP  POST  method, the request parameters are serialized using Form Serialization, per  [Section 13.2](https://openid.net/specs/openid-connect-core-1_0.html#FormSerialization). The Access Token obtained from an OpenID Connect Authentication Request MUST be sent as a Bearer Token, per Section 2 of  [OAuth 2.0 Bearer Token Usage](https://openid.net/specs/openid-connect-core-1_0.html#RFC6750)  [RFC6750].
-
-It is RECOMMENDED that the request use the HTTP  GET  method and the Access Token be sent using the Authorization  header field.
-
-This specification defines the following request parameters for the Claims Endpoint request:
-
-- *uid* **Optional** String value which identifies the end-user at the Client. The value is described in 5.3.2 of this specification. If this parameter is not supplied, the *uid* claims value MUST be supplied in the *claims* parameter.
-- *claims* **Optional**. This parameter is used to request that specific Claims be returned. This is a JSON object with only the *c_token* top-level member defined in 5.3.2 of this specification. The *c_token* member requests that the listed individual Claims be returned from the Claims Endpoint. The requested claims MUST only be a subset of the claims bounded to the Access Token as requested in the Authentication Request's *scope*, *claims*, or *request* or *request_uri* parameters. The *c_token* member MUST contain the *uid* claim value if the *uid* request parameter is not supplied.
-- *aud* **Required???** JSON object containing a string array of client identifiers that will be added as additional *aud*  (audience) claims for the resulting JWT response from this endpoint.
-
+1. The OAuth protected resource request SHOULD be protected by MTLS. 
+1. It is RECOMMENDED that the request use the HTTP  GET  method and the Access Token be sent using the Authorization  header field.
 
 The following is a non-normative example of a Aggregation Request:
 
@@ -344,29 +522,36 @@ The following is a non-normative example of a Aggregation Request:
       Authorization: Bearer SlAV32hkKG
 ```
 
-#### 5.4.2 Claims Endpoint Response
+The process will be repeated to as many Claims Endpoints as necessary. 
 
-The Claims Endpoint Claims MUST return signed or signed and encrypted response as was requested during Client Registration. The Claims defined in  [Section 5.1](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)  can be returned, as can additional Claims not specified there.
+#### Claims Endpoint Response
 
-For privacy reasons, OpenID Providers MAY elect to not return values for some requested Claims.
+Upon receit of the request, the Claims Endpoint Response 
 
-If a Claim is not returned, that Claim Name SHOULD be omitted from the JSON object representing the Claims; it SHOULD NOT be present with a null or empty string value.
+1. MUST be signed or signed and encrypted;
+1. MUST NOT contain other claims than asked; 
+1. MAY ommit claims if not appropriate or available in which case the claim name MUST be omitted;
+1. MUST provide correct content-type of the HTTP response; and 
+1. MUST contain `aud` claim with is value a subset of what was in the request; 
 
-The *uid* claim MUST always be returned in the Aggregation Response.
+**Editors Note** The above is specific to OIDC JWT and need to be expanded to accomodate VC etc. 
 
-Upon receipt of the Aggregation Request, the Claims Endpoint MUST return the JSON Serialization of the Aggregation Response as in  [Section 13.3](https://openid.net/specs/openid-connect-core-1_0.html#JSONSerialization)  in the HTTP response body unless a different format was specified during Registration  OpenID Connect Registration 1.0 [OpenID.Registration]. The Claims Endpoint MUST return a content-type header to indicate which format is being returned. The content-type of the HTTP response MUST be  application/json  if the response body is a text JSON object; the response body SHOULD be encoded using UTF-8.
+If the response is a JWS signed JWT, the Claims Endpoint Response 
 
-If the Aggregation Response is signed and/or encrypted, then the Claims are returned in a JWT and the content-type MUST be  application/jwt. The response MAY be encrypted without also being signed. If both signing and encryption are requested, the response MUST be signed then encrypted, with the result being a Nested JWT, as defined in  JWT [JWT]. The JWT returned from the Claims Endpoint SHOULD NOT have an expiration or if it does, it SHOULD have a suitable long term expiration period.
+1. MUST contain iss that is set as the CP's Issuer Identifer URL; 
+1. MUST contain *op_iss* claim whose value is the OP's issuer identifier URL registered to the CP; 
+1. MUST contain *sub* claim that is set to the *uid* claim value if it was in the request; 
 
-If signed, the Aggregation Response SHOULD contain the Claims  iss  (issuer) and  aud  (audience) as members. The  iss  value SHOULD be the Claim Provider's Issuer Identifier URL. The  aud  value MUST be the RP's Client ID value in addition to any *aud* identifiers that were supplied in the request.
-
-***Note:** [https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32#section-4.1.3](https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32#section-4.1.3) The "aud" (audience) claim identifies the recipients that the JWT is intended for.  Each principal intended to process the JWT MUST identify itself with a value in the audience claim.  If the principal processing the claim does not identify itself with a value in the "aud" claim when this claim is present, then the JWT MUST be rejected. This statement seems contradictory. a) Audience must identify itself b) Reject if present and does not identify
+NOTE: the combination of *op_iss* and *sub* is used to correlated to the OP response to the RP later. 
 
 The following is a non-normative example of a Aggregation Response:
-The Claims Provider returns the requested claims as described in 5.3.2 of OpenID Connect 1.0 [OIDC].
 
+```
+  To be provided. 
 
-#### 5.4.3 Claims Endpoint Error Response
+```
+
+#### Claims Endpoint Error Response
  When an error condition occurs, the Claims Endpoint returns an Error Response as defined in Section 3 of  [OAuth 2.0 Bearer Token Usage](https://openid.net/specs/openid-connect-core-1_0.html#RFC6750)  [RFC6750]. (HTTP errors unrelated to RFC 6750 are returned to the User Agent using the appropriate HTTP status code.)
 
 The following is a non-normative example of a Aggregation Error Response:
@@ -376,29 +561,87 @@ The following is a non-normative example of a Aggregation Error Response:
       WWW-Authenticate: error="invalid_token",
         error_description="The Access Token expired"
 ```
+
+#### Claims Endoint Verification
+
+Upon receit of the response, the OP 
+
+1. MUST verify ... 
  
-### 5.5 Aggregate Claims Response
-The OpenID Provider returning aggregate claims shall fetch the claims from the Claims Provider's Claims Endpoint. Claims Provider's Claims Endpoint responses must be signed or signed and encrypted. 
+### Claims Delivery
 
-The Claims Provider's Claims Endpoint response is then returned as aggregate claims in the OpenID Provider's ID Token response or   Claims Endpoint response as described in 5.6.2 of OpenID Connect 1.0 [OIDC].
+Once the necessary claim sets were collected, 
+the OP creates the Aggregated Claims response to be returned. 
 
-### 5.6 Aggregate Claims Response Validation
+The response can be returned as ID Token or Userinfo Response ( or Claims Endpoing Response). 
 
-1.  If the Aggregate Claim is encrypted, decrypt it using the keys and algorithms that the Client specified during Registration that the OP was to use to encrypt the Claims Endpoint response. If encryption was negotiated with the OP at Registration time and the Aggregate Claims is not encrypted, the RP SHOULD reject it.
-2.  The value of the  iss  (issuer) Claim containing the Claims Provider's Issuer Identifier must be a value that the Client trusts.
-3. The value of the  uid  MUST be the base64url encoded representation of the thumbprint of the Client's public signing key. 
-4.  The Client MUST validate that the  aud  (audience) Claim contains its  client_id  value registered at the Issuer identified by the  iss  (issuer) Claim as an audience. The  aud  (audience) Claim MAY contain an array with more than one element. The Aggregate Claim MUST be rejected if the Aggregate Claim does not list the Client as a valid audience, or if it contains additional audiences not trusted by the Client.
-5.  The Client MUST validate the signature of the Aggregate Claim according to  [JWS  [JWS] using the algorithm specified in the JWT  *alg*  Header Parameter. The Client MUST use the keys provided by the Issuer of the Aggregate Claim.
+The aggreated claims response is constructed as follows: 
 
-# 6. Security Considerations
+1. The overall container format complies to what is described in 5.6.2 of OpenID Connect 1.0 [OIDC].
+1. If the claim set was obtained as JWT, then it MUST be stored in the corresponding "JWT" member of the aggregated claims. 
+1. If the claim set was obtained as W3c Verifiable Credential, then it MUST be stored in the corresponding "verifiable_presentations" member of the aggregated claims. 
+1. If the claim set was obtained in other format, then ...
+
+
+### Claims Verification
+
+For Claims Verification,  
+
+1. the RP MUST verify the signature of the Aggregate Claim according to  [JWS] using the algorithm specified in the JWT  *alg*  Header Parameter the keys provided by the Issuer of the Aggregate Claim for the signature verification; 
+1. the RP MUST extract the signed claims from JWT and other relevant members and verify according to their verification rule; 
+1. the RP MUST verify that issuers of the signed claims in the aggregated claims are the ones it trust; 
+1. the RP MUST verify that `op_iss` and `uid` values in the signed claims match the `iss` and `sub` value of the response; 
+1. the RP MUST verify that the  aud  (audience) Claim contains its  client_id  value registered at the Issuer identified by the  iss  (issuer) Claim as an audience; 
+1. The RP MUST verify the aud claim does not trusted by the Client; and 
+1. The RP MUST reject the response if any of the verification above fails. 
+
+# Security Considerations
 
 TBD
 
-# 7. Privacy Considerations
+# Privacy Considerations
 
 TBD
 
-# Authors
+{backmatter}
 
-* Edmund Jay, Illumila
-* Nat Sakimura, NAT Consulting
+<reference anchor="OpenID" target="http://openid.net/specs/openid-connect-core-1_0.html">
+  <front>
+    <title>OpenID Connect Core 1.0 incorporating errata set 1</title>
+    <author initials="N." surname="Sakimura" fullname="Nat Sakimura">
+      <organization>NRI</organization>
+    </author>
+    <author initials="J." surname="Bradley" fullname="John Bradley">
+      <organization>Ping Identity</organization>
+    </author>
+    <author initials="M." surname="Jones" fullname="Mike Jones">
+      <organization>Microsoft</organization>
+    </author>
+    <author initials="B." surname="de Medeiros" fullname="Breno de Medeiros">
+      <organization>Google</organization>
+    </author>
+    <author initials="C." surname="Mortimore" fullname="Chuck Mortimore">
+      <organization>Salesforce</organization>
+    </author>
+   <date day="8" month="Nov" year="2014"/>
+  </front>
+</reference>
+
+<reference anchor="preload" target="https://hstspreload.org/">
+<front>
+<title>HSTS Preload List Submission</title>
+    <author fullname="Anonymous">
+      <organization></organization>
+    </author>
+</front>
+</reference>
+
+
+<reference anchor="ISODIR2" target="https://www.iso.org/sites/directives/current/part2/index.xhtml">
+<front>
+<title>ISO/IEC Directives Part 2 - </title>
+    <author fullname="International Organization for Standardization">
+      <organization></organization>
+    </author>
+</front>
+</reference>
