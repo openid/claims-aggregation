@@ -383,22 +383,22 @@ This information is obtained via Discovery, as described in OpenID Connect Disco
 
 This document adds the following OpenID Provider Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
 
-* *claims_endpoint*
+* `claims_endpoint`
 	* **Required**. Claims Endpoint. URL at the Claims Provider that provides signed claims.
-* *claims_signing_alg_values_supported*
+* `claims_signing_alg_values_supported`
 	* **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
-* *claims_encryption_alg_values_supported*
+* `claims_encryption_alg_values_supported`
 	* **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
-* *claims_encryption_enc_values_supported*
+* claims_encryption_enc_values_supported`
 	* **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
 Additionally, the following OpenID Provider Metadata MUST contain the following parameters:
 
-- *claim_types_supported*. The JSON array MUST contain the values *normal*, and *distributed* (client only).
-- *claims_supported*. A JSON array containing a list of the Claim Names of the Claims that the OpenID Provider MAY be able to supply values for.
-- *claims_parameter_supported*. The value MUST be *true* to support the *claims* request parameter.
-- *request_parameter_supported*. The value MUST be *true* to support the *request* request parameter.
-- *request_uri_parameter_supported*. The value MUST be *true* to support the *request_uri* request parameter.
+- `claim_types_supported`. The JSON array MUST contain the values *normal*, and *distributed* (client only).
+- `claims_supported`. A JSON array containing a list of the Claim Names of the Claims that the OpenID Provider MAY be able to supply values for.
+- `claims_parameter_supported`. The value MUST be *true* to support the *claims* request parameter.
+- `request_parameter_supported`. The value MUST be *true* to support the *request* request parameter.
+- `request_uri_parameter_supported`. The value MUST be *true* to support the *request_uri* request parameter.
 
 If the CP supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], 
 the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published 
@@ -424,18 +424,18 @@ via Dynamic Registration, as described in [OpenID Connect Dynamic Client Registr
 
 This documents adds the following Client Metadata to the OpenID Connect Dynamic Client Registration :
 
-* *claims_signed_response_alg*
+* `claims_signed_response_alg`
 	* **Required**. JWS *alg* algorithm JWA [JWA] REQUIRED for signing Claims Responses. The value *none* MUST NOT be used. If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. The default, if omitted, is *RS256*.
-* *claims_encrypted_response_alg*
+* `claims_encrypted_response_alg`
 	* **Optional**. JWE *alg* algorithm JWA [JWA] REQUIRED for encrypting Claims responses to the client. If both signing and encryption are requested, the response will be signed then encrypted, with the result being a Nested JWT, as defined in JWT [JWT]. The default, if omitted, is that no encryption is performed.
-* *claims_encrypted_response_enc*
+* `claims_encrypted_response_enc`
 	* **Optional**. JWE *enc* algorithm JWA [JWA] REQUIRED for encrypting Claims responses. If *claims_encrypted_response_enc* is specified, the default for this value is *A128CBC-HS256*. When *claims_encrypted_response_enc* is included, *claims_encrypted_response_alg* MUST also be provided.
 
 Authentication requests to the Claims Provider's Authorization Endpoint should be signed or signed and encrypted. In order to support a more diverse set of claims, requests for claims should be made using  Request Objects which are signed or signed and encrypted by registering the appropriate values for the following Client Metadata registration parameters:
 
-- *request_object_signing_alg*
-- *request_object_encryption_alg*
-- *request_object_encryption_enc* 
+- `request_object_signing_alg`
+- `request_object_encryption_alg`
+- `request_object_encryption_enc` 
 
 
 ## Setup Phase
