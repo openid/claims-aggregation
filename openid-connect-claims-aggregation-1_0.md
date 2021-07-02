@@ -32,12 +32,12 @@ organization="Illumila"
 
 This document specifies the methods for
 
-* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
-* the OP to perform client registration to the Claims Provider;
-* the OP to obtain claims from the Claims Provider; 
-* an RP to ask for verified claims to the OP;  
-* the OP to return obtained claims from CP to the RP; and 
-* the RP to verify the claims.
+* an IW acting as a client of Issuing Authority (IA) to perform discovery for a Issuing Authority Metadata;
+* the IW to perform client registration to the Issuing Authority;
+* the IW to obtain claims from the Issuing Authority; 
+* an CC to ask for verified claims to the IW;  
+* the IW to return obtained claims from IA to the CC; and 
+* the CC to verify the claims.
 
 .# Warning
 
@@ -66,59 +66,59 @@ In the OpenID Connect specification, it is assumed that there are many sources o
 Each claim is associated with its authoritative source so there naturally will be many authoritative sources. 
 Claim sources can be corroborative, i.e., not authoritative, as well. 
 In total, there will be many Claim Set sources in OpenID Connect Framework. 
-These Claim sources are called Claims Providers in OpenID Connect. 
-Claims Provider (CP) is just an OpenID Provider (OP) but it does not provide the claims about the current authentication event 
-and its associated subject identifier authoritatively. Note that Claims Provider can act as an OpenID Provider in other transactions. 
-Whether it is called OP or CP is depending on their role in a particular transaction. 
+These Claim sources are called Issuing Authorities in OpenID Connect. 
+Issuing Authority (IA) is just an Identity Wallet (IW) but it does not provide the claims about the current authentication event 
+and its associated subject identifier authoritatively. Note that Issuing Authority can act as an Identity Wallet in other transactions. 
+Whether it is called IW or IA is depending on their role in a particular transaction. 
 
 There are four main actors in OpenID Connect using an aggregation model. 
 
 1. Subject (User)
-1. OpenID Provider (OP) that provides claims about the subject authentication event and provides signed claim sets obtained from other Claims Providers
-1. Claims Providers (CP) that provides other claims
-1. Relying Party (RP) that verifies and consumes the provided claim sets. 
+1. Identity Wallet (IW) that provides claims about the subject authentication event and provides signed claim sets obtained from other Issuing Authorities
+1. Issuing Authorities (IA) that provides other claims
+1. Claims Consumer (CC) that verifies and consumes the provided claim sets. 
 
-An OP can provide an RP the claims by value or by reference. 
+An IW can provide an CC the claims by value or by reference. 
 
-By value is the case where an OP collects claims and their values 
-from CPs and aggregate them in one package to provide to the RP. 
+By value is the case where an IW collects claims and their values 
+from IAs and aggregate them in one package to provide to the CC. 
 This model is called Aggregated Claims Model. 
 
-By value is the case where the OP does not collect and provide the value 
-but just provide the reference and its access information to the RP. 
+By value is the case where the IW does not collect and provide the value 
+but just provide the reference and its access information to the CC. 
 This model is called Distributed Claims Model. 
 
 In either case, there has to be strong binding between the subject 
-in the claim sets provided by CPs and the subject in the ID Token provided by the OP. 
+in the claim sets provided by IAs and the subject in the ID Token provided by the IW. 
 Conceptually, it can be done through Subject value correlation or 
 through the correlation of signing key materials. 
 Regardless of the methods, there has to be this binding. 
 Otherwise, the provided claims cannot be trusted to be linked to the authenticated subject. 
 
 This document defines how to do this binding even in the case of ephemeral subject identifier 
-in which case the `sub` value of the ID Token will change every time the subject visits the RP. 
-This allows anonymous attribute based authentication where an RP cannot link two visits 
+in which case the `sub` value of the ID Token will change every time the subject visits the CC. 
+This allows anonymous attribute based authentication where an CC cannot link two visits 
 by the subject without using other facilities. 
 
 By supporting the case of epehemeral subject identifier, pairwise pseudonymous identifier 
 and omni-directional identifier cases are also covered. 
 
 Another feature that this document provides is the way to avoid multipe consent screen 
-per RP authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
-naively, it may results in many consent screens per RP request. 
-For example, if four CPs and one OP is involved in the request, then, there may be five consent screens. 
+per CC authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
+naively, it may results in many consent screens per CC request. 
+For example, if four IAs and one IW is involved in the request, then, there may be five consent screens. 
 This is too onerous. This document defines a mechanism to consolidate it into one consent screen. 
-This is done through one "OP User Setup Phase" per CP that the OP obtains the consent 
-from the subject to obtain claims from the CP for the purpose of creating aggregated and distributed 
-claims response for future RP requests in which OP will collect a new consent from the subject. 
+This is done through one "IW User Setup Phase" per IA that the IW obtains the consent 
+from the subject to obtain claims from the IA for the purpose of creating aggregated and distributed 
+claims response for future CC requests in which IW will collect a new consent from the subject. 
 
 The mechanism used for this is to obtain an access token and a refresh token that corresponds 
-to a suitably wide scope for the purpose. While the claims at the time of an RP request can be 
+to a suitably wide scope for the purpose. While the claims at the time of an CC request can be 
 obtained from the UserInfo endpoint, this document defines a new endpoint called claims endpoint. 
 It is almost the same as the UserInfo endpoint, but there are a few important differences: 
 
 1. It allows collection minimization by supporting claims parameter. 
-1. It allows an identifier to correlate the claims it is returning and the ID Token the OP provides. 
+1. It allows an identifier to correlate the claims it is returning and the ID Token the IW provides. 
 1. It include the `iss` claim. (Userinfo Endpoint does not)
 1. It returns signed response. 
 1. It allows multiple schema types for its response. (e.g, JWT and W3C Verifable Credentials formats)
@@ -131,20 +131,20 @@ This new Claims Endpoint allows the specification of the response schema and med
 e.g., OIDC JWT, OIDC4IDA JWT, W3C Verifiable Claims in JWT and JSON-LD, SCIM 2.0 in JWT, etc. 
 It is done so in an extensible manner (using registry tbd). 
 
-This implies that there will be an impact to the authentication and claims request that an RP makes. 
+This implies that there will be an impact to the authentication and claims request that an CC makes. 
 It may optionally want to specify its prefered format for the Claim Sets to be received. 
 Therefore, this document also defines a new parameter to express its preference. 
 
 There are four phases defined in this document. 
 
-1. CP Discovery Phase: OP discovers CP metadata. 
-1. OP Registration Phase: OP registers to CP as an RP. 
-1. Setup Phase: OP obtains the access and refresh tokens from CP by the permission of the subject. 
-1. RP Phase: 
-    1. RP makes autentication and claims request, 
-	1. OP fetches relevant claim sets from CPs, 
-	1. OP respond to the RP
-	1. the RP verifies the response. 
+1. IA Discovery Phase: IW discovers IA metadata. 
+1. IW Registration Phase: IW registers to IA as an CC. 
+1. Setup Phase: IW obtains the access and refresh tokens from IA by the permission of the subject. 
+1. CC Phase: 
+    1. CC makes autentication and claims request, 
+	1. IW fetches relevant claim sets from IAs, 
+	1. IW respond to the CC
+	1. the CC verifies the response. 
 
 Note that distribued claims model is out of scope of this document. 
 
@@ -166,12 +166,12 @@ capitals, as shown here.
 
 This document specifies the methods for
 
-* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
-* the OP to perform client registration to the Claims Provider;
-* the OP to obtain claims from the Claims Provider; 
-* an RP to ask for verified claims to the OP;  
-* the OP to return obtained claims from CP to the RP; and 
-* the RP to verify the claims.
+* an IW acting as a client of Issuing Authority (IA) to perform discovery for a Issuing Authority Metadata;
+* the IW to perform client registration to the Issuing Authority;
+* the IW to obtain claims from the Issuing Authority; 
+* an CC to ask for verified claims to the IW;  
+* the IW to return obtained claims from IA to the CC; and 
+* the CC to verify the claims.
 
 ## Normative references
 The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
@@ -230,11 +230,11 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 
 ## Symbols and abbreviated terms
 
-**RP** – Relying Party
+**CC** – Claims Consumer
 
-**OP** – OpenID Provider
+**IW** – Identity Wallet
 
-**CP** – Claims Provider
+**IA** – Issuing Authority
 
 **HTTP** - Hyper Text Transfer Protocol
 
@@ -253,9 +253,9 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 In this document, there are four main actors. 
 
 1. Subject (User)
-1. CP
-1. OP 
-1. RP that verifies and consumes the provided claim sets. 
+1. IA
+1. IW 
+1. CC that verifies and consumes the provided claim sets. 
 
 They are topologically connected as in the following diagram.
 
@@ -266,13 +266,13 @@ They are topologically connected as in the following diagram.
     | grants   +---------+        |
     v               |             |
 +------+            | instructs   | allows
-|  CP  |----+       |             |
+|  IA  |----+       |             |
 +------+    |       v             v
    .        |    +------+     +------+
-   .        |----|  OP  |-----|  RP  | 
+   .        |----|  IW  |-----|  CC  | 
    .        |    +------+     +------+
 +------+    |
-|  CP  |----+
+|  IA  |----+
 +------+  
 
 ~~~
@@ -281,44 +281,44 @@ Figure: Relationships among actors
 
 ### Subject (User)
 
-Subject is the entity that grants access to the claims at CPs and the OP. 
-In this system, the Subject grants CP to provide OP the Claims for 
+Subject is the entity that grants access to the claims at IAs and the IW. 
+In this system, the Subject grants IA to provide IW the Claims for 
 the purpose of providing those claims with other claims to potentially 
-unspecified RPs under the Subject's direction. 
+unspecified CCs under the Subject's direction. 
 
-This request from the OP to the CP is sent by the Subject's instruction. 
-The Subject also allows OP to potentially store the obtained claims. 
+This request from the IW to the IA is sent by the Subject's instruction. 
+The Subject also allows IW to potentially store the obtained claims. 
 
-The Subject also allows RP to make a claims request to the OP, 
-typically for the Subject to receive some services from the RP. 
+The Subject also allows CC to make a claims request to the IW, 
+typically for the Subject to receive some services from the CC. 
 
-### RP
+### CC
 
-RP is an actor that typically provides some service to the Subject. 
-To perform the service, the RP obtains some claims about the Subject from OP. 
-The basis for the processing of the Subject's claims by the RP can be 
+CC is an actor that typically provides some service to the Subject. 
+To perform the service, the CC obtains some claims about the Subject from IW. 
+The basis for the processing of the Subject's claims by the CC can be 
 performance of contract, consent, and other lawful basis. 
 
-### CP
+### IA
 
-CP, Claims Provider, is a role assumed by an OpenID Provider 
+IA, Issuing Authority, is a role assumed by an Identity Wallet 
 that supports signed claims according to this document.  
 Specifically, it supports an extension to bind the 
-authentication response that RPs received from the OP 
+authentication response that CCs received from the IW 
 to the claim sets that it provides. 
 
-The provision for the Claims Provider are as follows: 
+The provision for the Issuing Authority are as follows: 
 
 1. It MUST implement Claims Endpoint. 
 1. It MUST support the issuance of Access Tokens and Refresh Tokens for the Claims Endpoint. 
 1. It MUST support the Discovery Metadata extension defined by this document. 
-1. It MUST support the registration of the OPs with extensions defined in this document. 
-1. It SHOULD support the registration of the OPs through Dynamic Registration. 
+1. It MUST support the registration of the IWs with extensions defined in this document. 
+1. It SHOULD support the registration of the IWs through Dynamic Registration. 
 
 #### Claims Endpoint
 The Claims Endpoint is an OAuth 2.0 Protected Resource that returns Claims about the authenticated Subject. 
 To obtain the requested Claims about the Subject, 
-the OP acting as a Client makes a request to the Calims Endpont of the CP using an Access Token obtained through OpenID Connect Authentication. 
+the IW acting as a Client makes a request to the Calims Endpont of the IA using an Access Token obtained through OpenID Connect Authentication. 
 These Claims can be represented in variety of format as requested. 
 
 This document defines the following request parameters for the Claims Endpoint request:
@@ -327,7 +327,7 @@ This document defines the following request parameters for the Claims Endpoint r
 - *claims*  This parameter is used to request that specific Claims be returned. This is a JSON object with only the *c_token* top-level member defined in 5.3.2 of this specification. The *c_token* member requests that the listed individual Claims be returned from the Claims Endpoint. The requested claims MUST only be a subset of the claims bounded to the Access Token as requested in the Authentication Request's *scope*, *claims*, or *request* or *request_uri* parameters. The *c_token* member MUST contain the *uid* claim value if the *uid* request parameter is not supplied.
 - *aud*  JSON object containing a string array of client identifiers that will be added as additional *aud*  (audience) claims for the resulting JWT response from this endpoint. (Editor's NOTE: This point needs more discussion.)
 
-** Editor's NOTE ** Is there a way to specify the RPs that are registered to the OP? 
+** Editor's NOTE ** Is there a way to specify the CCs that are registered to the IW? 
 
 The provision for the Claims Endpoint are as follows: 
 
@@ -343,72 +343,72 @@ The provision for the Claims Endpoint are as follows:
 ** EDITOR'S NOTE ** I guess there are other provisions. The above probably needs to be tweaked as well. 
 
 
-### OP
+### IW
 
-OP is an entity that acts as an OpenID Provider to the RP. 
-Also, OP acts as a relying party to CPs. 
+IW is an entity that acts as an Identity Wallet to the CC. 
+Also, IW acts as a Claims Consumer to IAs. 
 
-The provision for the OP is as follows: 
+The provision for the IW is as follows: 
 
-1. It MUST support OpenID Connect Aggregated Claims as an OpenID Provider. 
-1. It MUST act as an OpenID Connect relying party to CPs to fetche claims from CPs according to instructions given by the Subject. 
-1. As an OpenID Provider, OP MUST implement mandatory to implement extensions that this document defines. 
-1. It MAY store the signed claims obtained from CPs with appropriate safeguarding controls. 
+1. It MUST support OpenID Connect Aggregated Claims as an Identity Wallet. 
+1. It MUST act as an OpenID Connect Claims Consumer to IAs to fetch claims from IAs according to instructions given by the Subject. 
+1. As an Identity Wallet, IW MUST implement mandatory to implement extensions that this document defines. 
+1. It MAY store the signed claims obtained from IAs with appropriate safeguarding controls. 
 1. To the authenticated Subject, it MUST provide a user interface to show what claims about the subject it stores. 
-1. It MUST NOT provide claims to RPs without the Subject's permission. 
-1. It MUST implement `c_token` authentication request parameter as a mechanism to request claims to CPs. 
+1. It MUST NOT provide claims to CCs without the Subject's permission. 
+1. It MUST implement `c_token` authentication request parameter as a mechanism to request claims to IAs. 
 
 ** EDITOR'S NOTE ** I guess there are other provisions. 
 
 #### c_token 
 
 `c_token` Authoriaztion Request parameter lists individual Claims 
-that the OP asks the CP to be returned from the Claims Endpoint. 
+that the IW asks the IA to be returned from the Claims Endpoint. 
 This top-level member is a JSON object with the names of the individual Claims being requested 
 as the member names and the values are defined as in 5.5.1 of OpenID Connect 1.0 [OIDC].
 
 ## Discovery Phase
 
-Before registering it self as an OAuth Client to a CP, the OP needs to obtain 
-configuration information from the CP, 
+Before registering it self as an OAuth Client to a IA, the IW needs to obtain 
+configuration information from the IA, 
 including its Authorization Endpoint and Token Endpoint locations. 
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
-This document adds the following OpenID Provider Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
+This document adds the following Identity Wallet Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
 
-* `claims_endpoint` **Required**. Claims Endpoint. URL at the Claims Provider that provides signed claims.
+* `claims_endpoint` **Required**. Claims Endpoint. URL at the Issuing Authority that provides signed claims.
 * `claims_signing_alg_values_supported` **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 * `claims_encryption_alg_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 * claims_encryption_enc_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
-Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the Claims Provider Metadata:
+Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the Issuing Authority Metadata:
 
 - `claim_types_supported`. The JSON array MUST contain the values *normal*, and *distributed* (client only).
-- `claims_supported`. A JSON array containing a list of the Claim Names of the Claims that the OpenID Provider MAY be able to supply values for.
+- `claims_supported`. A JSON array containing a list of the Claim Names of the Claims that the Identity Wallet MAY be able to supply values for.
 - `claims_parameter_supported`. The value MUST be *true* to support the *claims* request parameter.
 - `request_parameter_supported`. The value MUST be *true* to support the *request* request parameter.
 - `request_uri_parameter_supported`. The value MUST be *true* to support the *request_uri* request parameter.
 
-If the CP supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], 
+If the IA supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], 
 the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published 
 as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.IDA].
 
-If the CP suppports W3c Verifaiable Credeintial, the CP MUST advertise it with the following metadata: 
+If the IA suppports W3c Verifaiable Credeintial, the IA MUST advertise it with the following metadata: 
 
 ** Editors Note: Tobias, could you fill in here? **
 
-If the CP supports mDL format, the CP MUST advertise it with the following metadata: 
+If the IA supports mDL format, the IA MUST advertise it with the following metadata: 
 
 ** Editors Note: Tony or Kristina, could you fill in here? **
 
-If the CP supports SCIM fromat, the CP MUST advertise it with the following metadata: 
+If the IA supports SCIM fromat, the IA MUST advertise it with the following metadata: 
 
 ** Editors Note: SCIM experts, could you fill in here? **
 
 ## Registration Phase
 
-Before starting to make requests to a CP, the OP MUST register itself to the CP. 
+Before starting to make requests to a IA, the IW MUST register itself to the IA. 
 The registration SHOULD be performed 
 via Dynamic Registration, as described in OpenID Connect Dynamic Client Registration 1.0.  
 
@@ -420,7 +420,7 @@ This documents adds the following Client Metadata to the OpenID Connect Dynamic 
 
 `claims_encrypted_response_enc` **Optional**. JWE `enc` algorithm JWA [JWA] REQUIRED for encrypting Claims responses. If `claims_encrypted_response_enc` is specified, the default for this value is `A128CBC-HS256`. When `claims_encrypted_response_enc` is included, `claims_encrypted_response_alg` MUST also be provided.
 
-Authentication requests to the Claims Provider's Authorization Endpoint should be signed or signed and encrypted. In order to support a more diverse set of claims, requests for claims should be made using  Request Objects which are signed or signed and encrypted by registering the appropriate values for the following Client Metadata registration parameters:
+Authentication requests to the Issuing Authority's Authorization Endpoint should be signed or signed and encrypted. In order to support a more diverse set of claims, requests for claims should be made using  Request Objects which are signed or signed and encrypted by registering the appropriate values for the following Client Metadata registration parameters:
 
 - `request_object_signing_alg`
 - `request_object_encryption_alg`
@@ -431,78 +431,78 @@ Authentication requests to the Claims Provider's Authorization Endpoint should b
 
 ** Editor's NOTE: Not sure if c_token is really needed. ** 
 
-In this phase, the OP obtains an access token (and optionally refresh token) 
-that is bound to the current user so that the OP can obtain the claims about the current user 
-from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.
+In this phase, the IW obtains an access token (and optionally refresh token) 
+that is bound to the current user so that the IW can obtain the claims about the current user 
+from the IA subsequently without taking the user to the IA and show them the consent dialogue for every CC requests.
 
-1. This has to be done at least once for each CP that a user of an OP who wishes to use the facility this document explains.
-1. To obtain the grant, the OP MUST use OpenID Connect Authentication Request. 
+1. This has to be done at least once for each IA that a user of an IW who wishes to use the facility this document explains.
+1. To obtain the grant, the IW MUST use OpenID Connect Authentication Request. 
 1. The Claims to be granted MUST be specified with `c_token` parameter. 
 
-The CP MUST show a dialogue to the Subject explaining that the OP will be 
-getting signed claims set from this CP as appropriate to provide claims to RPs as directed 
+The IA MUST show a dialogue to the Subject explaining that the IW will be 
+getting signed claims set from this IA as appropriate to provide claims to CCs as directed 
 by the Subject. 
 
-The dialogue MUST provide the link to the `policy_url` provided by the OP during its registration. 
+The dialogue MUST provide the link to the `policy_url` provided by the IW during its registration. 
 
 The actual act of granting MUST involve active user interaction. 
 
 The grant that is to be obtained in this phase SHOULD be sufficiently large so that it will reduce the 
-number of times that OP needs to take the Subject to the CP to obtain additional grants. 
+number of times that IW needs to take the Subject to the IA to obtain additional grants. 
 
-## Delivery Phase (RP Phase)
+## Delivery Phase (CC Phase)
 
-In Delivery Phase, the claims are delivered to RP. 
+In Delivery Phase, the claims are delivered to CC. 
 To do so, it typically goes through the following steps: 
 
-1. (Claims Request) An RP makes an OpenID Connect Authentication Request with extension parameters defined in this document to the OP. 
-1. (Request Verification) The OP verifies if the request is valid. 
-1. (Subject Granting) The OP shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
-1. (Claims Collection) The OP accesses relevant Claims Endpoints with Access Tokens to collect signed claims. 
-1. (Claims Delivery) The OP delivers the collected claims through ID Token, UserInfo endpoint, and/or Claims Endpoint if it supports. 
-1. (Claims Verification) The RP verifies the recieved response. 
+1. (Claims Request) An CC makes an OpenID Connect Authentication Request with extension parameters defined in this document to the IW. 
+1. (Request Verification) The IW verifies if the request is valid. 
+1. (Subject Granting) The IW shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
+1. (Claims Collection) The IW accesses relevant Claims Endpoints with Access Tokens to collect signed claims. 
+1. (Claims Delivery) The IW delivers the collected claims through ID Token, UserInfo endpoint, and/or Claims Endpoint if it supports. 
+1. (Claims Verification) The CC verifies the recieved response. 
 
-Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the RP requests. 
+Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the CC requests. 
 This is typically the case when claims are provided through the W3C Verifiable Credentials container. 
 
-### Claims Request by RP to OP
+### Claims Request by CC to IW
 
-For an RP to request claims according to this document, the RP 
+For an CC to request claims according to this document, the CC 
 
-1. MUST use the OpenID Connect Authentication Request with extension parameters defined in this document to the OP; and 
+1. MUST use the OpenID Connect Authentication Request with extension parameters defined in this document to the IW; and 
 1. MAY use Pushed Authorization Request. 
 
-### RP authentication and the request verification
+### CC authentication and the request verification
 
-Upon receit of the request, the OP 
+Upon receit of the request, the IW 
 
-1. MUST verify that the request is not tampered and is from a valid registered RP if the request is signed; and 
+1. MUST verify that the request is not tampered and is from a valid registered CC if the request is signed; and 
 1. MUST at least verify that the client_id is valid and make sure 
    that the autorization code that it is going to return will be bound to this client_id if the request is not signed. 
 
-NOTE: RP MUST be authenticated at one point or another before completion of the transaction. 
+NOTE: CC MUST be authenticated at one point or another before completion of the transaction. 
 
 ### Subject Granting
 
-After verifying the request, the OP 
+After verifying the request, the IW 
 
 1. MUST authenticate the Subject if it has not yet been; 
-1. MUST show the Subject what is being requested from the RP; 
-1. MUST show the Subject the link to the RP provided policy_url; and 
+1. MUST show the Subject what is being requested from the CC; 
+1. MUST show the Subject the link to the CC provided policy_url; and 
 1. MUST obtain grant from the Subject through explicit action. 
 
 ### Claims Collection
 
-The OP collects the required claims from relevant Claims Endpoints. 
-This process can be performed before the RP's request. 
+The IW collects the required claims from relevant Claims Endpoints. 
+This process can be performed before the CC's request. 
 
 #### Claims Endpoint Request
 
-For claims collection, the OP 
+For claims collection, the IW 
 
 1. MUST send OAuth protected resource request to the Claims Endpoint using previously obtained Access Token; 
 1. MUST send `claims` parameter to minimize the collected claims to what is necessary; 
-1. MUST send `uid` parameter if binding between the claim set and the response to the RP is sought; and 
+1. MUST send `uid` parameter if binding between the claim set and the response to the CC is sought; and 
 1. SHOULD send `aud` parameter. 
 
 Addionally, 
@@ -535,11 +535,11 @@ Upon receit of the request, the Claims Endpoint Response
 
 If the response is a JWS signed JWT, the Claims Endpoint Response 
 
-1. MUST contain iss that is set as the CP's Issuer Identifer URL; 
-1. MUST contain *op_iss* claim whose value is the OP's issuer identifier URL registered to the CP; 
+1. MUST contain iss that is set as the IA's Issuer Identifer URL; 
+1. MUST contain *op_iss* claim whose value is the IW's issuer identifier URL registered to the IA; 
 1. MUST contain *sub* claim that is set to the *uid* claim value if it was in the request; 
 
-NOTE: the combination of *op_iss* and *sub* is used to correlated to the OP response to the RP later. 
+NOTE: the combination of *op_iss* and *sub* is used to correlated to the IW response to the CC later. 
 
 The following is a non-normative example of a Aggregation Response:
 
@@ -561,14 +561,14 @@ The following is a non-normative example of a Aggregation Error Response:
 
 #### Claims Endoint Verification
 
-Upon receit of the response, the OP 
+Upon receit of the response, the IW 
 
 1. MUST verify ... 
  
 ### Claims Delivery
 
 Once the necessary claim sets were collected, 
-the OP creates the Aggregated Claims response to be returned. 
+the IW creates the Aggregated Claims response to be returned. 
 
 The response can be returned as ID Token or Userinfo Response ( or Claims Endpoint Response). 
 
@@ -584,13 +584,13 @@ The aggreated claims response is constructed as follows:
 
 For Claims Verification,  
 
-1. the RP MUST verify the signature of the Aggregate Claim according to  [JWS] using the algorithm specified in the JWT  *alg*  Header Parameter the keys provided by the Issuer of the Aggregate Claim for the signature verification; 
-1. the RP MUST extract the signed claims from JWT and other relevant members and verify according to their verification rule; 
-1. the RP MUST verify that issuers of the signed claims in the aggregated claims are the ones it trust; 
-1. the RP MUST verify that `op_iss` and `uid` values in the signed claims match the `iss` and `sub` value of the response; 
-1. the RP MUST verify that the  aud  (audience) Claim contains its  client_id  value registered at the Issuer identified by the  iss  (issuer) Claim as an audience; 
-1. The RP MUST verify that the aud claim does not contain claim values not trusted by the RP; and 
-1. The RP MUST reject the response if any of the verification above fails. 
+1. the CC MUST verify the signature of the Aggregate Claim according to  [JWS] using the algorithm specified in the JWT  *alg*  Header Parameter the keys provided by the Issuer of the Aggregate Claim for the signature verification; 
+1. the CC MUST extract the signed claims from JWT and other relevant members and verify according to their verification rule; 
+1. the CC MUST verify that issuers of the signed claims in the aggregated claims are the ones it trust; 
+1. the CC MUST verify that `op_iss` and `uid` values in the signed claims match the `iss` and `sub` value of the response; 
+1. the CC MUST verify that the  aud  (audience) Claim contains its  client_id  value registered at the Issuer identified by the  iss  (issuer) Claim as an audience; 
+1. The CC MUST verify that the aud claim does not contain claim values not trusted by the CC; and 
+1. The CC MUST reject the response if any of the verification above fails. 
 
 # Security Considerations
 
