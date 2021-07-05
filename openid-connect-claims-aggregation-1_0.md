@@ -48,7 +48,6 @@ The technology described in this specification was made available from contribut
 
 The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.
 
-
 .# Introduction
 
 OpenID Connect is a selective claims disclosure mechanism. When a set of claims included in its response is about 
@@ -64,12 +63,12 @@ Issuing Authority (IA) is just an Identity Wallet (IW) but it does not provide t
 and its associated subject identifier authoritatively. Note that Issuing Authority can act as an Identity Wallet in other transactions. 
 Whether it is called IW or IA is depending on their role in a particular transaction. 
 
-There are four main actors in OpenID Connect using an aggregation model. 
+There are four main actors in the OpenID Connect aggregated claims model.
 
-1. Subject (User)
-1. Identity Wallet (IW) that provides claims about the subject authentication event and provides signed claim sets obtained from other Issuing Authorities
-1. Issuing Authorities (IA) that provides other claims
-1. Claims Consumer (CC) that verifies and consumes the provided claim sets. 
+1. End-User (Subject)
+2. Issuing Authority (IA) - Entity that is the issuer of claims about the End-User.
+3. Identity Wallet (IW) that provides claims about the subject authentication event and provides signed claim sets obtained from other Issuing Authorities
+4. Claims Consumer (CC) that verifies and relies upon the provided claims.
 
 An IW can provide an CC the claims by value or by reference. 
 
@@ -93,10 +92,10 @@ in which case the `sub` value of the ID Token will change every time the subject
 This allows anonymous attribute based authentication where an CC cannot link two visits 
 by the subject without using other facilities. 
 
-By supporting the case of epehemeral subject identifier, pairwise pseudonymous identifier 
+By supporting the case of ephemeral subject identifier, pairwise pseudonymous identifier 
 and omni-directional identifier cases are also covered. 
 
-Another feature that this document provides is the way to avoid multipe consent screen 
+Another feature that this document provides is the way to avoid multiple consent screen 
 per CC authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
 naively, it may results in many consent screens per CC request. 
 For example, if four IAs and one IW is involved in the request, then, there may be five consent screens. 
@@ -114,7 +113,7 @@ It is almost the same as the UserInfo endpoint, but there are a few important di
 1. It allows an identifier to correlate the claims it is returning and the ID Token the IW provides. 
 1. It include the `iss` claim. (Userinfo Endpoint does not)
 1. It returns signed response. 
-1. It allows multiple schema types for its response. (e.g, JWT and W3C Verifable Credentials formats)
+1. It allows multiple schema types for its response. (e.g, JWT and W3C Verifiable Credentials formats)
 
 Note that while Userinfo Endpoint was conceived to support multiple response types, 
 e.g., support for SCIM schema, 
@@ -125,7 +124,7 @@ e.g., OIDC JWT, OIDC4IDA JWT, W3C Verifiable Claims in JWT and JSON-LD, SCIM 2.0
 It is done so in an extensible manner (using registry tbd). 
 
 This implies that there will be an impact to the authentication and claims request that an CC makes. 
-It may optionally want to specify its prefered format for the Claim Sets to be received. 
+It may optionally want to specify its preferred format for the Claim Sets to be received. 
 Therefore, this document also defines a new parameter to express its preference. 
 
 There are four phases defined in this document. 
@@ -134,18 +133,16 @@ There are four phases defined in this document.
 1. IW Registration Phase: IW registers to IA as an CC. 
 1. Setup Phase: IW obtains the access and refresh tokens from IA by the permission of the subject. 
 1. CC Phase: 
-    1. CC makes autentication and claims request, 
+    1. CC makes authentication and claims request, 
 	1. IW fetches relevant claim sets from IAs, 
 	1. IW respond to the CC
 	1. the CC verifies the response. 
 
-Note that distribued claims model is out of scope of this document. 
+Note that distributed claims model is out of scope of this document. 
 
 Intended reader of this document is the developer and systems architect who builds attributes and claims base systems. 
 
-
-
-.# Notational Conventions
+.# Requirements Notation and Conventions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
@@ -153,72 +150,12 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 14 [RFC2119] [RFC8174] when, and only when, they appear in all
 capitals, as shown here.
 
-{mainmatter}
+In the .txt version of this document, values are quoted to indicate that they are to be taken literally. When using these values in protocol messages, the quotes MUST NOT be used as part of the value. In the HTML version of this document, values to be taken literally are indicated by the use of this fixed-width font.
 
-## Scope
+All uses of JSON Web Signature (JWS) JWS and JSON Web Encryption (JWE) JWE data structures in this specification utilize the JWS Compact Serialization or the JWE Compact Serialization; the JWS JSON Serialization and the JWE JSON Serialization are not used.
 
-This document specifies the methods for
+.# Terminology
 
-* an IW acting as a client of Issuing Authority (IA) to perform discovery for a Issuing Authority Metadata;
-* the IW to perform client registration to the Issuing Authority;
-* the IW to obtain claims from the Issuing Authority; 
-* an CC to ask for verified claims to the IW;  
-* the IW to return obtained claims from IA to the CC; and 
-* the CC to verify the claims.
-
-## Normative references
-The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
-
-[BCP14] - Key words for use in RFCs to Indicate Requirement Levels
-[BCP14]: https://tools.ietf.org/html/bcp14
-
-[RFC6749] - The OAuth 2.0 Authorization Framework
-[RFC6749]: https://tools.ietf.org/html/rfc6749
-
-[RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
-[RFC6750]: https://tools.ietf.org/html/rfc6750
-
-[RFC7636] - # Proof Key for Code Exchange by OAuth Public Clients
-[RFC7636]: https://tools.ietf.org/html/rfc76360
-
-[BCP212] - OAuth 2.0 for Native Apps
-[BCP212]: https://tools.ietf.org/html/bcp212
-
-[RFC6819] - OAuth 2.0 Threat Model and Security Considerations
-[RFC6819]: https://tools.ietf.org/html/rfc6819
-
-[BCP195] - Recommendations for Secure Use of Transport Layer Security (TLS) and Datagram Transport Layer Security (DTLS)
-[BCP195]: https://tools.ietf.org/html/bcp195
-
-[OIDC] - OpenID Connect Core 1.0 incorporating errata set 1
-[OIDC]: https://openid.net/specs/openid-connect-core-1_0.html
-
-[OpenID.Discovery] - OpenID Connect Discovery 1.0
-[OpenID.Discovery]: https://openid.net/specs/openid-connect-discovery-1_0.html
-
-[OpenID.Registration] - OpenID Connect Registration 1.0
-[OpenID.Registration]: http://openid.net/specs/openid-connect-registration-1_0.html
-
-[OpenID.IDA] - OpenID Connect for Identity Assurance 1.0
-[OpenID.IDA]:https://openid.net/specs/openid-connect-4-identity-assurance-1_0-ID1.html
-
-[MTLS] - OAuth 2.0 Mutual TLS Client Authentication and Certificate Bound Access Tokens
-[MTLS]: https://tools.ietf.org/html/draft-ietf-oauth-mtls
-
-[JWT] - JSON Web Token
-[JWT]: http://tools.ietf.org/html/draft-ietf-oauth-json-web-token
-
-[JWS] - JSON Web Signature
-[JWS]: http://tools.ietf.org/html/draft-ietf-jose-json-web-signature
-
-[JWE] - JSON Web Encryption
-[JWE]: http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption
-
-[JWA] - JSON Web Algorithms
-[JWA]: http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms
-
-
-## Terms and definitions
 For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] apply.
 
 ## Symbols and abbreviated terms
@@ -240,6 +177,19 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 **VP** - W3C Verifiable Presentation
 
 **DID** - Decentralized Identifier
+
+{mainmatter}
+
+## Scope
+
+This document specifies the methods for
+
+* an IW acting as a client of Issuing Authority (IA) to perform discovery for a Issuing Authority Metadata;
+* the IW to perform client registration to the Issuing Authority;
+* the IW to obtain claims from the Issuing Authority; 
+* an CC to ask for verified claims to the IW;  
+* the IW to return obtained claims from IA to the CC; and 
+* the CC to verify the claims.
 
 ## Actors
 
@@ -311,7 +261,7 @@ The provision for the Issuing Authority are as follows:
 #### Claims Endpoint
 The Claims Endpoint is an OAuth 2.0 Protected Resource that returns Claims about the authenticated Subject. 
 To obtain the requested Claims about the Subject, 
-the IW acting as a Client makes a request to the Calims Endpont of the IA using an Access Token obtained through OpenID Connect Authentication. 
+the IW acting as a Client makes a request to the Claims Endpoint of the IA using an Access Token obtained through OpenID Connect Authentication. 
 These Claims can be represented in variety of format as requested. 
 
 This document defines the following request parameters for the Claims Endpoint request:
@@ -355,7 +305,7 @@ The provision for the IW is as follows:
 
 #### c_token 
 
-`c_token` Authoriaztion Request parameter lists individual Claims 
+`c_token` Authorization Request parameter lists individual Claims 
 that the IW asks the IA to be returned from the Claims Endpoint. 
 This top-level member is a JSON object with the names of the individual Claims being requested 
 as the member names and the values are defined as in 5.5.1 of OpenID Connect 1.0 [OIDC].
@@ -453,7 +403,7 @@ To do so, it typically goes through the following steps:
 1. (Subject Granting) The IW shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
 1. (Claims Collection) The IW accesses relevant Claims Endpoints with Access Tokens to collect signed claims. 
 1. (Claims Delivery) The IW delivers the collected claims through ID Token, UserInfo endpoint, and/or Claims Endpoint if it supports. 
-1. (Claims Verification) The CC verifies the recieved response. 
+1. (Claims Verification) The CC verifies the received response. 
 
 Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the CC requests. 
 This is typically the case when claims are provided through the W3C Verifiable Credentials container. 
@@ -498,7 +448,7 @@ For claims collection, the IW
 1. MUST send `uid` parameter if binding between the claim set and the response to the CC is sought; and 
 1. SHOULD send `aud` parameter. 
 
-Addionally, 
+Additionally, 
 
 1. The OAuth protected resource request SHOULD be protected by MTLS. 
 1. It is RECOMMENDED that the request use the HTTP  GET  method and the Access Token be sent using the Authorization  header field.
@@ -516,15 +466,15 @@ The process will be repeated to as many Claims Endpoints as necessary.
 
 #### Claims Endpoint Response
 
-Upon receit of the request, the Claims Endpoint Response 
+Upon receipt of the request, the Claims Endpoint Response 
 
 1. MUST be signed or signed and encrypted;
 1. MUST NOT contain other claims than asked; 
-1. MAY ommit claims if not appropriate or available in which case the claim name MUST be omitted;
+1. MAY omit claims if not appropriate or available in which case the claim name MUST be omitted;
 1. MUST provide correct content-type of the HTTP response; and 
 1. MUST contain `aud` claim with is value a subset of what was in the request; 
 
-**Editors Note** The above is specific to OIDC JWT and need to be expanded to accomodate VC etc. 
+**Editors Note** The above is specific to OIDC JWT and need to be expanded to accommodate VC etc. 
 
 If the response is a JWS signed JWT, the Claims Endpoint Response 
 
@@ -565,7 +515,7 @@ the IW creates the Aggregated Claims response to be returned.
 
 The response can be returned as ID Token or Userinfo Response ( or Claims Endpoint Response). 
 
-The aggreated claims response is constructed as follows: 
+The aggregated claims response is constructed as follows: 
 
 1. The overall container format complies to what is described in 5.6.2 of OpenID Connect 1.0 [OIDC].
 1. If the claim set was obtained as JWT, then it MUST be stored in the corresponding "JWT" member of the aggregated claims. 
@@ -592,5 +542,58 @@ TBD
 # Privacy Considerations
 
 TBD
+
+# References
+
+## Normative references
+The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
+
+[BCP14] - Key words for use in RFCs to Indicate Requirement Levels
+[BCP14]: https://tools.ietf.org/html/bcp14
+
+[RFC6749] - The OAuth 2.0 Authorization Framework
+[RFC6749]: https://tools.ietf.org/html/rfc6749
+
+[RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
+[RFC6750]: https://tools.ietf.org/html/rfc6750
+
+[RFC7636] - # Proof Key for Code Exchange by OAuth Public Clients
+[RFC7636]: https://tools.ietf.org/html/rfc76360
+
+[BCP212] - OAuth 2.0 for Native Apps
+[BCP212]: https://tools.ietf.org/html/bcp212
+
+[RFC6819] - OAuth 2.0 Threat Model and Security Considerations
+[RFC6819]: https://tools.ietf.org/html/rfc6819
+
+[BCP195] - Recommendations for Secure Use of Transport Layer Security (TLS) and Datagram Transport Layer Security (DTLS)
+[BCP195]: https://tools.ietf.org/html/bcp195
+
+[OIDC] - OpenID Connect Core 1.0 incorporating errata set 1
+[OIDC]: https://openid.net/specs/openid-connect-core-1_0.html
+
+[OpenID.Discovery] - OpenID Connect Discovery 1.0
+[OpenID.Discovery]: https://openid.net/specs/openid-connect-discovery-1_0.html
+
+[OpenID.Registration] - OpenID Connect Registration 1.0
+[OpenID.Registration]: http://openid.net/specs/openid-connect-registration-1_0.html
+
+[OpenID.IDA] - OpenID Connect for Identity Assurance 1.0
+[OpenID.IDA]:https://openid.net/specs/openid-connect-4-identity-assurance-1_0-ID1.html
+
+[MTLS] - OAuth 2.0 Mutual TLS Client Authentication and Certificate Bound Access Tokens
+[MTLS]: https://tools.ietf.org/html/draft-ietf-oauth-mtls
+
+[JWT] - JSON Web Token
+[JWT]: http://tools.ietf.org/html/draft-ietf-oauth-json-web-token
+
+[JWS] - JSON Web Signature
+[JWS]: http://tools.ietf.org/html/draft-ietf-jose-json-web-signature
+
+[JWE] - JSON Web Encryption
+[JWE]: http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption
+
+[JWA] - JSON Web Algorithms
+[JWA]: http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms
 
 {backmatter}
