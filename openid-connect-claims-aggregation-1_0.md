@@ -30,14 +30,7 @@ organization="Illumila"
 
 .# Abstract 
 
-This document specifies the methods for
-
-* an IW acting as a client of Issuing Authority (IA) to perform discovery for a Issuing Authority Metadata;
-* the IW to perform client registration to the Issuing Authority;
-* the IW to obtain claims from the Issuing Authority; 
-* an CC to ask for verified claims to the IW;  
-* the IW to return obtained claims from IA to the CC; and 
-* the CC to verify the claims.
+OpenID Providers within OpenID Connect assume many roles, one of these is providing End-User claims to relying parties at the consent of the End-User such as their name or date of birth. OpenID Connect defines multiple models under which claims are provided and relied upon by a relying parties, including simple, aggregated and distributed claims. This document focuses on elaborating upon the aggregated model outlined in section 5.6.2 of OpenID Connect core by defining the full life-cycle of aggregated claims and the new roles of the entities involved in an aggregated claims model.
 
 .# Warning
 
