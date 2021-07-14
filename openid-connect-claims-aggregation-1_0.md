@@ -25,6 +25,15 @@ fullname="Jay Edmund"
 organization="Illumila"
     [author.address]
     email = "ejay@nillumi.la"
+    
+[[author]]
+initials = "T."
+surname = "Looker"
+fullname = "Tobias Looker"
+#role = "editor"
+organization = "MATTR Ltd"
+[author.address]
+email = "tobias.looker@mattr.global"
 
 %%%
 
