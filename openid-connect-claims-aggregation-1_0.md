@@ -1,5 +1,5 @@
 %%%
-title = "OpenID Connect Claims Aggregation"
+title = "OpenID Connect Claims Aggregation Draft 01"
 abbrev = "oidc-ca"
 ipr = "none"
 workgroup = "connect"
@@ -7,7 +7,7 @@ keyword = ["security", "openid", "w3c verifiable credential", "did", "privacy"]
 
 [seriesInfo]
 name = "OpenID-Draft"
-value = "fapi-2_0-baseline-00"
+value = "oidc-ca-01"
 status = "standard"
 
 [[author]]
@@ -329,15 +329,45 @@ This document adds the following Identity Wallet Metadata to the OpenID Connect 
 * `claims_endpoint` **Required**. Claims Endpoint. URL at the Issuing Authority that provides signed claims.
 * `claims_signing_alg_values_supported` **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 * `claims_encryption_alg_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
-* claims_encryption_enc_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
+* `claims_encryption_enc_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
 Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the Issuing Authority Metadata:
 
-- `claim_types_supported`. The JSON array MUST contain the values *normal*, and *distributed* (client only).
-- `claims_supported`. A JSON array containing a list of the Claim Names of the Claims that the Identity Wallet MAY be able to supply values for.
-- `claims_parameter_supported`. The value MUST be *true* to support the *claims* request parameter.
-- `request_parameter_supported`. The value MUST be *true* to support the *request* request parameter.
-- `request_uri_parameter_supported`. The value MUST be *true* to support the *request_uri* request parameter.
+`claim_types_supported`
+: The JSON array MUST contain the values *normal*, *distributed*, ... .
+
+`claims_supported`
+: A JSON array containing a list of the Claim Names of the Claims that the Identity Wallet MAY be able to supply values for.
+
+`claims_parameter_supported`
+: The value MUST be *true* to support the *claims* request parameter.
+
+`request_parameter_supported`
+: The value MUST be *true* to support the *request* request parameter.
+
+`request_uri_parameter_supported`
+: The value MUST be *true* to support the *request_uri* request parameter.
+
+`credential_supported`
+: Boolean value indicating that the OpenID provider supports the credential issuance flow.
+
+`credential_endpoint`
+: A JSON string value indicating the location of the OpenID providers credential endpoint.
+
+`credential_formats_supported`
+: A JSON array of strings identifying the resulting format of the credential issued at the end of the flow.
+
+`credential_claims_supported`
+: A JSON array of strings identifying the claim names supported within an issued credential.
+
+`credential_name`
+: A human readable string to identify the name of the credential offered by the provider.
+
+`dids_supported`
+: Boolean value indicating that the OpenID provider supports the resolution of [decentralized identifiers](https://w3c.github.io/did-core/).
+
+`did_methods_supported`
+: A JSON array of strings representing [Decentralized Identifier Methods](https://w3c-ccg.github.io/did-method-registry/) that the OpenID provider supports resolution of.
 
 If the IA supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], 
 the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published 
@@ -346,6 +376,31 @@ as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.I
 If the IA suppports W3c Verifaiable Credeintial, the IA MUST advertise it with the following metadata: 
 
 ** Editors Note: Tobias, could you fill in here? **
+
+The following is a non-normative example of the relevant entries in the openid-configuration meta data for an OpenID Provider supporting the credential issuance flow
+
+```
+{
+  "dids_supported": true,
+  "did_methods_supported": [
+    "did:ion:",
+    "did:elem:",
+    "did:sov:"
+  ],
+  "credential_supported": true,
+  "credential_endpoint": "https://server.example.com/credential",
+  "credential_formats_supported": [
+    "w3cvc-jsonld",
+    "jwt"
+  ],
+  "credential_claims_supported": [
+    "given_name",
+    "last_name",
+    "https://www.w3.org/2018/credentials/examples/v1/degree"
+  ],
+  "credential_name": "University Credential"
+}
+```
 
 If the IA supports mDL format, the IA MUST advertise it with the following metadata: 
 
@@ -378,7 +433,7 @@ Authentication requests to the Issuing Authority's Authorization Endpoint should
 
 ## Setup Phase
 
-** Editor's NOTE: Not sure if c_token is really needed. ** 
+### Overview
 
 In this phase, the IW obtains an access token (and optionally refresh token) 
 that is bound to the current user so that the IW can obtain the claims about the current user 
@@ -386,7 +441,31 @@ from the IA subsequently without taking the user to the IA and show them the con
 
 1. This has to be done at least once for each IA that a user of an IW who wishes to use the facility this document explains.
 1. To obtain the grant, the IW MUST use OpenID Connect Authentication Request. 
-1. The Claims to be granted MUST be specified with `c_token` parameter. 
+
+** Editor's NOTE:** Originally, it had: The Claims to be granted MUST be specified with `c_token` parameter. 
+
+### Authorization request
+
+A Signed Claim Set Request uses the OpenID and OAuth2.0 request parameters as outlined 
+in section [3.1.2.1](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest) of 
+OpenID Connect core, except for the following additional constraints.
+
+claimset_format
+: REQUIRED. Determines the format of the signed claim set returned at the end of the flow, values supported by the IA are advertised in their openid-configuration metadata, under the `claimset_formats_supported` attribute.
+
+sub_jwk
+: OPTIONAL. Used when making a Signed Credential Request, defines the key material the IW is requesting the claim set to be bound to and the key responsible for signing the request object. The value is a JSON Object that is a valid [JWK](https://tools.ietf.org/html/rfc7517).
+
+** Editors Note: ** DISCUSS the following paragraph. the parameter `did` should be sent in the claims collection phase rather than here? 
+
+did
+: OPTIONAL. Defines the relationship between the key material the IW is requesting the credential to be bound to and a [decentralized identifier](https://w3c.github.io/did-core/). Processing of this value requires the IA to support the resolution of [decentralized identifiers](https://w3c.github.io/did-core/) which is advertised in their openid-configuration metadata, under the `dids_supported` attribute. The value of this field MUST be a valid [decentralized identifier](https://w3c.github.io/did-core/).
+
+** Editors Note: ** DISCUSS the following paragraph. Normal client authnetication should be a primary choice instead? 
+
+Public private key pairs are used by a requesting IW to establish a means of binding to the resulting signed claim set. 
+An IW making a Claims Request to an IA MUST prove control over this binding mechanism during the request, 
+this is accomplished through the extended usage of a [signed request](https://openid.net/specs/openid-connect-core-1_0.html#SignedRequestObject) defined in OpenID Connect Core.
 
 The IA MUST show a dialogue to the Subject explaining that the IW will be 
 getting signed claims set from this IA as appropriate to provide claims to CCs as directed 
@@ -399,7 +478,28 @@ The actual act of granting MUST involve active user interaction.
 The grant that is to be obtained in this phase SHOULD be sufficiently large so that it will reduce the 
 number of times that IW needs to take the Subject to the IA to obtain additional grants. 
 
+### Token Endpoint Response
+
+Successful and Error Authentication Response are in the same manner 
+as [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html) 
+with the `code` parameter always being returned with the Authorization Code Flow. ** DISCUSS ** 
+
+On Request to the Token Endpoint the `grant_type` value MUST be `authorization_code` inline with the Authorization Code Flow and the `code` value included as a parameter.
+
+The following is a non-normative example of a response from the token endpoint, whereby the `access_token` authorizes the Credential Holder to request a `credential` from the credential endpoint.
+
+```
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6Ikp..sHQ",
+  "token_type": "bearer",
+  "expires_in": 86400,
+  "id_token": "eyJodHRwOi8vbWF0dHIvdGVuYW50L..3Mz"
+}
+```
+
 ## Delivery Phase (CC Phase)
+
+### Overview
 
 In Delivery Phase, the claims are delivered to CC. 
 To do so, it typically goes through the following steps: 
@@ -443,7 +543,22 @@ After verifying the request, the IW
 ### Claims Collection
 
 The IW collects the required claims from relevant Claims Endpoints. 
-This process can be performed before the CC's request. 
+This process can be performed before the CC's request, 
+in which case IW stores the obtained signed claim set for a later day use. 
+
+The Claims Endpoint is an OAuth 2.0 Protected Resource that when called, 
+returns Claims about the authenticated Subject in the form of a signed claim set. 
+To obtain a claim set on behalf of the Subject, the IW makes a request to the Credential Endpoint using 
+an Access Token obtained through OpenID Connect Authentication stated above.
+
+Communication with the Credential Endpoint MUST utilize TLS. See Section TBD for more information on using TLS.
+
+The Claims Endpoint MUST support the use of HTTP POST methods defined in RFC 2616 [RFC2616].
+
+The Claims Endpoint SHOULD support the use of Cross Origin Resource Sharing (CORS) [CORS] and or other methods as appropriate to enable Java Script Clients to access the endpoint. 
+
+The Claims Endpoint MUST support either MTLS or DPOP. 
+
 
 #### Claims Endpoint Request
 
@@ -457,45 +572,246 @@ For claims collection, the IW
 Additionally, 
 
 1. The OAuth protected resource request SHOULD be protected by MTLS. 
-1. It is RECOMMENDED that the request use the HTTP  GET  method and the Access Token be sent using the Authorization  header field.
+1. It is RECOMMENDED that the request use the HTTP POST method and the Access Token be sent using the Authorization header field.
 
 The following is a non-normative example of a Aggregation Request:
 
 ```
-      GET /c_token?claims={"aggregation":{"uid":"id8837395937","email":{"essential":true},"email_verified":{"essential":true}}}&aud={["client1234"}      
+      POST /claims HTTP/1.1      
       HTTP/1.1
       Host: server.example.com
       Authorization: Bearer SlAV32hkKG
+      claims={"aggregation":{"uid":"id8837395937","email":{"essential":true},"email_verified":{"essential":true}}}&aud={["client1234"}
+```
+
+** Editor's Note ** An alternative way. 
+
+A non-normative example of a Signed Credential request.
+
+```
+      POST /claims HTTP/1.1
+      Host: https://issuer.example.com
+      Authorization: Bearer <access-token>
+      Content-Type: application/json
+{
+  "request": <signed-jwt-request-obj>
+}
+```
+
+where the decoded payload of the request parameter is as follows:
+
+```
+{
+  "aud": "https://issuer.example.com",
+  "iss": "https://wallet.example.com",
+  "sub": "urn:uuid:dc000c79-6aa3-45f2-9527-43747d5962a5",
+  "sub_jwk" : {
+    "crv":"secp256k1",
+    "kid":"YkDpvGNsch2lFBf6p8u3",
+    "kty":"EC",
+    "x":"7KEKZa5xJPh7WVqHJyUpb2MgEe3nA8Rk7eUlXsmBl-M",
+    "y":"3zIgl_ml4RhapyEm5J7lvU-4f5jiBvZr4KgxUjEhl9o"
+  },
+  "claimset_format": "w3cvc-jwt",
+  "nonce": "43747d5962a5",
+  "iat": 1591069056,
+  "exp": 1591069556
+}
 ```
 
 The process will be repeated to as many Claims Endpoints as necessary. 
 
+#### Signed Credential Request using a Decentralized Identifier
+
+**Usage of Decentralized Identifiers** 
+
+TODO improve this section
+
+[Decentralized identifiers](https://w3c.github.io/did-core/) are a resolvable identifier to a set of statements about the [did subject](https://w3c.github.io/did-core/#dfn-did-subjects) including a set of cryptographic material (e.g public keys). Using this cryptographic material, a [decentralized identifier](https://w3c.github.io/did-core/) can be used as an authenticatable identifier in a credential, rather than using a public key directly.
+
+
+An IW submitting a signed Claim Set Request can request, 
+that the resulting claim set be bound to the IW through the usage of [decentralized identifiers](https://w3c.github.io/did-core/) by using the `did` field.
+
+An IW prior to submitting a claim set request SHOULD validate that the IA supports the resolution of decentralized identifiers 
+by retrieving their openid-configuration metadata to check if an attribute of `dids_supported` has a value of `true`.
+
+The IW SHOULD also validate that the IA supports the [did method](https://w3c-ccg.github.io/did-method-registry/) 
+to be used in the request by retrieving their openid-configuration metadata to check if an attribute of `did_methods_supported` contains the required did method.
+
+An IA processing a claim set request featuring a [decentralized identifier](https://w3c.github.io/did-core/) MUST follow the following additional steps to validate the request.
+
+1. Validate the value in the `did` field is a valid [decentralized identifier](https://w3c.github.io/did-core/).
+2. Resolve the `did` value to a [did document](https://w3c.github.io/did-core/#dfn-did-documents).
+3. Validate that the key in the `sub_jwk` field of the request is referenced in the [authentication](https://w3c.github.io/did-core/#authentication) section of the [DID Document](https://w3c.github.io/did-core/#dfn-did-documents).
+
+If any of the steps fail then the IA MUST respond to the request with the Error Response parameter, 
+[section 3.1.2.6.](https://openid.net/specs/openid-connect-core-1_0.html#AuthError) with Error code: `invalid_did`.
+
+The following is a non-normative example of requesting the issuance of a credential that uses a decentralized identifier.
+
+```
+{
+  "response_type": "code",
+  "client_id": "IAicV0pt9co5nn9D1tUKDCoPQq8BFlGH",
+  "sub_jwk" : {
+    "crv":"secp256k1",
+    "kid":"YkDpvGNsch2lFBf6p8u3",
+    "kty":"EC",
+    "x":"7KEKZa5xJPh7WVqHJyUpb2MgEe3nA8Rk7eUlXsmBl-M",
+    "y":"3zIgl_ml4RhapyEm5J7lvU-4f5jiBvZr4KgxUjEhl9o"
+  },
+  "did": "did:example:1234",
+  "redirect_uri": "https://Client.example.com/callback",
+  "credential_format": "w3cvc-jsonld"
+}
+```
+
+
+
 #### Claims Endpoint Response
 
-Upon receipt of the request, the Claims Endpoint Response 
+Upon receipt of the request, the Claims Endpoint Response is returened in the top level member of the 
+JSON payload named `claimset`, 
+of which the format is indicated by another top level member`format`. 
+
+format : REQUIRED. The proof format the credential was returned in. For example `oidc-jws` or `w3cvc-jsonld` or `w3cvc-jwt`.
+claimset : REQUIRED. A cryptographically verifiable proof in the defined proof `format`. Most commonly a Linked Data Proof or a JWS.
+
+The following is a non-normative example: 
+
+```
+{
+  "format": "w3cvc-jsonld",
+  "claimset": <claimset>
+}
+```
+
+##### Claimset in OIDC JWS format
+
+If the claimset is provided as oidc-jws, the claimset 
 
 1. MUST be signed or signed and encrypted;
 1. MUST NOT contain other claims than asked; 
 1. MAY omit claims if not appropriate or available in which case the claim name MUST be omitted;
 1. MUST provide correct content-type of the HTTP response; and 
 1. MUST contain `aud` claim with is value a subset of what was in the request; 
-
-**Editors Note** The above is specific to OIDC JWT and need to be expanded to accommodate VC etc. 
-
-If the response is a JWS signed JWT, the Claims Endpoint Response 
-
 1. MUST contain iss that is set as the IA's Issuer Identifer URL; 
 1. MUST contain *op_iss* claim whose value is the IW's issuer identifier URL registered to the IA; 
 1. MUST contain *sub* claim that is set to the *uid* claim value if it was in the request; 
 
 NOTE: the combination of *op_iss* and *sub* is used to correlated to the IW response to the CC later. 
 
-The following is a non-normative example of a Aggregation Response:
+The following is a non-normative example of such:
 
 ```
   To be provided. 
 
 ```
+
+##### Claimset in W3C VC format
+
+Formats of the `claimset` can vary, examples include JSON-LD or JWT based Credentials, 
+the IA SHOULD make their supported credential formats available at their openid-configuration metadata endpoint.
+
+The following is a non-normative example of a claim set issued as a [W3C Verifiable Credential 1.0](https://www.w3.org/TR/vc-data-model/) compliant format in JSON-LD.
+
+```
+{
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://www.w3.org/2018/credentials/examples/v1"
+  ],
+  "id": "http://example.gov/credentials/3732",
+  "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+  "issuer": "did:key:z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd",
+  "issuanceDate": "2020-03-10T04:24:12.164Z",
+  "credentialSubject": {
+    "id": "urn:uuid:dc000c79-6aa3-45f2-9527-43747d5962a5",
+    "jwk": {
+      "crv":"secp256k1",
+      "kid":"YkDpvGNsch2lFBf6p8u3",
+      "kty":"EC",
+      "x":"7KEKZa5xJPh7WVqHJyUpb2MgEe3nA8Rk7eUlXsmBl-M",
+      "y":"3zIgl_ml4RhapyEm5J7lvU-4f5jiBvZr4KgxUjEhl9o"
+    },
+    "givenName": "John",
+    "familyName": "Doe",
+    "degree": {
+      "type": "BachelorDegree",
+      "name": "Bachelor of Science and Arts"
+    }
+  },
+  "proof": {
+    "type": "Ed25519Signature2018",
+    "created": "2020-04-10T21:35:35Z",
+    "verificationMethod": "did:key:z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd#z6MkjRagNiMu91DduvCvgEsqLZDVzrJzFrwahc4tXLt9DoHd",
+    "proofPurpose": "assertionMethod",
+    "jws": "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..l9d0YHjcFAH2H4dB9xlWFZQLUpixVCWJk0eOt4CXQe1NXKWZwmhmn9OQp6YxX0a2LffegtYESTCJEoGVXLqWAA"
+  }
+}
+```
+
+The following is a non-normative example of a claims endpoint response for the request shown above.
+
+```
+{
+  "format": "w3cvc-jsonld",
+  "credential": {
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://www.w3.org/2018/credentials/examples/v1"
+    ],
+    "id": "http://example.gov/credentials/3732",
+    "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+    "issuer": "https://issuer.edu",
+    "issuanceDate": "2020-03-10T04:24:12.164Z",
+    "credentialSubject": {
+      "id": "did:example:1234",
+      "degree": {
+        "type": "BachelorDegree",
+        "name": "Bachelor of Science and Arts"
+      }
+    },
+    "proof": {
+      "type": "Ed25519Signature2018",
+      "created": "2020-04-10T21:35:35Z",
+      "verificationMethod": "https://issuer.edu/keys/1",
+      "proofPurpose": "assertionMethod",
+      "jws": "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..l9d0YHjcFAH2H4dB9xlWFZQLUpixVCWJk0eOt4CXQe1NXKWZwmhmn9OQp6YxX0a2LffegtYESTCJEoGVXLqWAA"
+    }
+  }
+}
+```
+
+The following is a non-normative example of a Credential issued as a [JWT](https://tools.ietf.org/html/rfc7519)
+
+```
+ewogICJhbGciOiAiRVMyNTYiLAogICJ0eXAiOiAiSldUIgp9.ewogICJpc3MiOiAiaXNzdWVyIjogImh0dHBzOi8vaXNzdWVyLmVkdSIsCiAgInN1YiI6ICJkaWQ6ZXhhbXBsZToxMjM0NTYiLAogICJpYXQiOiAxNTkxMDY5MDU2LAogICJleHAiOiAxNTkxMDY5NTU2LAogICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy9leGFtcGxlcy92MS9kZWdyZWUiOiB7CiAgICAgImh0dHBzOi8vd3d3LnczLm9yZy8yMDE4L2NyZWRlbnRpYWxzL2V4YW1wbGVzL3YxL3R5cGUiOiAiQmFjaGVsb3JEZWdyZWUiLAogICAgICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy9leGFtcGxlcy92MS9uYW1lIjogIkJhY2hlbG9yIG9mIFNjaWVuY2UgYW5kIEFydHMiCiAgfQp9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+And the decoded Claim Set of the JWT
+
+```
+{
+  "iss": "https://issuer.example.com",
+  "sub": "urn:uuid:dc000c79-6aa3-45f2-9527-43747d5962a5",
+  "sub_jwk" : {
+    "crv":"secp256k1",
+    "kid":"YkDpvGNsch2lFBf6p8u3",
+    "kty":"EC",
+    "x":"7KEKZa5xJPh7WVqHJyUpb2MgEe3nA8Rk7eUlXsmBl-M",
+    "y":"3zIgl_ml4RhapyEm5J7lvU-4f5jiBvZr4KgxUjEhl9o"
+  },
+  "iat": 1591069056,
+  "exp": 1591069556,
+  "https://www.w3.org/2018/credentials/examples/v1/degree": {
+    "https://www.w3.org/2018/credentials/examples/v1/type": "BachelorDegree",
+    "https://www.w3.org/2018/credentials/examples/v1/name": "Bachelor of Science and Arts"
+  }
+}
+```
+
 
 #### Claims Endpoint Error Response
  When an error condition occurs, the Claims Endpoint returns an Error Response as defined in Section 3 of  [OAuth 2.0 Bearer Token Usage](https://openid.net/specs/openid-connect-core-1_0.html#RFC6750)  [RFC6750]. (HTTP errors unrelated to RFC 6750 are returned to the User Agent using the appropriate HTTP status code.)
