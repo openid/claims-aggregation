@@ -154,7 +154,26 @@ In the .txt version of this document, values are quoted to indicate that they ar
 
 All uses of JSON Web Signature (JWS) JWS and JSON Web Encryption (JWE) JWE data structures in this specification utilize the JWS Compact Serialization or the JWE Compact Serialization; the JWS JSON Serialization and the JWE JSON Serialization are not used.
 
-.# Terminology
+
+
+{mainmatter}
+
+## Scope
+
+This document specifies the methods for
+
+* an Identity Wallet acting as a client of Issuing Authority to perform discovery for a Issuing Authority Metadata;
+* the Identity Wallet to perform client registration to the Issuing Authority;
+* the Identity Wallet to obtain claims from the Issuing Authority; 
+* an Claims Consumer to ask for verified claims to the Identity Wallet;  
+* the Identity Wallet to return obtained claims from Issuing Authority to the Claims Consumer; and 
+* the Claims Consumer to verify the claims.
+
+## Normative references
+
+The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
+
+## Terms and definitions
 
 For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] apply.
 
@@ -177,19 +196,6 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 **VP** - W3C Verifiable Presentation
 
 **DID** - Decentralized Identifier
-
-{mainmatter}
-
-## Scope
-
-This document specifies the methods for
-
-* an IW acting as a client of Issuing Authority (IA) to perform discovery for a Issuing Authority Metadata;
-* the IW to perform client registration to the Issuing Authority;
-* the IW to obtain claims from the Issuing Authority; 
-* an CC to ask for verified claims to the IW;  
-* the IW to return obtained claims from IA to the CC; and 
-* the CC to verify the claims.
 
 ## Actors
 
