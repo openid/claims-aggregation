@@ -198,7 +198,7 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 
 **TLS** - Transport Layer Security
 
-**W3c** - World Wide Web Consortium
+**W3C** - World Wide Web Consortium
 
 **VC** - W3C Verifiable Credential
 
@@ -250,14 +250,14 @@ The Subject also allows IW to potentially store the obtained claims.
 The Subject also allows CC to make a claims request to the IW, 
 typically for the Subject to receive some services from the CC. 
 
-### CC
+### Claims Consumer (CC)
 
 CC is an actor that typically provides some service to the Subject. 
 To perform the service, the CC obtains some claims about the Subject from IW. 
 The basis for the processing of the Subject's claims by the CC can be 
 performance of contract, consent, and other lawful basis. 
 
-### IA
+### Issueing Authority (IA)
 
 IA, Issuing Authority, is a role assumed by an Identity Wallet 
 that supports signed claims according to this document.  
@@ -301,7 +301,7 @@ The provision for the Claims Endpoint are as follows:
 ** EDITOR'S NOTE ** I guess there are other provisions. The above probably needs to be tweaked as well. 
 
 
-### IW
+### Identity Wallet (IW)
 
 IW is an entity that acts as an Identity Wallet to the CC. 
 Also, IW acts as a Claims Consumer to IAs. 
@@ -358,10 +358,10 @@ Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discov
 : The value MUST be *true* to support the *request_uri* request parameter.
 
 `credential_supported`
-: Boolean value indicating that the OpenID provider supports the credential issuance flow.
+: Boolean value indicating that the Issuing Authority supports the credential issuance flow.
 
-`credential_endpoint`
-: A JSON string value indicating the location of the OpenID providers credential endpoint.
+
+
 
 `credential_formats_supported`
 : A JSON array of strings identifying the resulting format of the credential issued at the end of the flow.
@@ -382,7 +382,7 @@ If the IA supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA],
 the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published 
 as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.IDA].
 
-If the IA suppports W3c Verifaiable Credeintial, the IA MUST advertise it with the following metadata: 
+If the IA suppports W3C Verifaiable Credeintial, the IA MUST advertise it with the following metadata: 
 
 ** Editors Note: Tobias, could you fill in here? **
 
@@ -557,7 +557,7 @@ in which case IW stores the obtained signed claim set for a later day use.
 
 The Claims Endpoint is an OAuth 2.0 Protected Resource that when called, 
 returns Claims about the authenticated Subject in the form of a signed claim set. 
-To obtain a claim set on behalf of the Subject, the IW makes a request to the Credential Endpoint using 
+To obtain a claim set on behalf of the Subject, the IW makes a request to the Claims Endpoint using 
 an Access Token obtained through OpenID Connect Authentication stated above.
 
 Communication with the Credential Endpoint MUST utilize TLS. See Section TBD for more information on using TLS.
@@ -583,14 +583,14 @@ Additionally,
 1. The OAuth protected resource request SHOULD be protected by MTLS. 
 1. It is RECOMMENDED that the request use the HTTP POST method and the Access Token be sent using the Authorization header field.
 
-The following is a non-normative example of a Aggregation Request:
+The following is a non-normative example of a Claims Endpoint Request:
 
 ```
       POST /claims HTTP/1.1      
       HTTP/1.1
       Host: server.example.com
       Authorization: Bearer SlAV32hkKG
-      claims={"aggregation":{"uid":"id8837395937","email":{"essential":true},"email_verified":{"essential":true}}}&aud={["client1234"}
+      claims={"uid":"id8837395937","email":{"essential":true},"email_verified":{"essential":true}}&aud={["client1234"]}
 ```
 
 ** Editor's Note ** An alternative way. 
@@ -680,7 +680,7 @@ The following is a non-normative example of requesting the issuance of a credent
 
 #### Claims Endpoint Response
 
-Upon receipt of the request, the Claims Endpoint Response is returened in the top level member of the 
+Upon receipt of the request, the Claims Endpoint Response is returned in the top level member of the 
 JSON payload named `claimset`, 
 of which the format is indicated by another top level member`format`. 
 
@@ -793,7 +793,7 @@ The following is a non-normative example of a claims endpoint response for the r
 }
 ```
 
-The following is a non-normative example of a Credential issued as a [JWT](https://tools.ietf.org/html/rfc7519)
+The following is a non-normative example of a Claim Set issued as a [JWT](https://tools.ietf.org/html/rfc7519)
 
 ```
 ewogICJhbGciOiAiRVMyNTYiLAogICJ0eXAiOiAiSldUIgp9.ewogICJpc3MiOiAiaXNzdWVyIjogImh0dHBzOi8vaXNzdWVyLmVkdSIsCiAgInN1YiI6ICJkaWQ6ZXhhbXBsZToxMjM0NTYiLAogICJpYXQiOiAxNTkxMDY5MDU2LAogICJleHAiOiAxNTkxMDY5NTU2LAogICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy9leGFtcGxlcy92MS9kZWdyZWUiOiB7CiAgICAgImh0dHBzOi8vd3d3LnczLm9yZy8yMDE4L2NyZWRlbnRpYWxzL2V4YW1wbGVzL3YxL3R5cGUiOiAiQmFjaGVsb3JEZWdyZWUiLAogICAgICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy9leGFtcGxlcy92MS9uYW1lIjogIkJhY2hlbG9yIG9mIFNjaWVuY2UgYW5kIEFydHMiCiAgfQp9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
@@ -825,7 +825,7 @@ And the decoded Claim Set of the JWT
 #### Claims Endpoint Error Response
  When an error condition occurs, the Claims Endpoint returns an Error Response as defined in Section 3 of  [OAuth 2.0 Bearer Token Usage](https://openid.net/specs/openid-connect-core-1_0.html#RFC6750)  [RFC6750]. (HTTP errors unrelated to RFC 6750 are returned to the User Agent using the appropriate HTTP status code.)
 
-The following is a non-normative example of a Aggregation Error Response:
+The following is a non-normative example of a Claims Endpoint Error Response:
 
 ```
     HTTP/1.1 401 Unauthorized
@@ -850,7 +850,7 @@ The aggregated claims response is constructed as follows:
 
 1. The overall container format complies to what is described in 5.6.2 of OpenID Connect 1.0 [OIDC].
 1. If the claim set was obtained as JWT, then it MUST be stored in the corresponding "JWT" member of the aggregated claims. 
-1. If the claim set was obtained as W3c Verifiable Credential, then it MUST be stored in the corresponding "verifiable_presentations" member of the aggregated claims. 
+1. If the claim set was obtained as W3C Verifiable Credential, then it MUST be stored in the corresponding "verifiable_presentations" member of the aggregated claims. 
 1. If the claim set was obtained in other format, then ...
 
 
