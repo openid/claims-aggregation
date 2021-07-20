@@ -187,15 +187,15 @@ The following referenced documents are indispensable for the application of this
 For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] apply. In addition, following terms are defined as a shorthand for the definition text that follows. 
 
 **3.1**  
-**Issuing-Authority**
+**Issuing-Authority**  
 party that issues attested claims
 
 **3.2**  
-**Claims-Consumer**
+**Claims-Consumer**  
 party that verifies and consumes the provided claim sets
 
 **3.3**  
-**Identity-Agent**
+**Identity-Agent**  
 party that acts as an RP to Issuing-Authorities and OP to Claims-Consumers
 
 Note to entry: A Digital Identity Wallet is a type of IdA. 
