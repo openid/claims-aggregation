@@ -68,29 +68,29 @@ Each claim is associated with its authoritative source so there naturally will b
 Claim sources can be corroborative, i.e., not authoritative, as well. 
 In total, there will be many Claim Set sources in OpenID Connect Framework. 
 These Claim sources are called Issuing Authorities in OpenID Connect. 
-Issuing Authority (IA) is just an Identity Wallet (IW) but it does not provide the claims about the current authentication event 
-and its associated subject identifier authoritatively. Note that Issuing Authority can act as an Identity Wallet in other transactions. 
-Whether it is called IW or IA is depending on their role in a particular transaction. 
+Issuing-Authority (IA) is just an Identity-Agent (IdA) but it does not provide the claims about the current authentication event 
+and its associated subject identifier authoritatively. Note that Issuing-Authority can act as an Identity-Agent in other transactions. 
+Whether it is called IdA or IA is depending on their role in a particular transaction. 
 
 There are four main actors in the OpenID Connect aggregated claims model.
 
 1. End-User (Subject)
-2. Issuing Authority (IA) - Entity that is the issuer of claims about the End-User.
-3. Identity Wallet (IW) that provides claims about the subject authentication event and provides signed claim sets obtained from other Issuing Authorities
-4. Claims Consumer (CC) that verifies and relies upon the provided claims.
+2. Issuing-Authority (IA) - Entity that is the issuer of claims about the End-User.
+3. Identity-Agent (IdA) that provides claims about the subject authentication event and provides signed claim sets obtained from other Issuing Authorities
+4. Claims-Consumer (CC) that verifies and relies upon the provided claims.
 
-An IW can provide an CC the claims by value or by reference. 
+An IdA can provide an CC the claims by value or by reference. 
 
-By value is the case where an IW collects claims and their values 
+By value is the case where an IdA collects claims and their values 
 from IAs and aggregate them in one package to provide to the CC. 
 This model is called Aggregated Claims Model. 
 
-By value is the case where the IW does not collect and provide the value 
+By value is the case where the IdA does not collect and provide the value 
 but just provide the reference and its access information to the CC. 
 This model is called Distributed Claims Model. 
 
 In either case, there has to be strong binding between the subject 
-in the claim sets provided by IAs and the subject in the ID Token provided by the IW. 
+in the claim sets provided by IAs and the subject in the ID Token provided by the IdA. 
 Conceptually, it can be done through Subject value correlation or 
 through the correlation of signing key materials. 
 Regardless of the methods, there has to be this binding. 
@@ -107,11 +107,11 @@ and omni-directional identifier cases are also covered.
 Another feature that this document provides is the way to avoid multiple consent screen 
 per CC authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
 naively, it may results in many consent screens per CC request. 
-For example, if four IAs and one IW is involved in the request, then, there may be five consent screens. 
+For example, if four IAs and one IdA is involved in the request, then, there may be five consent screens. 
 This is too onerous. This document defines a mechanism to consolidate it into one consent screen. 
-This is done through one "IW User Setup Phase" per IA that the IW obtains the consent 
+This is done through one "IdA User Setup Phase" per IA that the IdA obtains the consent 
 from the subject to obtain claims from the IA for the purpose of creating aggregated and distributed 
-claims response for future CC requests in which IW will collect a new consent from the subject. 
+claims response for future CC requests in which IdA will collect a new consent from the subject. 
 
 The mechanism used for this is to obtain an access token and a refresh token that corresponds 
 to a suitably wide scope for the purpose. While the claims at the time of an CC request can be 
@@ -119,7 +119,7 @@ obtained from the UserInfo endpoint, this document defines a new endpoint called
 It is almost the same as the UserInfo endpoint, but there are a few important differences: 
 
 1. It allows collection minimization by supporting claims parameter. 
-1. It allows an identifier to correlate the claims it is returning and the ID Token the IW provides. 
+1. It allows an identifier to correlate the claims it is returning and the ID Token the IdA provides. 
 1. It include the `iss` claim. (Userinfo Endpoint does not)
 1. It returns signed response. 
 1. It allows multiple schema types for its response. (e.g, JWT and W3C Verifiable Credentials formats)
@@ -138,13 +138,13 @@ Therefore, this document also defines a new parameter to express its preference.
 
 There are four phases defined in this document. 
 
-1. IA Discovery Phase: IW discovers IA metadata. 
-1. IW Registration Phase: IW registers to IA as an CC. 
-1. Setup Phase: IW obtains the access and refresh tokens from IA by the permission of the subject. 
+1. IA Discovery Phase: IdA discovers IA metadata. 
+1. IdA Registration Phase: IdA registers to IA as an CC. 
+1. Setup Phase: IdA obtains the access and refresh tokens from IA by the permission of the subject. 
 1. CC Phase: 
     1. CC makes authentication and claims request, 
-	1. IW fetches relevant claim sets from IAs, 
-	1. IW respond to the CC
+	1. IdA fetches relevant claim sets from IAs, 
+	1. IdA respond to the CC
 	1. the CC verifies the response. 
 
 Note that distributed claims model is out of scope of this document. 
@@ -171,12 +171,12 @@ All uses of JSON Web Signature (JWS) JWS and JSON Web Encryption (JWE) JWE data 
 
 This document specifies the methods for
 
-* an Identity Wallet acting as a client of Issuing Authority to perform discovery for a Issuing Authority Metadata;
-* the Identity Wallet to perform client registration to the Issuing Authority;
-* the Identity Wallet to obtain claims from the Issuing Authority; 
-* an Claims Consumer to ask for verified claims to the Identity Wallet;  
-* the Identity Wallet to return obtained claims from Issuing Authority to the Claims Consumer; and 
-* the Claims Consumer to verify the claims.
+* an Identity-Agent acting as a client of Issuing-Authority to perform discovery for a Issuing-Authority Metadata;
+* the Identity-Agent to perform client registration to the Issuing-Authority;
+* the Identity-Agent to obtain claims from the Issuing-Authority; 
+* an Claims-Consumer to ask for verified claims to the Identity-Agent;  
+* the Identity-Agent to return obtained claims from Issuing-Authority to the Claims-Consumer; and 
+* the Claims-Consumer to verify the claims.
 
 ## Normative references
 
@@ -184,51 +184,65 @@ The following referenced documents are indispensable for the application of this
 
 ## Terms and definitions
 
-For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] apply.
+For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] apply. In addition, following terms are defined as a shorthand for the definition text that follows. 
+
+**3.1**  
+**Issuing-Authority**
+party that issues attested claims
+
+**3.2**  
+**Claims-Consumer**
+party that verifies and consumes the provided claim sets
+
+**3.3**  
+**Identity-Agent**
+party that acts as an RP to Issuing-Authorities and OP to Claims-Consumers
+
+Note to entry: A Digital Identity Wallet is a type of IdA. 
 
 ## Symbols and abbreviated terms
 
-**CC** – Claims Consumer
+**IA** – Issuing-Authority
 
-**IW** – Identity Wallet
+**IdA** – Identity-Agent
 
-**IA** – Issuing Authority
+**CC** – Claims-Consumer
+
+**DID** - Decentralized Identifier
 
 **HTTP** - Hyper Text Transfer Protocol
 
 **TLS** - Transport Layer Security
 
-**W3C** - World Wide Web Consortium
-
 **VC** - W3C Verifiable Credential
 
 **VP** - W3C Verifiable Presentation
 
-**DID** - Decentralized Identifier
+**W3C** - World Wide Web Consortium
 
 ## Actors
 
 In this document, there are four main actors. 
 
 1. Subject (User)
-1. IA
-1. IW 
-1. CC that verifies and consumes the provided claim sets. 
+1. Issuing-Authority (IA)
+1. Identity-Agent (IdA) 
+1. Claims-Consumer(CC)  
 
 They are topologically connected as in the following diagram.
 
 !---
 ~~~ ascii-art
-               +---------+
-    +----------| Subject |--------+
-    | grants   +---------+        |
-    v               |             |
-+------+            | instructs   | allows
-|  IA  |----+       |             |
-+------+    |       v             v
-   .        |    +------+     +------+
-   .        |----|  IW  |-----|  CC  | 
-   .        |    +------+     +------+
+                +---------+
+    +-----------| Subject |--------+
+    | grants    +---------+        |
+    v                |             |
++------+             | instructs   | allows
+|  IA  |----+        |             |
++------+    |        v             v
+   .        |    +-------+     +------+
+   .        |----|  IdA  |-----|  CC  | 
+   .        |    +-------+     +------+
 +------+    |
 |  IA  |----+
 +------+  
@@ -239,44 +253,44 @@ Figure: Relationships among actors
 
 ### Subject (User)
 
-Subject is the entity that grants access to the claims at IAs and the IW. 
-In this system, the Subject grants IA to provide IW the Claims for 
+Subject is the entity that grants access to the claims at IAs and the IdA. 
+In this system, the Subject grants IA to provide IdA the Claims for 
 the purpose of providing those claims with other claims to potentially 
 unspecified CCs under the Subject's direction. 
 
-This request from the IW to the IA is sent by the Subject's instruction. 
-The Subject also allows IW to potentially store the obtained claims. 
+This request from the IdA to the IA is sent by the Subject's instruction. 
+The Subject also allows IdA to potentially store the obtained claims. 
 
-The Subject also allows CC to make a claims request to the IW, 
+The Subject also allows CC to make a claims request to the IdA, 
 typically for the Subject to receive some services from the CC. 
 
-### Claims Consumer (CC)
+### Claims-Consumer (CC)
 
 CC is an actor that typically provides some service to the Subject. 
-To perform the service, the CC obtains some claims about the Subject from IW. 
+To perform the service, the CC obtains some claims about the Subject from IdA. 
 The basis for the processing of the Subject's claims by the CC can be 
 performance of contract, consent, and other lawful basis. 
 
-### Issueing Authority (IA)
+### Issuing-Authority (IA)
 
-IA, Issuing Authority, is a role assumed by an Identity Wallet 
+IA, Issuing-Authority, is a role assumed by an Identity-Agent 
 that supports signed claims according to this document.  
 Specifically, it supports an extension to bind the 
-authentication response that CCs received from the IW 
+authentication response that CCs received from the IdA 
 to the claim sets that it provides. 
 
-The provision for the Issuing Authority are as follows: 
+The provision for the Issuing-Authority are as follows: 
 
 1. It MUST implement Claims Endpoint. 
 1. It MUST support the issuance of Access Tokens and Refresh Tokens for the Claims Endpoint. 
 1. It MUST support the Discovery Metadata extension defined by this document. 
-1. It MUST support the registration of the IWs with extensions defined in this document. 
-1. It SHOULD support the registration of the IWs through Dynamic Registration. 
+1. It MUST support the registration of the IdAs with extensions defined in this document. 
+1. It SHOULD support the registration of the IdAs through Dynamic Registration. 
 
 #### Claims Endpoint
 The Claims Endpoint is an OAuth 2.0 Protected Resource that returns Claims about the authenticated Subject. 
 To obtain the requested Claims about the Subject, 
-the IW acting as a Client makes a request to the Claims Endpoint of the IA using an Access Token obtained through OpenID Connect Authentication. 
+the IdA acting as a Client makes a request to the Claims Endpoint of the IA using an Access Token obtained through OpenID Connect Authentication. 
 These Claims can be represented in variety of format as requested. 
 
 This document defines the following request parameters for the Claims Endpoint request:
@@ -285,7 +299,7 @@ This document defines the following request parameters for the Claims Endpoint r
 - *claims*  This parameter is used to request that specific Claims be returned. This is a JSON object with only the *c_token* top-level member defined in 5.3.2 of this specification. The *c_token* member requests that the listed individual Claims be returned from the Claims Endpoint. The requested claims MUST only be a subset of the claims bounded to the Access Token as requested in the Authentication Request's *scope*, *claims*, or *request* or *request_uri* parameters. The *c_token* member MUST contain the *uid* claim value if the *uid* request parameter is not supplied.
 - *aud*  JSON object containing a string array of client identifiers that will be added as additional *aud*  (audience) claims for the resulting JWT response from this endpoint. (Editor's NOTE: This point needs more discussion.)
 
-** Editor's NOTE ** Is there a way to specify the CCs that are registered to the IW? 
+** Editor's NOTE ** Is there a way to specify the CCs that are registered to the IdA? 
 
 The provision for the Claims Endpoint are as follows: 
 
@@ -301,16 +315,16 @@ The provision for the Claims Endpoint are as follows:
 ** EDITOR'S NOTE ** I guess there are other provisions. The above probably needs to be tweaked as well. 
 
 
-### Identity Wallet (IW)
+### Identity-Agent (IdA)
 
-IW is an entity that acts as an Identity Wallet to the CC. 
-Also, IW acts as a Claims Consumer to IAs. 
+IdA is an entity that acts as an Identity-Agent to the CC. 
+Also, IdA acts as a Claims-Consumer to IAs. 
 
-The provision for the IW is as follows: 
+The provision for the IdA is as follows: 
 
-1. It MUST support OpenID Connect Aggregated Claims as an Identity Wallet. 
-1. It MUST act as an OpenID Connect Claims Consumer to IAs to fetch claims from IAs according to instructions given by the Subject. 
-1. As an Identity Wallet, IW MUST implement mandatory to implement extensions that this document defines. 
+1. It MUST support OpenID Connect Aggregated Claims as an Identity-Agent. 
+1. It MUST act as an OpenID Connect Claims-Consumer to IAs to fetch claims from IAs according to instructions given by the Subject. 
+1. As an Identity-Agent, IdA MUST implement mandatory to implement extensions that this document defines. 
 1. It MAY store the signed claims obtained from IAs with appropriate safeguarding controls. 
 1. To the authenticated Subject, it MUST provide a user interface to show what claims about the subject it stores. 
 1. It MUST NOT provide claims to CCs without the Subject's permission. 
@@ -321,32 +335,32 @@ The provision for the IW is as follows:
 #### c_token 
 
 `c_token` Authorization Request parameter lists individual Claims 
-that the IW asks the IA to be returned from the Claims Endpoint. 
+that the IdA asks the IA to be returned from the Claims Endpoint. 
 This top-level member is a JSON object with the names of the individual Claims being requested 
 as the member names and the values are defined as in 5.5.1 of OpenID Connect 1.0 [OIDC].
 
 ## Discovery Phase
 
-Before registering it self as an OAuth Client to a IA, the IW needs to obtain 
+Before registering it self as an OAuth Client to a IA, the IdA needs to obtain 
 configuration information from the IA, 
 including its Authorization Endpoint and Token Endpoint locations. 
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
-This document adds the following Identity Wallet Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
+This document adds the following Identity-Agent Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
 
-* `claims_endpoint` **Required**. Claims Endpoint. URL at the Issuing Authority that provides signed claims.
+* `claims_endpoint` **Required**. Claims Endpoint. URL at the Issuing-Authority that provides signed claims.
 * `claims_signing_alg_values_supported` **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 * `claims_encryption_alg_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 * `claims_encryption_enc_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
 
-Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the Issuing Authority Metadata:
+Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the Issuing-Authority Metadata:
 
 `claim_types_supported`
 : The JSON array MUST contain the values *normal*, *distributed*, ... .
 
 `claims_supported`
-: A JSON array containing a list of the Claim Names of the Claims that the Identity Wallet MAY be able to supply values for.
+: A JSON array containing a list of the Claim Names of the Claims that the Identity-Agent MAY be able to supply values for.
 
 `claims_parameter_supported`
 : The value MUST be *true* to support the *claims* request parameter.
@@ -358,7 +372,7 @@ Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discov
 : The value MUST be *true* to support the *request_uri* request parameter.
 
 `credential_supported`
-: Boolean value indicating that the Issuing Authority supports the credential issuance flow.
+: Boolean value indicating that the Issuing-Authority supports the credential issuance flow.
 
 
 
@@ -421,7 +435,7 @@ If the IA supports SCIM fromat, the IA MUST advertise it with the following meta
 
 ## Registration Phase
 
-Before starting to make requests to a IA, the IW MUST register itself to the IA. 
+Before starting to make requests to a IA, the IdA MUST register itself to the IA. 
 The registration SHOULD be performed 
 via Dynamic Registration, as described in OpenID Connect Dynamic Client Registration 1.0.  
 
@@ -433,7 +447,7 @@ This documents adds the following Client Metadata to the OpenID Connect Dynamic 
 
 `claims_encrypted_response_enc` **Optional**. JWE `enc` algorithm JWA [JWA] REQUIRED for encrypting Claims responses. If `claims_encrypted_response_enc` is specified, the default for this value is `A128CBC-HS256`. When `claims_encrypted_response_enc` is included, `claims_encrypted_response_alg` MUST also be provided.
 
-Authentication requests to the Issuing Authority's Authorization Endpoint should be signed or signed and encrypted. In order to support a more diverse set of claims, requests for claims should be made using  Request Objects which are signed or signed and encrypted by registering the appropriate values for the following Client Metadata registration parameters:
+Authentication requests to the Issuing-Authority's Authorization Endpoint should be signed or signed and encrypted. In order to support a more diverse set of claims, requests for claims should be made using  Request Objects which are signed or signed and encrypted by registering the appropriate values for the following Client Metadata registration parameters:
 
 - `request_object_signing_alg`
 - `request_object_encryption_alg`
@@ -444,12 +458,12 @@ Authentication requests to the Issuing Authority's Authorization Endpoint should
 
 ### Overview
 
-In this phase, the IW obtains an access token (and optionally refresh token) 
-that is bound to the current user so that the IW can obtain the claims about the current user 
+In this phase, the IdA obtains an access token (and optionally refresh token) 
+that is bound to the current user so that the IdA can obtain the claims about the current user 
 from the IA subsequently without taking the user to the IA and show them the consent dialogue for every CC requests.
 
-1. This has to be done at least once for each IA that a user of an IW who wishes to use the facility this document explains.
-1. To obtain the grant, the IW MUST use OpenID Connect Authentication Request. 
+1. This has to be done at least once for each IA that a user of an IdA who wishes to use the facility this document explains.
+1. To obtain the grant, the IdA MUST use OpenID Connect Authentication Request. 
 
 ** Editor's NOTE:** Originally, it had: The Claims to be granted MUST be specified with `c_token` parameter. 
 
@@ -463,29 +477,29 @@ claimset_format
 : REQUIRED. Determines the format of the signed claim set returned at the end of the flow, values supported by the IA are advertised in their openid-configuration metadata, under the `claimset_formats_supported` attribute.
 
 sub_jwk
-: OPTIONAL. Used when making a Signed Credential Request, defines the key material the IW is requesting the claim set to be bound to and the key responsible for signing the request object. The value is a JSON Object that is a valid [JWK](https://tools.ietf.org/html/rfc7517).
+: OPTIONAL. Used when making a Signed Credential Request, defines the key material the IdA is requesting the claim set to be bound to and the key responsible for signing the request object. The value is a JSON Object that is a valid [JWK](https://tools.ietf.org/html/rfc7517).
 
 ** Editors Note: ** DISCUSS the following paragraph. the parameter `did` should be sent in the claims collection phase rather than here? 
 
 did
-: OPTIONAL. Defines the relationship between the key material the IW is requesting the credential to be bound to and a [decentralized identifier](https://w3c.github.io/did-core/). Processing of this value requires the IA to support the resolution of [decentralized identifiers](https://w3c.github.io/did-core/) which is advertised in their openid-configuration metadata, under the `dids_supported` attribute. The value of this field MUST be a valid [decentralized identifier](https://w3c.github.io/did-core/).
+: OPTIONAL. Defines the relationship between the key material the IdA is requesting the credential to be bound to and a [decentralized identifier](https://w3c.github.io/did-core/). Processing of this value requires the IA to support the resolution of [decentralized identifiers](https://w3c.github.io/did-core/) which is advertised in their openid-configuration metadata, under the `dids_supported` attribute. The value of this field MUST be a valid [decentralized identifier](https://w3c.github.io/did-core/).
 
 ** Editors Note: ** DISCUSS the following paragraph. Normal client authnetication should be a primary choice instead? 
 
-Public private key pairs are used by a requesting IW to establish a means of binding to the resulting signed claim set. 
-An IW making a Claims Request to an IA MUST prove control over this binding mechanism during the request, 
+Public private key pairs are used by a requesting IdA to establish a means of binding to the resulting signed claim set. 
+An IdA making a Claims Request to an IA MUST prove control over this binding mechanism during the request, 
 this is accomplished through the extended usage of a [signed request](https://openid.net/specs/openid-connect-core-1_0.html#SignedRequestObject) defined in OpenID Connect Core.
 
-The IA MUST show a dialogue to the Subject explaining that the IW will be 
+The IA MUST show a dialogue to the Subject explaining that the IdA will be 
 getting signed claims set from this IA as appropriate to provide claims to CCs as directed 
 by the Subject. 
 
-The dialogue MUST provide the link to the `policy_url` provided by the IW during its registration. 
+The dialogue MUST provide the link to the `policy_url` provided by the IdA during its registration. 
 
 The actual act of granting MUST involve active user interaction. 
 
 The grant that is to be obtained in this phase SHOULD be sufficiently large so that it will reduce the 
-number of times that IW needs to take the Subject to the IA to obtain additional grants. 
+number of times that IdA needs to take the Subject to the IA to obtain additional grants. 
 
 ### Token Endpoint Response
 
@@ -513,26 +527,26 @@ The following is a non-normative example of a response from the token endpoint, 
 In Delivery Phase, the claims are delivered to CC. 
 To do so, it typically goes through the following steps: 
 
-1. (Claims Request) An CC makes an OpenID Connect Authentication Request with extension parameters defined in this document to the IW. 
-1. (Request Verification) The IW verifies if the request is valid. 
-1. (Subject Granting) The IW shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
-1. (Claims Collection) The IW accesses relevant Claims Endpoints with Access Tokens to collect signed claims. 
-1. (Claims Delivery) The IW delivers the collected claims through ID Token, UserInfo endpoint, and/or Claims Endpoint if it supports. 
+1. (Claims Request) An CC makes an OpenID Connect Authentication Request with extension parameters defined in this document to the IdA. 
+1. (Request Verification) The IdA verifies if the request is valid. 
+1. (Subject Granting) The IdA shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
+1. (Claims Collection) The IdA accesses relevant Claims Endpoints with Access Tokens to collect signed claims. 
+1. (Claims Delivery) The IdA delivers the collected claims through ID Token, UserInfo endpoint, and/or Claims Endpoint if it supports. 
 1. (Claims Verification) The CC verifies the received response. 
 
 Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the CC requests. 
 This is typically the case when claims are provided through the W3C Verifiable Credentials container. 
 
-### Claims Request by CC to IW
+### Claims Request by CC to IdA
 
 For an CC to request claims according to this document, the CC 
 
-1. MUST use the OpenID Connect Authentication Request with extension parameters defined in this document to the IW; and 
+1. MUST use the OpenID Connect Authentication Request with extension parameters defined in this document to the IdA; and 
 1. MAY use Pushed Authorization Request. 
 
 ### CC authentication and the request verification
 
-Upon receit of the request, the IW 
+Upon receit of the request, the IdA 
 
 1. MUST verify that the request is not tampered and is from a valid registered CC if the request is signed; and 
 1. MUST at least verify that the client_id is valid and make sure 
@@ -542,7 +556,7 @@ NOTE: CC MUST be authenticated at one point or another before completion of the 
 
 ### Subject Granting
 
-After verifying the request, the IW 
+After verifying the request, the IdA 
 
 1. MUST authenticate the Subject if it has not yet been; 
 1. MUST show the Subject what is being requested from the CC; 
@@ -551,13 +565,13 @@ After verifying the request, the IW
 
 ### Claims Collection
 
-The IW collects the required claims from relevant Claims Endpoints. 
+The IdA collects the required claims from relevant Claims Endpoints. 
 This process can be performed before the CC's request, 
-in which case IW stores the obtained signed claim set for a later day use. 
+in which case IdA stores the obtained signed claim set for a later day use. 
 
 The Claims Endpoint is an OAuth 2.0 Protected Resource that when called, 
 returns Claims about the authenticated Subject in the form of a signed claim set. 
-To obtain a claim set on behalf of the Subject, the IW makes a request to the Claims Endpoint using 
+To obtain a claim set on behalf of the Subject, the IdA makes a request to the Claims Endpoint using 
 an Access Token obtained through OpenID Connect Authentication stated above.
 
 Communication with the Credential Endpoint MUST utilize TLS. See Section TBD for more information on using TLS.
@@ -571,7 +585,7 @@ The Claims Endpoint MUST support either MTLS or DPOP.
 
 #### Claims Endpoint Request
 
-For claims collection, the IW 
+For claims collection, the IdA 
 
 1. MUST send OAuth protected resource request to the Claims Endpoint using previously obtained Access Token; 
 1. MUST send `claims` parameter to minimize the collected claims to what is necessary; 
@@ -639,13 +653,13 @@ TODO improve this section
 [Decentralized identifiers](https://w3c.github.io/did-core/) are a resolvable identifier to a set of statements about the [did subject](https://w3c.github.io/did-core/#dfn-did-subjects) including a set of cryptographic material (e.g public keys). Using this cryptographic material, a [decentralized identifier](https://w3c.github.io/did-core/) can be used as an authenticatable identifier in a credential, rather than using a public key directly.
 
 
-An IW submitting a signed Claim Set Request can request, 
-that the resulting claim set be bound to the IW through the usage of [decentralized identifiers](https://w3c.github.io/did-core/) by using the `did` field.
+An IdA submitting a signed Claim Set Request can request, 
+that the resulting claim set be bound to the IdA through the usage of [decentralized identifiers](https://w3c.github.io/did-core/) by using the `did` field.
 
-An IW prior to submitting a claim set request SHOULD validate that the IA supports the resolution of decentralized identifiers 
+An IdA prior to submitting a claim set request SHOULD validate that the IA supports the resolution of decentralized identifiers 
 by retrieving their openid-configuration metadata to check if an attribute of `dids_supported` has a value of `true`.
 
-The IW SHOULD also validate that the IA supports the [did method](https://w3c-ccg.github.io/did-method-registry/) 
+The IdA SHOULD also validate that the IA supports the [did method](https://w3c-ccg.github.io/did-method-registry/) 
 to be used in the request by retrieving their openid-configuration metadata to check if an attribute of `did_methods_supported` contains the required did method.
 
 An IA processing a claim set request featuring a [decentralized identifier](https://w3c.github.io/did-core/) MUST follow the following additional steps to validate the request.
@@ -706,10 +720,10 @@ If the claimset is provided as oidc-jws, the claimset
 1. MUST provide correct content-type of the HTTP response; and 
 1. MUST contain `aud` claim with is value a subset of what was in the request; 
 1. MUST contain iss that is set as the IA's Issuer Identifer URL; 
-1. MUST contain *op_iss* claim whose value is the IW's issuer identifier URL registered to the IA; 
+1. MUST contain *op_iss* claim whose value is the IdA's issuer identifier URL registered to the IA; 
 1. MUST contain *sub* claim that is set to the *uid* claim value if it was in the request; 
 
-NOTE: the combination of *op_iss* and *sub* is used to correlated to the IW response to the CC later. 
+NOTE: the combination of *op_iss* and *sub* is used to correlated to the IdA response to the CC later. 
 
 The following is a non-normative example of such:
 
@@ -835,14 +849,14 @@ The following is a non-normative example of a Claims Endpoint Error Response:
 
 #### Claims Endoint Verification
 
-Upon receit of the response, the IW 
+Upon receit of the response, the IdA 
 
 1. MUST verify ... 
  
 ### Claims Delivery
 
 Once the necessary claim sets were collected, 
-the IW creates the Aggregated Claims response to be returned. 
+the IdA creates the Aggregated Claims response to be returned. 
 
 The response can be returned as ID Token or Userinfo Response ( or Claims Endpoint Response). 
 
