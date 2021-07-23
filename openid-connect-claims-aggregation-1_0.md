@@ -371,20 +371,20 @@ Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discov
 `request_uri_parameter_supported`
 : The value MUST be *true* to support the *request_uri* request parameter.
 
-`credential_supported`
-: Boolean value indicating that the Issuing-Authority supports the credential issuance flow.
+`claimset_supported`
+: Boolean value indicating that the Issuing-Authority supports the claimset flows.
 
 
 
 
-`credential_formats_supported`
-: A JSON array of strings identifying the resulting format of the credential issued at the end of the flow.
+`claimset_formats_supported`
+: A JSON array of strings identifying the resulting format of the claimset issued at the end of the flow.
 
-`credential_claims_supported`
-: A JSON array of strings identifying the claim names supported within an issued credential.
+`claimset_claims_supported`
+: A JSON array of strings identifying the claim names supported within an issued claimset.
 
-`credential_name`
-: A human readable string to identify the name of the credential offered by the provider.
+`claimset_name`
+: A human readable string to identify the name of the claimset offered by the provider.
 
 `dids_supported`
 : Boolean value indicating that the OpenID provider supports the resolution of [decentralized identifiers](https://w3c.github.io/did-core/).
@@ -400,7 +400,7 @@ If the IA suppports W3C Verifaiable Credeintial, the IA MUST advertise it with t
 
 ** Editors Note: Tobias, could you fill in here? **
 
-The following is a non-normative example of the relevant entries in the openid-configuration meta data for an OpenID Provider supporting the credential issuance flow
+The following is a non-normative example of the relevant entries in the openid-configuration meta data for an OpenID Provider supporting the claimset issuance flow
 
 ```
 {
@@ -410,18 +410,18 @@ The following is a non-normative example of the relevant entries in the openid-c
     "did:elem:",
     "did:sov:"
   ],
-  "credential_supported": true,
-  "credential_endpoint": "https://server.example.com/credential",
-  "credential_formats_supported": [
+  "claimset_supported": true,
+  "claimset_endpoint": "https://server.example.com/credential",
+  "claimset_formats_supported": [
     "w3cvc-jsonld",
     "jwt"
   ],
-  "credential_claims_supported": [
+  "claimset_claims_supported": [
     "given_name",
     "last_name",
     "https://www.w3.org/2018/credentials/examples/v1/degree"
   ],
-  "credential_name": "University Credential"
+  "claimset_name": "University Credential"
 }
 ```
 
@@ -477,12 +477,12 @@ claimset_format
 : REQUIRED. Determines the format of the signed claim set returned at the end of the flow, values supported by the IA are advertised in their openid-configuration metadata, under the `claimset_formats_supported` attribute.
 
 sub_jwk
-: OPTIONAL. Used when making a Signed Credential Request, defines the key material the IdA is requesting the claim set to be bound to and the key responsible for signing the request object. The value is a JSON Object that is a valid [JWK](https://tools.ietf.org/html/rfc7517).
+: OPTIONAL. Used when making a Signed Claimset Request, defines the key material the IdA is requesting the claim set to be bound to and the key responsible for signing the request object. The value is a JSON Object that is a valid [JWK](https://tools.ietf.org/html/rfc7517).
 
 ** Editors Note: ** DISCUSS the following paragraph. the parameter `did` should be sent in the claims collection phase rather than here? 
 
 did
-: OPTIONAL. Defines the relationship between the key material the IdA is requesting the credential to be bound to and a [decentralized identifier](https://w3c.github.io/did-core/). Processing of this value requires the IA to support the resolution of [decentralized identifiers](https://w3c.github.io/did-core/) which is advertised in their openid-configuration metadata, under the `dids_supported` attribute. The value of this field MUST be a valid [decentralized identifier](https://w3c.github.io/did-core/).
+: OPTIONAL. Defines the relationship between the key material the IdA is requesting the claimset to be bound to and a [decentralized identifier](https://w3c.github.io/did-core/). Processing of this value requires the IA to support the resolution of [decentralized identifiers](https://w3c.github.io/did-core/) which is advertised in their openid-configuration metadata, under the `dids_supported` attribute. The value of this field MUST be a valid [decentralized identifier](https://w3c.github.io/did-core/).
 
 ** Editors Note: ** DISCUSS the following paragraph. Normal client authnetication should be a primary choice instead? 
 
@@ -509,7 +509,7 @@ with the `code` parameter always being returned with the Authorization Code Flow
 
 On Request to the Token Endpoint the `grant_type` value MUST be `authorization_code` inline with the Authorization Code Flow and the `code` value included as a parameter.
 
-The following is a non-normative example of a response from the token endpoint, whereby the `access_token` authorizes the Credential Holder to request a `credential` from the credential endpoint.
+The following is a non-normative example of a response from the token endpoint, whereby the `access_token` authorizes the Claimset Holder to request a `credential` from the claimset endpoint.
 
 ```
 {
@@ -644,13 +644,13 @@ where the decoded payload of the request parameter is as follows:
 
 The process will be repeated to as many Claims Endpoints as necessary. 
 
-#### Signed Credential Request using a Decentralized Identifier
+#### Signed Claimset Request using a Decentralized Identifier
 
 **Usage of Decentralized Identifiers** 
 
 TODO improve this section
 
-[Decentralized identifiers](https://w3c.github.io/did-core/) are a resolvable identifier to a set of statements about the [did subject](https://w3c.github.io/did-core/#dfn-did-subjects) including a set of cryptographic material (e.g public keys). Using this cryptographic material, a [decentralized identifier](https://w3c.github.io/did-core/) can be used as an authenticatable identifier in a credential, rather than using a public key directly.
+[Decentralized identifiers](https://w3c.github.io/did-core/) are a resolvable identifier to a set of statements about the [did subject](https://w3c.github.io/did-core/#dfn-did-subjects) including a set of cryptographic material (e.g public keys). Using this cryptographic material, a [decentralized identifier](https://w3c.github.io/did-core/) can be used as an authenticatable identifier in a claimset, rather than using a public key directly.
 
 
 An IdA submitting a signed Claim Set Request can request, 
@@ -671,7 +671,7 @@ An IA processing a claim set request featuring a [decentralized identifier](http
 If any of the steps fail then the IA MUST respond to the request with the Error Response parameter, 
 [section 3.1.2.6.](https://openid.net/specs/openid-connect-core-1_0.html#AuthError) with Error code: `invalid_did`.
 
-The following is a non-normative example of requesting the issuance of a credential that uses a decentralized identifier.
+The following is a non-normative example of requesting the issuance of a claimset that uses a decentralized identifier.
 
 ```
 {
@@ -686,7 +686,7 @@ The following is a non-normative example of requesting the issuance of a credent
   },
   "did": "did:example:1234",
   "redirect_uri": "https://Client.example.com/callback",
-  "credential_format": "w3cvc-jsonld"
+  "claimset_format": "w3cvc-jsonld"
 }
 ```
 
@@ -698,7 +698,7 @@ Upon receipt of the request, the Claims Endpoint Response is returned in the top
 JSON payload named `claimset`, 
 of which the format is indicated by another top level member`format`. 
 
-format : REQUIRED. The proof format the credential was returned in. For example `oidc-jws` or `w3cvc-jsonld` or `w3cvc-jwt`.
+format : REQUIRED. The proof format the claimset was returned in. For example `oidc-jws` or `w3cvc-jsonld` or `w3cvc-jwt`.
 claimset : REQUIRED. A cryptographically verifiable proof in the defined proof `format`. Most commonly a Linked Data Proof or a JWS.
 
 The following is a non-normative example: 
@@ -735,7 +735,7 @@ The following is a non-normative example of such:
 ##### Claimset in W3C VC format
 
 Formats of the `claimset` can vary, examples include JSON-LD or JWT based Credentials, 
-the IA SHOULD make their supported credential formats available at their openid-configuration metadata endpoint.
+the IA SHOULD make their supported claimset formats available at their openid-configuration metadata endpoint.
 
 The following is a non-normative example of a claim set issued as a [W3C Verifiable Credential 1.0](https://www.w3.org/TR/vc-data-model/) compliant format in JSON-LD.
 
