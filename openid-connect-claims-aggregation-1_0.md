@@ -357,17 +357,48 @@ including its Authorization Endpoint and Token Endpoint locations.
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
-This document adds the following Identity-Agent Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
+This document adds the following Issuing-Authority Metadata to the OpenID Connect Discovery 1.0 [OpenID.Discovery] response: 
 
-* `claims_endpoint` **Required**. Claims Endpoint. URL at the Issuing-Authority that provides signed claims.
-* `claims_signing_alg_values_supported` **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
-* `claims_encryption_alg_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
-* `claims_encryption_enc_values_supported` **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
+`claims_endpoint` 
+: **Required**. Claims Endpoint. URL at the Issuing-Authority that provides signed claims.
 
-Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the Issuing-Authority Metadata:
+`claims_signing_alg_values_supported` 
+: **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 
-`claim_types_supported`
-: The JSON array MUST contain the values *normal*, *distributed*, ... .
+`claims_encryption_alg_values_supported` 
+: **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (alg values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
+
+`claims_encryption_enc_values_supported` 
+: **Optional**. JSON array containing a list of the  JWE [JWE] encryption algorithms (enc values) JWA [JWA] supported by the Claims Endpoint to encode the Claims in a JWT [JWT]. 
+
+`claimset_supported`
+: **Optional**. Boolean value indicating that the Issuing-Authority supports the claimset flows.
+
+`claimset_formats_supported`
+: **Optional**. A JSON array of strings identifying the resulting format of the claimset issued at the end of the flow.
+
+`claimset_claims_supported`
+: **Optional**. A JSON array of strings identifying the claim names supported within an issued claimset.
+
+`claimset_name`
+: **Optional**. A human-readable string to identify the name of the claimset offered by the provider.
+
+`dids_supported`
+: **Optional**. Boolean value indicating that the OpenID provider supports the resolution of [decentralized identifiers](https://w3c.github.io/did-core/).
+
+`did_methods_supported`
+: **Optional**. A JSON array of strings representing [Decentralized Identifier Methods](https://w3c-ccg.github.io/did-method-registry/) that the OpenID provider supports resolution of.
+
+If the IA supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA],
+the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published
+as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.IDA].
+
+If the IA supports W3C Verifiable Credentials, the IA MUST advertise it with the following metadata:
+
+** Editors Note: Tobias, could you fill in here? **
+
+
+Additionally, the following OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters MUST be included in the Issuing-Authority Metadata:
 
 `claims_supported`
 : A JSON array containing a list of the Claim Names of the Claims that the Identity-Agent MAY be able to supply values for.
@@ -381,37 +412,8 @@ Additionally, the following optional OpenID Connect Discovery 1.0 [OpenID.Discov
 `request_uri_parameter_supported`
 : The value MUST be *true* to support the *request_uri* request parameter.
 
-`claimset_supported`
-: Boolean value indicating that the Issuing-Authority supports the claimset flows.
-
-
-
-
-`claimset_formats_supported`
-: A JSON array of strings identifying the resulting format of the claimset issued at the end of the flow.
-
-`claimset_claims_supported`
-: A JSON array of strings identifying the claim names supported within an issued claimset.
-
-`claimset_name`
-: A human-readable string to identify the name of the claimset offered by the provider.
-
-`dids_supported`
-: Boolean value indicating that the OpenID provider supports the resolution of [decentralized identifiers](https://w3c.github.io/did-core/).
-
-`did_methods_supported`
-: A JSON array of strings representing [Decentralized Identifier Methods](https://w3c-ccg.github.io/did-method-registry/) that the OpenID provider supports resolution of.
-
-If the IA supports OpenID Connect for Identity Assurance 1.0 [OpenID.IDA], 
-the supported OpenID Connect for Identity Assurance 1.0 [OpenID.IDA] features MUST be published 
-as specified in section 7 of OpenID Connect for Identity Assurance 1.0 [OpenID.IDA].
-
-If the IA supports W3C Verifiable Credentials, the IA MUST advertise it with the following metadata: 
-
-** Editors Note: Tobias, could you fill in here? **
 
 The following is a non-normative example of the relevant entries in the openid-configuration metadata for an OpenID Provider supporting the claimset issuance flow
-
 ```
 {
   "dids_supported": true,
