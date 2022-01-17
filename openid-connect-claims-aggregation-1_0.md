@@ -581,13 +581,11 @@ returns Claims about the authenticated Subject in the form of a signed claim set
 To obtain a claim set on behalf of the Subject, the IdA makes a request to the Claims Endpoint using 
 an Access Token obtained through OpenID Connect Authentication stated above.
 
-Communication with the Credential Endpoint MUST utilize TLS. See Section TBD for more information on using TLS.
+Communication with the Claims Endpoint MUST utilize TLS. See Section TBD for more information on using TLS.
 
 The Claims Endpoint MUST support the use of HTTP POST methods defined in RFC 2616 [RFC2616].
 
 The Claims Endpoint SHOULD support the use of Cross Origin Resource Sharing (CORS) [CORS] and or other methods as appropriate to enable JavaScript Clients to access the endpoint. 
-
-The Claims Endpoint MUST support either MTLS or DPOP. 
 
 
 ### Claims Endpoint Request
