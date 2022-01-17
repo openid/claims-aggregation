@@ -119,7 +119,7 @@ This is done through one "IdA User Setup Phase" per IA that the IdA obtains the 
 from the subject to obtain claims from the IA for the purpose of creating aggregated and distributed 
 claims response for future CC requests in which IdA will collect a new consent from the subject. 
 
-The mechanism used for this is to obtain an access token and a refresh token that corresponds 
+The mechanism used for this is to obtain an access token that corresponds 
 to a suitably wide scope for the purpose. While the claims at the time of an CC request can be 
 obtained from the UserInfo endpoint, this document defines a new endpoint called claims endpoint. 
 It is almost the same as the UserInfo endpoint, but there are a few important differences: 
@@ -129,6 +129,9 @@ It is almost the same as the UserInfo endpoint, but there are a few important di
 1. It includes the `iss` claim. (Userinfo Endpoint does not)
 1. It returns signed response. 
 1. It allows multiple schema types for its response. (e.g, JWT and W3C Verifiable Credentials formats)
+
+Note: Refresh tokens are optional in this specification, but profiles and trust frameworks may require the use of 
+refresh tokens. 
 
 Note that while Userinfo Endpoint was conceived to support multiple response types, 
 e.g., support for SCIM schema, 
@@ -146,7 +149,7 @@ There are four phases defined in this document.
 
 1. IA Discovery Phase: IdA discovers IA metadata. 
 1. IdA Registration Phase: IdA registers to IA as an CC. 
-1. Setup Phase: IdA obtains the access and refresh tokens from IA by the permission of the subject. 
+1. Setup Phase: IdA obtains the access token from IA by the permission of the subject. 
 1. CC Phase: 
     1. CC makes authentication and claims request, 
 	1. IdA fetches relevant claim sets from IAs, 
@@ -289,7 +292,7 @@ to the claim sets that it provides.
 The provision for the Issuing-Authority are as follows: 
 
 1. It MUST implement Claims Endpoint. 
-1. It MUST support the issuance of Access Tokens and Refresh Tokens for the Claims Endpoint. 
+1. It MUST support the issuance of Access Tokens for the Claims Endpoint. 
 1. It MUST support the Discovery Metadata extension defined by this document. 
 1. It MUST support the registration of the IdAs with extensions defined in this document. 
 1. It SHOULD support the registration of the IdAs through Dynamic Registration. 
@@ -465,7 +468,7 @@ Authentication requests to the Issuing-Authority's Authorization Endpoint should
 
 ## Overview
 
-In this phase, the IdA obtains an access token (and optionally refresh token) 
+In this phase, the IdA obtains an access token 
 that is bound to the current user so that the IdA can obtain the claims about the current user 
 from the IA subsequently without taking the user to the IA and show them the consent dialogue for every CC requests.
 
@@ -888,6 +891,21 @@ For Claims Verification,
 # Security Considerations
 
 TBD
+
+# Implementation Considerations
+
+## Refresh Tokens
+For security purposes, access tokens may have restrictions associated with them at issuance.
+
+Refresh tokens may be required to obtain new access tokens in the following situations:
+* request issuance of a credential with different format
+* request issuance of a credential bound to different key material
+* requesting a new credential because the previous credential expired 
+  (might require new approval but could be useful if the issuer wants to issue very short-lived credentials)
+* requesting a single use credential (because the key/proof method does not support uncorrelatable identifiers towards verifiers).
+* request issuance of a particular credential out of several approved credentials 
+  (especially needed if the credential issuance is an operation issuing a single credential at a time)
+
 
 # Privacy Considerations
 
