@@ -1,5 +1,5 @@
 %%%
-title = "OpenID Connect Claims Aggregation Draft 03"
+title = "OpenID Connect Claims Aggregation 1.0 - Draft 03"
 abbrev = "oidc-ca"
 ipr = "none"
 workgroup = "connect"
@@ -52,46 +52,6 @@ This document specifies the methods for
 This document is not an OIDF International Standard. It is distributed for review and comment. It is subject to change without notice and may not be referred to as an International Standard.
 
 Recipients of this draft are invited to submit, with their comments, notification of any relevant patent rights of which they are aware and to provide supporting documentation.
-
-.# Notices
-
-Copyright (c) 2025 The OpenID Foundation.
-
-The OpenID Foundation (OIDF) grants to any Contributor, developer,
-implementer, or other interested party a non-exclusive, royalty free,
-worldwide copyright license to reproduce, prepare derivative works from,
-distribute, perform and display, this Implementers Draft, Final
-Specification, or Final Specification Incorporating Errata Corrections
-solely for the purposes of (i) developing specifications,
-and (ii) implementing Implementers Drafts, Final Specifications,
-and Final Specification Incorporating Errata Corrections based
-on such documents, provided that attribution be made to the OIDF as the
-source of the material, but that such attribution does not indicate an
-endorsement by the OIDF.
-
-The technology described in this specification was made available
-from contributions from various sources, including members of the OpenID
-Foundation and others. Although the OpenID Foundation has taken steps to
-help ensure that the technology is available for distribution, it takes
-no position regarding the validity or scope of any intellectual property
-or other rights that might be claimed to pertain to the implementation
-or use of the technology described in this specification or the extent
-to which any license under such rights might or might not be available;
-neither does it represent that it has made any independent effort to
-identify any such rights. The OpenID Foundation and the contributors to
-this specification make no (and hereby expressly disclaim any)
-warranties (express, implied, or otherwise), including implied
-warranties of merchantability, non-infringement, fitness for a
-particular purpose, or title, related to this specification, and the
-entire risk as to implementing this specification is assumed by the
-implementer. The OpenID Intellectual Property Rights policy
-(found at openid.net) requires
-contributors to offer a patent promise not to assert certain patent
-claims against other contributors and against implementers.
-OpenID invites any interested party to bring to its attention any
-copyrights, patents, patent applications, or other proprietary rights
-that may cover technology that may be required to practice this
-specification.
 
 .# Foreword
 
@@ -245,7 +205,7 @@ In this document, there are four main actors.
 
 They are topologically connected as in the following diagram.
 
-!---
+
 ~~~ ascii-art
                +---------+
     +----------| Subject |--------+
@@ -454,6 +414,47 @@ Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the su
 
 
 {backmatter}
+
+# Notices
+
+Copyright (c) 2025 The OpenID Foundation.
+
+The OpenID Foundation (OIDF) grants to any Contributor, developer,
+implementer, or other interested party a non-exclusive, royalty free,
+worldwide copyright license to reproduce, prepare derivative works from,
+distribute, perform and display, this Implementers Draft, Final
+Specification, or Final Specification Incorporating Errata Corrections
+solely for the purposes of (i) developing specifications,
+and (ii) implementing Implementers Drafts, Final Specifications,
+and Final Specification Incorporating Errata Corrections based
+on such documents, provided that attribution be made to the OIDF as the
+source of the material, but that such attribution does not indicate an
+endorsement by the OIDF.
+
+The technology described in this specification was made available
+from contributions from various sources, including members of the OpenID
+Foundation and others. Although the OpenID Foundation has taken steps to
+help ensure that the technology is available for distribution, it takes
+no position regarding the validity or scope of any intellectual property
+or other rights that might be claimed to pertain to the implementation
+or use of the technology described in this specification or the extent
+to which any license under such rights might or might not be available;
+neither does it represent that it has made any independent effort to
+identify any such rights. The OpenID Foundation and the contributors to
+this specification make no (and hereby expressly disclaim any)
+warranties (express, implied, or otherwise), including implied
+warranties of merchantability, non-infringement, fitness for a
+particular purpose, or title, related to this specification, and the
+entire risk as to implementing this specification is assumed by the
+implementer. The OpenID Intellectual Property Rights policy
+(found at openid.net) requires
+contributors to offer a patent promise not to assert certain patent
+claims against other contributors and against implementers.
+OpenID invites any interested party to bring to its attention any
+copyrights, patents, patent applications, or other proprietary rights
+that may cover technology that may be required to practice this
+specification.
+
 
 # Acknowledgements
 
