@@ -3,7 +3,7 @@
 <rfc version="3" ipr="none" docName="openid-connect-claims-aggregation-1_0" submissionType="IETF" category="std" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true" consensus="true">
 
 <front>
-<title abbrev="oidc-ca">OpenID Connect Claims Aggregation Draft 03</title><seriesInfo value="openid-connect-claims-aggregation-1_0" status="standard" name="OpenID-Draft"></seriesInfo>
+<title abbrev="oidc-ca">OpenID Connect Claims Aggregation 1.0 - Draft 03</title><seriesInfo value="openid-connect-claims-aggregation-1_0" status="standard" name="OpenID-Draft"></seriesInfo>
 <author initials="N." surname="Sakimura" fullname="Nat Sakimura"><organization>NAT.Consulting</organization><address><postal><street></street>
 </postal><email>nat@nat.consulting</email>
 </address></author><author initials="E." surname="Jay" fullname="Edmund Jay"><organization>Illumila</organization><address><postal><street></street>
@@ -33,44 +33,6 @@
 <note><name>Warning</name>
 <t>This document is not an OIDF International Standard. It is distributed for review and comment. It is subject to change without notice and may not be referred to as an International Standard.</t>
 <t>Recipients of this draft are invited to submit, with their comments, notification of any relevant patent rights of which they are aware and to provide supporting documentation.</t>
-</note>
-
-<note><name>Notices</name>
-<t>Copyright (c) 2025 The OpenID Foundation.</t>
-<t>The OpenID Foundation (OIDF) grants to any Contributor, developer,
-implementer, or other interested party a non-exclusive, royalty free,
-worldwide copyright license to reproduce, prepare derivative works from,
-distribute, perform and display, this Implementers Draft, Final
-Specification, or Final Specification Incorporating Errata Corrections
-solely for the purposes of (i) developing specifications,
-and (ii) implementing Implementers Drafts, Final Specifications,
-and Final Specification Incorporating Errata Corrections based
-on such documents, provided that attribution be made to the OIDF as the
-source of the material, but that such attribution does not indicate an
-endorsement by the OIDF.</t>
-<t>The technology described in this specification was made available
-from contributions from various sources, including members of the OpenID
-Foundation and others. Although the OpenID Foundation has taken steps to
-help ensure that the technology is available for distribution, it takes
-no position regarding the validity or scope of any intellectual property
-or other rights that might be claimed to pertain to the implementation
-or use of the technology described in this specification or the extent
-to which any license under such rights might or might not be available;
-neither does it represent that it has made any independent effort to
-identify any such rights. The OpenID Foundation and the contributors to
-this specification make no (and hereby expressly disclaim any)
-warranties (express, implied, or otherwise), including implied
-warranties of merchantability, non-infringement, fitness for a
-particular purpose, or title, related to this specification, and the
-entire risk as to implementing this specification is assumed by the
-implementer. The OpenID Intellectual Property Rights policy
-(found at openid.net) requires
-contributors to offer a patent promise not to assert certain patent
-claims against other contributors and against implementers.
-OpenID invites any interested party to bring to its attention any
-copyrights, patents, patent applications, or other proprietary rights
-that may cover technology that may be required to practice this
-specification.</t>
 </note>
 
 <note><name>Foreword</name>
@@ -196,7 +158,6 @@ capitals, as shown here.</t>
 <li>RP that verifies and consumes the provided claim sets.</li>
 </ol>
 <t>They are topologically connected as in the following diagram.</t>
-<t>!---</t>
 <figure><name>Relationships among actors
 </name>
 <sourcecode type="ascii-art">               +---------+
@@ -405,6 +366,99 @@ the OP creates the Aggregated Claims response to be returned as described in 5.6
 </middle>
 
 <back>
+
+<section anchor="notices"><name>Notices</name>
+<t>Copyright (c) 2025 The OpenID Foundation.</t>
+<t>The OpenID Foundation (OIDF) grants to any Contributor, developer,
+implementer, or other interested party a non-exclusive, royalty free,
+worldwide copyright license to reproduce, prepare derivative works from,
+distribute, perform and display, this Implementers Draft, Final
+Specification, or Final Specification Incorporating Errata Corrections
+solely for the purposes of (i) developing specifications,
+and (ii) implementing Implementers Drafts, Final Specifications,
+and Final Specification Incorporating Errata Corrections based
+on such documents, provided that attribution be made to the OIDF as the
+source of the material, but that such attribution does not indicate an
+endorsement by the OIDF.</t>
+<t>The technology described in this specification was made available
+from contributions from various sources, including members of the OpenID
+Foundation and others. Although the OpenID Foundation has taken steps to
+help ensure that the technology is available for distribution, it takes
+no position regarding the validity or scope of any intellectual property
+or other rights that might be claimed to pertain to the implementation
+or use of the technology described in this specification or the extent
+to which any license under such rights might or might not be available;
+neither does it represent that it has made any independent effort to
+identify any such rights. The OpenID Foundation and the contributors to
+this specification make no (and hereby expressly disclaim any)
+warranties (express, implied, or otherwise), including implied
+warranties of merchantability, non-infringement, fitness for a
+particular purpose, or title, related to this specification, and the
+entire risk as to implementing this specification is assumed by the
+implementer. The OpenID Intellectual Property Rights policy
+(found at openid.net) requires
+contributors to offer a patent promise not to assert certain patent
+claims against other contributors and against implementers.
+OpenID invites any interested party to bring to its attention any
+copyrights, patents, patent applications, or other proprietary rights
+that may cover technology that may be required to practice this
+specification.</t>
+</section>
+
+<section anchor="acknowledgements"><name>Acknowledgements</name>
+<t>We would like to thank the following people for their valuable feedback and contributions that helped to evolve this specification.</t>
+<t>[[TBD]]</t>
+</section>
+
+<section anchor="document-history"><name>Document History</name>
+<t>[[ To be removed from the final specification ]]</t>
+<t>-03</t>
+
+<ul spacing="compact">
+<li><t>Simplified claims aggregation</t>
+
+<ul spacing="compact">
+<li>Rollback changes introduced in version 02</li>
+</ul></li>
+<li>Removed Claims Endpoint and related metadata and registration options</li>
+<li>Reuses Userinfo endpoint at Claims Provider to return aggregation claims</li>
+<li>Removed c_token in claims object</li>
+</ul>
+<t>-02</t>
+
+<ul spacing="compact">
+<li><t>defined new names for actors</t>
+
+<ul spacing="compact">
+<li>OpenID Provider (OP) -&gt; Identity Wallet (IW)</li>
+<li>Claims Provider (CP) -&gt; Issuing Authority (IA)</li>
+<li>Relying Party (RP) -&gt; Claims Consumer (CC)</li>
+</ul></li>
+<li><t>Claims endpoint response formats allows multiple schema types (W3C VC, JWT)</t>
+
+<ul spacing="compact">
+<li>Added 'claimset_format', 'sub_jwk', 'did' to authorization request parameters</li>
+<li>Added 'format' to claims endpoint response</li>
+</ul></li>
+<li><t>Added new requirements for claims endpoint</t>
+
+<ul spacing="compact">
+<li>MTLS or DPOP for sender constrain tokens</li>
+<li>Support OID4IDA claims</li>
+<li>Support W3C VC response format</li>
+</ul></li>
+<li>Support for DIDs in request/response</li>
+</ul>
+<t>-01</t>
+
+<ul spacing="compact">
+<li>initial revision</li>
+<li>defined claims endpoint &amp; discovery metadata</li>
+<li>defined registration of claims endpoint response signature and encryption algs</li>
+<li>defined c_token in claims object to request claims from claims endpoint</li>
+<li></li>
+</ul>
+</section>
 
 </back>
 

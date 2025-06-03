@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta content="Common,Latin" name="scripts">
 <meta content="initial-scale=1.0" name="viewport">
-<title>OpenID Connect Claims Aggregation Draft 03</title>
+<title>OpenID Connect Claims Aggregation 1.0 - Draft 03</title>
 <meta content="Nat Sakimura" name="author">
 <meta content="Edmund Jay" name="author">
 <meta content="
@@ -1231,7 +1231,7 @@ li > p:last-of-type:only-child {
 <dd class="workgroup">connect</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2025-05-12" class="published">12 May 2025</time>
+<time datetime="2025-05-29" class="published">29 May 2025</time>
     </dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
@@ -1246,7 +1246,7 @@ li > p:last-of-type:only-child {
 </dd>
 </dl>
 </div>
-<h1 id="title">OpenID Connect Claims Aggregation Draft 03</h1>
+<h1 id="title">OpenID Connect Claims Aggregation 1.0 - Draft 03</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">OpenID Providers within OpenID Connect assume many roles, one of these is providing End-User claims to relying parties at the consent of the End-User such as their name or date of birth. OpenID Connect defines multiple models under which claims are provided and relied upon by a relying parties, including simple, aggregated and distributed claims. This document focuses on elaborating upon the aggregated model outlined in section 5.6.2 of OpenID Connect core by defining the full life-cycle of aggregated claims and the new roles of the entities involved in an aggregated claims model.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1274,130 +1274,90 @@ li > p:last-of-type:only-child {
 <p id="section-note.1-2">Recipients of this draft are invited to submit, with their comments, notification of any relevant patent rights of which they are aware and to provide supporting documentation.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
 </section>
 <section class="note" id="section-note.2">
-      <h2 id="name-notices">
-<a href="#name-notices" class="section-name selfRef">Notices</a>
-      </h2>
-<p id="section-note.2-1">Copyright (c) 2025 The OpenID Foundation.<a href="#section-note.2-1" class="pilcrow">¶</a></p>
-<p id="section-note.2-2">The OpenID Foundation (OIDF) grants to any Contributor, developer,
-implementer, or other interested party a non-exclusive, royalty free,
-worldwide copyright license to reproduce, prepare derivative works from,
-distribute, perform and display, this Implementers Draft, Final
-Specification, or Final Specification Incorporating Errata Corrections
-solely for the purposes of (i) developing specifications,
-and (ii) implementing Implementers Drafts, Final Specifications,
-and Final Specification Incorporating Errata Corrections based
-on such documents, provided that attribution be made to the OIDF as the
-source of the material, but that such attribution does not indicate an
-endorsement by the OIDF.<a href="#section-note.2-2" class="pilcrow">¶</a></p>
-<p id="section-note.2-3">The technology described in this specification was made available
-from contributions from various sources, including members of the OpenID
-Foundation and others. Although the OpenID Foundation has taken steps to
-help ensure that the technology is available for distribution, it takes
-no position regarding the validity or scope of any intellectual property
-or other rights that might be claimed to pertain to the implementation
-or use of the technology described in this specification or the extent
-to which any license under such rights might or might not be available;
-neither does it represent that it has made any independent effort to
-identify any such rights. The OpenID Foundation and the contributors to
-this specification make no (and hereby expressly disclaim any)
-warranties (express, implied, or otherwise), including implied
-warranties of merchantability, non-infringement, fitness for a
-particular purpose, or title, related to this specification, and the
-entire risk as to implementing this specification is assumed by the
-implementer. The OpenID Intellectual Property Rights policy
-(found at openid.net) requires
-contributors to offer a patent promise not to assert certain patent
-claims against other contributors and against implementers.
-OpenID invites any interested party to bring to its attention any
-copyrights, patents, patent applications, or other proprietary rights
-that may cover technology that may be required to practice this
-specification.<a href="#section-note.2-3" class="pilcrow">¶</a></p>
-</section>
-<section class="note" id="section-note.3">
       <h2 id="name-foreword">
 <a href="#name-foreword" class="section-name selfRef">Foreword</a>
       </h2>
-<p id="section-note.3-1">The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.<a href="#section-note.3-1" class="pilcrow">¶</a></p>
+<p id="section-note.2-1">The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.<a href="#section-note.2-1" class="pilcrow">¶</a></p>
 </section>
-<section class="note" id="section-note.4">
+<section class="note" id="section-note.3">
       <h2 id="name-introduction">
 <a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-note.4-1">OpenID Connect is a selective claims disclosure mechanism. When a set of claims included in its response is about
+<p id="section-note.3-1">OpenID Connect is a selective claims disclosure mechanism. When a set of claims included in its response is about
 an entity authentication event, it works as an entity authentication federation mechanism, but it can deliver
-other claims selected by the subject as well.<a href="#section-note.4-1" class="pilcrow">¶</a></p>
-<p id="section-note.4-2">In the OpenID Connect specification, it is assumed that there are many sources of claims.
+other claims selected by the subject as well.<a href="#section-note.3-1" class="pilcrow">¶</a></p>
+<p id="section-note.3-2">In the OpenID Connect specification, it is assumed that there are many sources of claims.
 Each claim is associated with its authoritative source so there naturally will be many authoritative sources.
 Claim sources can be corroborative, i.e., not authoritative, as well.
 In total, there will be many Claim Set sources in OpenID Connect Framework.
 These Claim sources are called Claims Providers in OpenID Connect.
 Claims Provider (CP) is just an OpenID Provider (OP) but it does not provide the claims about the current authentication event
 and its associated subject identifier authoritatively. Note that Claims Provider can act as an OpenID Provider in other transactions.
-Whether it is called OP or CP is depending on their role in a particular transaction.<a href="#section-note.4-2" class="pilcrow">¶</a></p>
-<p id="section-note.4-3">There are four main actors in the OpenID Connect aggregated claims model.<a href="#section-note.4-3" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="compact type-1" id="section-note.4-4">
-<li id="section-note.4-4.1">Subject (User)<a href="#section-note.4-4.1" class="pilcrow">¶</a>
+Whether it is called OP or CP is depending on their role in a particular transaction.<a href="#section-note.3-2" class="pilcrow">¶</a></p>
+<p id="section-note.3-3">There are four main actors in the OpenID Connect aggregated claims model.<a href="#section-note.3-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="compact type-1" id="section-note.3-4">
+<li id="section-note.3-4.1">Subject (User)<a href="#section-note.3-4.1" class="pilcrow">¶</a>
 </li>
-        <li id="section-note.4-4.2">OpenID Provider (OP) that provides claims about the subject authentication event and provides signed claim sets obtained from other Claims Providers<a href="#section-note.4-4.2" class="pilcrow">¶</a>
+        <li id="section-note.3-4.2">OpenID Provider (OP) that provides claims about the subject authentication event and provides signed claim sets obtained from other Claims Providers<a href="#section-note.3-4.2" class="pilcrow">¶</a>
 </li>
-        <li id="section-note.4-4.3">Claims Providers (CP) that provides claims<a href="#section-note.4-4.3" class="pilcrow">¶</a>
+        <li id="section-note.3-4.3">Claims Providers (CP) that provides claims<a href="#section-note.3-4.3" class="pilcrow">¶</a>
 </li>
-        <li id="section-note.4-4.4">Relying Party (RP) that verifies and consumes the provided claim sets.<a href="#section-note.4-4.4" class="pilcrow">¶</a>
+        <li id="section-note.3-4.4">Relying Party (RP) that verifies and consumes the provided claim sets.<a href="#section-note.3-4.4" class="pilcrow">¶</a>
 </li>
       </ol>
-<p id="section-note.4-5">An OP can provide an RP the claims by value or by reference.<a href="#section-note.4-5" class="pilcrow">¶</a></p>
-<p id="section-note.4-6">By value is the case where an OP collects claims and their values
+<p id="section-note.3-5">An OP can provide an RP the claims by value or by reference.<a href="#section-note.3-5" class="pilcrow">¶</a></p>
+<p id="section-note.3-6">By value is the case where an OP collects claims and their values
 from CPs and aggregate them in one package to provide to the RP.
-This model is called Aggregated Claims Model.<a href="#section-note.4-6" class="pilcrow">¶</a></p>
-<p id="section-note.4-7">By reference is the case where the OP does not collect and provide the value
+This model is called Aggregated Claims Model.<a href="#section-note.3-6" class="pilcrow">¶</a></p>
+<p id="section-note.3-7">By reference is the case where the OP does not collect and provide the value
 but just provide the reference and its access information to the RP.
-This model is called Distributed Claims Model.<a href="#section-note.4-7" class="pilcrow">¶</a></p>
-<p id="section-note.4-8">Another feature that this document provides is the way to avoid multiple consent screen
+This model is called Distributed Claims Model.<a href="#section-note.3-7" class="pilcrow">¶</a></p>
+<p id="section-note.3-8">Another feature that this document provides is the way to avoid multiple consent screen
 per RP authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model
 naively, it may result in many consent screens per RP request.
 For example, if four CPs and one OP is involved in the request, then, there may be five consent screens.
 This is too onerous. This document defines a mechanism to consolidate it into one consent screen.
 This is done through one "OP User Setup Phase" per CP that the OP obtains the consent
 from the subject to obtain claims from the CP for the purpose of creating aggregated
-claims response for future RP requests in which OP will collect a new consent from the subject.<a href="#section-note.4-8" class="pilcrow">¶</a></p>
-<p id="section-note.4-9">The mechanism used for this is to obtain an access token and a refresh token that corresponds
-to a suitably wide scope for the purpose.<a href="#section-note.4-9" class="pilcrow">¶</a></p>
-<p id="section-note.4-10">The claims are returned from the Clams Provider's UserInfo endpoint and are always signed.<a href="#section-note.4-10" class="pilcrow">¶</a></p>
-<p id="section-note.4-11">Note: Refresh tokens are optional in this specification, but profiles and trust frameworks may require the use of
-refresh tokens.<a href="#section-note.4-11" class="pilcrow">¶</a></p>
-<p id="section-note.4-12">There are four phases defined in this document.<a href="#section-note.4-12" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="compact type-1" id="section-note.4-13">
-<li id="section-note.4-13.1">CP Discovery Phase: OP discovers CP metadata.<a href="#section-note.4-13.1" class="pilcrow">¶</a>
+claims response for future RP requests in which OP will collect a new consent from the subject.<a href="#section-note.3-8" class="pilcrow">¶</a></p>
+<p id="section-note.3-9">The mechanism used for this is to obtain an access token and a refresh token that corresponds
+to a suitably wide scope for the purpose.<a href="#section-note.3-9" class="pilcrow">¶</a></p>
+<p id="section-note.3-10">The claims are returned from the Clams Provider's UserInfo endpoint and are always signed.<a href="#section-note.3-10" class="pilcrow">¶</a></p>
+<p id="section-note.3-11">Note: Refresh tokens are optional in this specification, but profiles and trust frameworks may require the use of
+refresh tokens.<a href="#section-note.3-11" class="pilcrow">¶</a></p>
+<p id="section-note.3-12">There are four phases defined in this document.<a href="#section-note.3-12" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="compact type-1" id="section-note.3-13">
+<li id="section-note.3-13.1">CP Discovery Phase: OP discovers CP metadata.<a href="#section-note.3-13.1" class="pilcrow">¶</a>
 </li>
-        <li id="section-note.4-13.2">OP Registration Phase: OP registers to CP as an RP.<a href="#section-note.4-13.2" class="pilcrow">¶</a>
+        <li id="section-note.3-13.2">OP Registration Phase: OP registers to CP as an RP.<a href="#section-note.3-13.2" class="pilcrow">¶</a>
 </li>
-        <li id="section-note.4-13.3">Setup Phase: OP obtains the access and refresh tokens from CP by the permission of the subject.<a href="#section-note.4-13.3" class="pilcrow">¶</a>
+        <li id="section-note.3-13.3">Setup Phase: OP obtains the access and refresh tokens from CP by the permission of the subject.<a href="#section-note.3-13.3" class="pilcrow">¶</a>
 </li>
-        <li id="section-note.4-13.4">
-          <p id="section-note.4-13.4.1">RP Phase:<a href="#section-note.4-13.4.1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="compact type-1" id="section-note.4-13.4.2">
-<li id="section-note.4-13.4.2.1">RP makes authentication and claims request,<a href="#section-note.4-13.4.2.1" class="pilcrow">¶</a>
+        <li id="section-note.3-13.4">
+          <p id="section-note.3-13.4.1">RP Phase:<a href="#section-note.3-13.4.1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="compact type-1" id="section-note.3-13.4.2">
+<li id="section-note.3-13.4.2.1">RP makes authentication and claims request,<a href="#section-note.3-13.4.2.1" class="pilcrow">¶</a>
 </li>
-            <li id="section-note.4-13.4.2.2">OP fetches relevant claim sets from CPs,<a href="#section-note.4-13.4.2.2" class="pilcrow">¶</a>
+            <li id="section-note.3-13.4.2.2">OP fetches relevant claim sets from CPs,<a href="#section-note.3-13.4.2.2" class="pilcrow">¶</a>
 </li>
-            <li id="section-note.4-13.4.2.3">OP respond to the RP<a href="#section-note.4-13.4.2.3" class="pilcrow">¶</a>
+            <li id="section-note.3-13.4.2.3">OP respond to the RP<a href="#section-note.3-13.4.2.3" class="pilcrow">¶</a>
 </li>
-            <li id="section-note.4-13.4.2.4">the RP verifies the response.<a href="#section-note.4-13.4.2.4" class="pilcrow">¶</a>
+            <li id="section-note.3-13.4.2.4">the RP verifies the response.<a href="#section-note.3-13.4.2.4" class="pilcrow">¶</a>
 </li>
           </ol>
 </li>
       </ol>
-<p id="section-note.4-14">Intended reader of this document is the developer and systems architect who builds attributes and claims base systems.<a href="#section-note.4-14" class="pilcrow">¶</a></p>
+<p id="section-note.3-14">Intended reader of this document is the developer and systems architect who builds attributes and claims base systems.<a href="#section-note.3-14" class="pilcrow">¶</a></p>
 </section>
-<section class="note" id="section-note.5">
+<section class="note" id="section-note.4">
       <h2 id="name-notational-conventions">
 <a href="#name-notational-conventions" class="section-name selfRef">Notational Conventions</a>
       </h2>
-<p id="section-note.5-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+<p id="section-note.4-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
 "OPTIONAL" in this document are to be interpreted as described in BCP
 14 [RFC2119] [RFC8174] when, and only when, they appear in all
-capitals, as shown here.<a href="#section-note.5-1" class="pilcrow">¶</a></p>
+capitals, as shown here.<a href="#section-note.4-1" class="pilcrow">¶</a></p>
 </section>
 <div id="toc">
 <section id="section-toc.1">
@@ -1483,7 +1443,16 @@ capitals, as shown here.<a href="#section-note.5-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-notices" class="internal xref">Notices</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-acknowledgements" class="internal xref">Acknowledgements</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
+            <p id="section-toc.1-1.14.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
+            <p id="section-toc.1-1.15.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1565,9 +1534,8 @@ capitals, as shown here.<a href="#section-note.5-1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-5-3">They are topologically connected as in the following diagram.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">!---<a href="#section-5-4" class="pilcrow">¶</a></p>
 <span id="name-relationships-among-actors"></span><figure id="figure-1">
-        <div class="lang-ascii-art sourcecode" id="section-5-5.1">
+        <div class="lang-ascii-art sourcecode" id="section-5-4.1">
 <pre>               +---------+
     +----------| Subject |--------+
     | grants   +---------+        |
@@ -1875,8 +1843,131 @@ the OP creates the Aggregated Claims response to be returned as described in 5.6
 <p id="section-11-1">Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the subject using the <code>sub</code> value in the JWT included in the aggregated claim.<a href="#section-11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="authors-addresses">
+<div id="notices">
 <section id="appendix-A">
+      <h2 id="name-notices">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-notices" class="section-name selfRef">Notices</a>
+      </h2>
+<p id="appendix-A-1">Copyright (c) 2025 The OpenID Foundation.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">The OpenID Foundation (OIDF) grants to any Contributor, developer,
+implementer, or other interested party a non-exclusive, royalty free,
+worldwide copyright license to reproduce, prepare derivative works from,
+distribute, perform and display, this Implementers Draft, Final
+Specification, or Final Specification Incorporating Errata Corrections
+solely for the purposes of (i) developing specifications,
+and (ii) implementing Implementers Drafts, Final Specifications,
+and Final Specification Incorporating Errata Corrections based
+on such documents, provided that attribution be made to the OIDF as the
+source of the material, but that such attribution does not indicate an
+endorsement by the OIDF.<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-3">The technology described in this specification was made available
+from contributions from various sources, including members of the OpenID
+Foundation and others. Although the OpenID Foundation has taken steps to
+help ensure that the technology is available for distribution, it takes
+no position regarding the validity or scope of any intellectual property
+or other rights that might be claimed to pertain to the implementation
+or use of the technology described in this specification or the extent
+to which any license under such rights might or might not be available;
+neither does it represent that it has made any independent effort to
+identify any such rights. The OpenID Foundation and the contributors to
+this specification make no (and hereby expressly disclaim any)
+warranties (express, implied, or otherwise), including implied
+warranties of merchantability, non-infringement, fitness for a
+particular purpose, or title, related to this specification, and the
+entire risk as to implementing this specification is assumed by the
+implementer. The OpenID Intellectual Property Rights policy
+(found at openid.net) requires
+contributors to offer a patent promise not to assert certain patent
+claims against other contributors and against implementers.
+OpenID invites any interested party to bring to its attention any
+copyrights, patents, patent applications, or other proprietary rights
+that may cover technology that may be required to practice this
+specification.<a href="#appendix-A-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="acknowledgements">
+<section id="appendix-B">
+      <h2 id="name-acknowledgements">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-acknowledgements" class="section-name selfRef">Acknowledgements</a>
+      </h2>
+<p id="appendix-B-1">We would like to thank the following people for their valuable feedback and contributions that helped to evolve this specification.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">[[TBD]]<a href="#appendix-B-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-C">
+      <h2 id="name-document-history">
+<a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+<p id="appendix-C-2">-03<a href="#appendix-C-2" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-3.1">
+          <p id="appendix-C-3.1.1">Simplified claims aggregation<a href="#appendix-C-3.1.1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-3.1.2.1">Rollback changes introduced in version 02<a href="#appendix-C-3.1.2.1" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="compact" id="appendix-C-3.2">Removed Claims Endpoint and related metadata and registration options<a href="#appendix-C-3.2" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="appendix-C-3.3">Reuses Userinfo endpoint at Claims Provider to return aggregation claims<a href="#appendix-C-3.3" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="appendix-C-3.4">Removed c_token in claims object<a href="#appendix-C-3.4" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="appendix-C-4">-02<a href="#appendix-C-4" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-5.1">
+          <p id="appendix-C-5.1.1">defined new names for actors<a href="#appendix-C-5.1.1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-5.1.2.1">OpenID Provider (OP) -&gt; Identity Wallet (IW)<a href="#appendix-C-5.1.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="appendix-C-5.1.2.2">Claims Provider (CP) -&gt; Issuing Authority (IA)<a href="#appendix-C-5.1.2.2" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="appendix-C-5.1.2.3">Relying Party (RP) -&gt; Claims Consumer (CC)<a href="#appendix-C-5.1.2.3" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="compact" id="appendix-C-5.2">
+          <p id="appendix-C-5.2.1">Claims endpoint response formats allows multiple schema types (W3C VC, JWT)<a href="#appendix-C-5.2.1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-5.2.2.1">Added 'claimset_format', 'sub_jwk', 'did' to authorization request parameters<a href="#appendix-C-5.2.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="appendix-C-5.2.2.2">Added 'format' to claims endpoint response<a href="#appendix-C-5.2.2.2" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="compact" id="appendix-C-5.3">
+          <p id="appendix-C-5.3.1">Added new requirements for claims endpoint<a href="#appendix-C-5.3.1" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-5.3.2.1">MTLS or DPOP for sender constrain tokens<a href="#appendix-C-5.3.2.1" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="appendix-C-5.3.2.2">Support OID4IDA claims<a href="#appendix-C-5.3.2.2" class="pilcrow">¶</a>
+</li>
+            <li class="compact" id="appendix-C-5.3.2.3">Support W3C VC response format<a href="#appendix-C-5.3.2.3" class="pilcrow">¶</a>
+</li>
+          </ul>
+</li>
+        <li class="compact" id="appendix-C-5.4">Support for DIDs in request/response<a href="#appendix-C-5.4" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="appendix-C-6">-01<a href="#appendix-C-6" class="pilcrow">¶</a></p>
+<ul class="compact">
+<li class="compact" id="appendix-C-7.1">initial revision<a href="#appendix-C-7.1" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="appendix-C-7.2">defined claims endpoint &amp; discovery metadata<a href="#appendix-C-7.2" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="appendix-C-7.3">defined registration of claims endpoint response signature and encryption algs<a href="#appendix-C-7.3" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="appendix-C-7.4">defined c_token in claims object to request claims from claims endpoint<a href="#appendix-C-7.4" class="pilcrow">¶</a>
+</li>
+        <li class="compact" id="appendix-C-7.5">
+      </ul>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-D">
       <h2 id="name-authors-addresses">
 <a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>
