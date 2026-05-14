@@ -1,5 +1,5 @@
 %%%
-title = "OpenID Connect Claims Aggregation 1.0 - Draft 03"
+title = "OpenID Connect Claims Aggregation 1.0 - Draft 04"
 abbrev = "oidc-ca"
 ipr = "none"
 workgroup = "connect"
@@ -12,7 +12,7 @@ status = "standard"
 
 [pi]
 subcompact = "yes"
-private = "Draft-03"
+private = "Draft-04"
 tocdepth = "5"
 iprnotified = "no"
 
@@ -465,6 +465,12 @@ We would like to thank the following people for their valuable feedback and cont
 # Document History
 
 [[ To be removed from the final specification ]]
+
+-04
+
+* Down scoping clarified
+* Anti RP-RP' Linkability provision added
+* Stated trust model
 
 -03
 
