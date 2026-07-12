@@ -55,7 +55,7 @@ Recipients of this draft are invited to submit, with their comments, notificatio
 
 .# Foreword
 
-The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.
+The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it comprises over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.
 
 .# Introduction
 
@@ -101,7 +101,7 @@ claims response for future RP requests in which OP will collect a new consent fr
 The mechanism used for this is to obtain an access token and a refresh token that corresponds 
 to a suitably wide scope for the purpose. 
 
-The claims are returned from the Clams Provider's UserInfo endpoint and are always signed.
+The claims are returned from the Claims Provider's UserInfo endpoint and are always signed.
 
 Note: Refresh tokens are optional in this specification, but profiles and trust frameworks may require the use of
 refresh tokens.
@@ -317,7 +317,7 @@ In addition, the OP MUST NOT register `userinfo_encrypted_response_alg` value.
 
 In this phase, the OP obtains an access token (and optionally refresh token) 
 that is bound to the current user so that the OP can obtain the claims about the current user 
-from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.
+from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP request.
 
 1. This has to be done at least once for each CP that a user of an OP who wishes to use the facility this document explains.
 1. To obtain the grant, the OP MUST use an OpenID Connect Authentication Request. 
@@ -342,6 +342,7 @@ To do so, it typically goes through the following steps:
 1. (Request Verification) The OP verifies if the request is valid. 
 1. (Subject Granting) The OP shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
 1. (Claims Collection) The OP accesses relevant Claims Provider's UserInfo Endpoints with Access Tokens to collect signed claims
+1. (Claims Delivery) The OP returns the Aggregated Claims response to the RP.
 1. (Claims Verification) The RP verifies the received response. 
 
 Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the RP requests. 
@@ -378,7 +379,7 @@ After verifying the request, the OP
 The OP collects the required claims from the relevant UserInfo Endpoint. 
 This process can be performed before the RP's request. 
 
-To minimize the information returned from the UserInfo Endpoint, the OP SHOULD downscope the access token to return only the claims requested by the RP's authorization request. This OP retrieves a downscoped access token by making a request to the CP's Token Endpoint using `scope` parameter as described in section 12 of OpenID Connect 1.0 [OIDC]. The `scope` parameter value SHOULD only allow access to the claims requested by the RP at the CP.  
+To minimize the information returned from the UserInfo Endpoint, the OP SHOULD downscope the access token to return only the claims requested by the RP's authorization request. The OP retrieves a downscoped access token by making a request to the CP's Token Endpoint using `scope` parameter as described in section 12 of OpenID Connect 1.0 [OIDC]. The `scope` parameter value SHOULD only allow access to the claims requested by the RP at the CP.
 
 
 ### UserInfo Endpoint Request
@@ -387,11 +388,11 @@ For claims collection, the OP
 
 1. MUST send OAuth protected resource request to the UserInfo Endpoint using previously obtained Access Token as described in 5.3.1 of OpenID Connect 1.0 [OIDC];
 
-This process will be repeated for as each Claims Providers as necessary.
+This process will be repeated for each Claims Provider as necessary.
 
 ## Claims Delivery
 
-Once the necessary claim sets were collected, 
+Once the necessary claim sets have been collected,
 the OP creates the Aggregated Claims response to be returned as described in 5.6.2 of OpenID Connect 1.0 [OIDC] . 
 
 ## Claims Verification
@@ -501,4 +502,4 @@ We would like to thank the following people for their valuable feedback and cont
 * defined claims endpoint & discovery metadata
 * defined registration of claims endpoint response signature and encryption algs
 * defined c_token in claims object to request claims from claims endpoint
-* 
+*
