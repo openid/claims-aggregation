@@ -63,21 +63,8 @@ OpenID Connect is a selective claims disclosure mechanism. When a set of claims 
 an entity authentication event, it works as an entity authentication federation mechanism, but it can deliver 
 other claims selected by the subject as well. 
 
-In the OpenID Connect specification, it is assumed that there are many sources of claims. 
-Each claim is associated with its authoritative source so there naturally will be many authoritative sources. 
-Claim sources can be corroborative, i.e., not authoritative, as well. 
-In total, there will be many Claim Set sources in OpenID Connect Framework. 
-These Claim sources are called Claims Providers in OpenID Connect. 
-Claims Provider (CP) is just an OpenID Provider (OP) but it does not provide the claims about the current authentication event 
-and its associated subject identifier authoritatively. Note that Claims Provider can act as an OpenID Provider in other transactions. 
-Whether it is called OP or CP is depending on their role in a particular transaction. 
-
-There are four main actors in the OpenID Connect aggregated claims model.
-
-1. Subject (User)
-1. OpenID Provider (OP) that provides claims about the subject authentication event and provides signed claim sets obtained from other Claims Providers
-1. Claims Providers (CP) that provides claims
-1. Relying Party (RP) that verifies and consumes the provided claim sets. 
+An OpenID Connect response can include claims from several sources. These sources can be authoritative
+or corroborative. The roles in the Aggregated Claims model are described in (#actors).
 
 An OP can provide an RP the claims by value or by reference. 
 
@@ -98,20 +85,15 @@ This is done through one "OP User Setup Phase" per CP that the OP obtains the co
 from the subject to obtain claims from the CP for the purpose of creating aggregated 
 claims response for future RP requests in which OP will collect a new consent from the subject. 
 
-The mechanism used for this is to obtain an access token and a refresh token that corresponds 
-to a suitably wide scope for the purpose. 
-
-The claims are returned from the Clams Provider's UserInfo endpoint and are always signed.
-
-Note: Refresh tokens are optional in this specification, but profiles and trust frameworks may require the use of
-refresh tokens.
+The OP obtains an access token and, if needed and granted, a refresh token. The CP's UserInfo endpoint
+returns signed Claim Sets. Profiles and trust frameworks may require the use of refresh tokens.
 
 
 There are four phases defined in this document. 
 
 1. CP Discovery Phase: OP discovers CP metadata. 
 1. Client Configuration Phase: OP establishes itself as a client of the CP.
-1. Setup Phase: OP obtains the access and refresh tokens from CP by the permission of the subject. 
+1. Setup Phase: The Subject authorizes the OP to obtain claims from the CP. The OP obtains an access token and may obtain a refresh token.
 1. RP Phase: 
     1. RP makes authentication and claims request, 
 	1. OP fetches relevant claim sets from CPs, 
@@ -199,31 +181,12 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 
 # Actors
 
-In this document, there are four main actors. 
-
-1. Subject (User)
-1. CP
-1. OP 
-1. RP that verifies and consumes the provided claim sets. 
-
-They are topologically connected as in the following diagram.
-
-
 ~~~ ascii-art
-               +---------+
-    +----------| Subject |--------+
-    | grants   +---------+        |
-    v               |             |
-+------+            | instructs   | allows
-|  CP  |----+       |             |
-+------+    |       v             v
-   .        |    +------+     +------+
-   .        |----|  OP  |-----|  RP  | 
-   .        |    +------+     +------+
-+------+    |
-|  CP  |----+
-+------+  
+Subject --- authorizes release to the OP ------> CP
+Subject --- authorizes disclosure to the RP ---> OP
 
+CP <------ requests claims ------ OP <------ requests claims ------ RP
+CP ------- signed Claim Sets ---> OP ------- Aggregated Claims ---> RP
 ~~~
 Figure: Relationships among actors
 
@@ -256,7 +219,6 @@ that supports signed UserInfo response and has the OP as a client.
 The provision for the Claims Provider are as follows: 
 
 1. It MUST support signed UserInfo response. 
-1. It SHOULD support the Discovery Metadata extension defined by this document. 
 1. It MUST support OpenID Federation Automatic Registration as specified in (#client-configuration-phase).
 
 ### UserInfo Endpoint
@@ -276,12 +238,38 @@ The provision for the OP is as follows:
 
 1. It MUST support OpenID Connect Aggregated Claims as an OpenID Provider. 
 1. It MUST act as an OpenID Connect relying party to CPs to fetch claims from CPs according to instructions given by the Subject. 
-1. As an OpenID Provider, OP MUST implement mandatory to implement extensions that this document defines. 
 1. It MAY store the signed claims obtained from CPs with appropriate safeguarding controls. 
 1. To the authenticated Subject, it MUST provide a user interface to show what claims about the subject it stores. 
 1. It MUST NOT provide claims to RPs without the Subject's permission. 
 
 
+
+# Trust Model
+
+This specification uses the L1 trust model. The RP relies on the OP to associate Claim Sets from
+CPs with the Subject authenticated by the OP. By including an Aggregated Claim Set in an ID Token
+or UserInfo response, the OP asserts that the Claim Set is about the Subject identified by the
+`sub` in that response.
+
+The OP MUST bind the CP's Issuer Identifier and Subject Identifier (`iss`, `sub`), obtained from
+the validated CP ID Token during Setup, to the authenticated OP account that initiated Setup.
+The OP MUST bind the corresponding authorization grant and its access and refresh tokens to the
+same OP account. Token refresh and downscoping MUST preserve this binding. When it obtains a signed
+UserInfo response, the OP MUST validate it according to [OIDC], verify its signature and audience,
+and match its `iss` and `sub` against the stored CP identifiers. The OP MUST use those tokens and
+any Claim Sets obtained with them only for the bound OP account. This requirement also applies to
+stored Claim Sets.
+
+The OP and the CP establish trust for client registration through [OpenID.Federation]. The CP's
+grant authorizes the OP to collect claims. Disclosure to a particular RP requires the Subject's
+separate authorization at the OP as described in (#subject-granting).
+
+The RP MUST validate the OP's ID Token or UserInfo response according to [OIDC]. The RP MUST
+apply its trust policy to decide whether it trusts the OP to associate claims with the Subject
+and whether it trusts each CP as a source for the claims it uses. The RP MAY use Federation to
+establish trust in either party. A deployment can use Federation Trust Marks to indicate
+conformance with its trust framework.
+Profiles can define additional subject binding or presentation-time authentication requirements.
 
 # Discovery Phase
 
@@ -291,7 +279,7 @@ including its Authorization Endpoint, Token Endpoint, and UserInfo Endpoint loca
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
-The following OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are required in the Claims Provider Metadata:
+The Claims Provider Metadata uses the following parameters from [OpenID.Discovery].
 
 `userinfo_endpoint`
 : **Required**. Claims Endpoint. URL at the Issuing-Authority that provides signed claims.
@@ -300,9 +288,13 @@ The following OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are req
 : **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the UserInfo Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 
 
-The following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are now required in the OpenID Provider Metadata:
+## Aggregating OP Metadata
 
-- `claim_types_supported`. The Claims Types supported by the Claims Provider. It MUST contain the value *aggregated*.
+The OP MUST include `aggregated` in `claim_types_supported` and set `claims_parameter_supported`
+to `true` in its `openid_provider` metadata. If the OP also publishes a configuration document
+using [OpenID.Discovery], it MUST advertise the same capabilities there. These parameters
+describe the OP's capabilities for serving RPs. A CP that only serves signed UserInfo to the OP
+has no requirement to advertise `aggregated` in that role.
 
 
 # Client Configuration Phase
@@ -332,43 +324,42 @@ The OP MUST omit `userinfo_encrypted_response_alg`.
 
 # Setup Phase
 
-In this phase, the OP obtains an access token (and optionally refresh token) 
-that is bound to the current user so that the OP can obtain the claims about the current user 
-from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.
+The OP obtains the Subject's authorization to collect claims from each CP it will use. The OP
+MUST use an OpenID Connect Authentication Request to obtain the grant. It SHOULD identify the
+requested claims using `scope`, `claims.userinfo`, or both. It MUST associate the grant and tokens
+with the authenticated OP account as specified in (#trust-model).
 
-1. This has to be done at least once for each CP that a user of an OP who wishes to use the facility this document explains.
-1. To obtain the grant, the OP MUST use an OpenID Connect Authentication Request. 
-1. The Claims to be granted SHOULD be specified with the`scope` parameter and/or the `userinfo` member of the `claims` parameter. 
-The CP MUST show a dialogue to the Subject explaining that the OP will be 
-getting signed claims set from this CP as appropriate to provide claims to RPs as directed 
-by the Subject. 
+When requesting a refresh token for offline access, the OP MUST include `offline_access` in
+`scope` and use a response type that returns an authorization code. The OP and CP MUST follow
+the consent requirements in Section 11 of [OIDC], including `prompt=consent` unless other
+conditions permitting offline access are in place.
 
-The dialogue MUST provide the link to the `policy_uri` in the OP's client metadata.
-
-The actual act of granting MUST involve active user interaction. 
-
-The grant that is to be obtained in this phase SHOULD be sufficiently large so that it will reduce the 
-number of times that OP needs to take the Subject to the CP to obtain additional grants. 
+The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
+to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
+`policy_uri` in the OP's client metadata. Granting access MUST involve active user interaction.
 
 # Delivery Phase (RP Phase)
 
 In Delivery Phase, the claims are delivered to RP. 
 To do so, it typically goes through the following steps: 
 
-1. (Claims Request) An RP makes an OpenID Connect Authentication Request with extension parameters defined in this document to the OP. 
+1. (Claims Request) The RP sends an OpenID Connect Authentication Request to the OP.
 1. (Request Verification) The OP verifies if the request is valid. 
 1. (Subject Granting) The OP shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
 1. (Claims Collection) The OP accesses relevant Claims Provider's UserInfo Endpoints with Access Tokens to collect signed claims
 1. (Claims Verification) The RP verifies the received response. 
 
-Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the RP requests. 
-
-
 ## Claims Request by RP to OP
 
-For an RP to request claims according to this document, the RP 
+The RP MUST use an OpenID Connect Authentication Request as defined in [OIDC]. To request
+individual claims, the RP MUST use the standard `claims` parameter with `userinfo`, `id_token`, or both,
+as described in Section 5.5 of [OIDC]. The OP MUST support this parameter. The RP can also use
+`scope` as defined in [OIDC].
 
-1. MUST use the OpenID Connect Authentication Request with extension parameters defined in this document to the OP. 
+The OP selects CPs associated with the Subject's account and MUST use the Aggregated Claims format
+for claims it returns from those CPs. The RP can apply its own policy to the CP's signed `iss`
+when deciding whether to use the claims. The request syntax defined here covers claim names.
+Requesting a specific CP or specifying freshness requirements for CP data requires an extension.
 
 
 ## RP authentication and the request verification
@@ -392,10 +383,20 @@ After verifying the request, the OP
 
 ## Claims Collection
 
-The OP collects the required claims from the relevant UserInfo Endpoint. 
-This process can be performed before the RP's request. 
+The OP MAY collect Claim Sets before an RP requests them if the CP grant and the Subject's
+authorization permit it. The OP MAY reuse a stored Claim Set if it still meets the applicable
+validity, authorization, and account-binding requirements.
 
-To minimize the information returned from the UserInfo Endpoint, the OP SHOULD downscope the access token to return only the claims requested by the RP's authorization request. This OP retrieves a downscoped access token by making a request to the CP's Token Endpoint using `scope` parameter as described in section 12 of OpenID Connect 1.0 [OIDC]. The `scope` parameter value SHOULD only allow access to the claims requested by the RP at the CP.  
+For a new collection, the OP SHOULD use an access token with the narrowest scope available for
+the claims it needs. If the available access token grants broader access than needed, and a
+refresh token and a suitable narrower scope are available, the OP SHOULD request a downscoped
+access token using `grant_type=refresh_token` and `scope`, as described in Section 12 of [OIDC]
+and Section 6 of [RFC6749]. The requested scope MUST be within the scope of the original grant.
+The OP MUST successfully reevaluate trust in the CP before continuing to make requests after
+the Trust Chain expires, as specified in Section 12.3 of [OpenID.Federation].
+
+If the OP cannot collect a suitable Claim Set using a valid access token or a refresh token,
+it MUST obtain the necessary authorization from the Subject at the CP or omit the affected claims.
 
 
 ### UserInfo Endpoint Request
@@ -408,8 +409,11 @@ This process will be repeated for as each Claims Providers as necessary.
 
 ## Claims Delivery
 
-Once the necessary claim sets were collected, 
-the OP creates the Aggregated Claims response to be returned as described in 5.6.2 of OpenID Connect 1.0 [OIDC] . 
+The OP creates the Aggregated Claims response as described in Section 5.6.2 of [OIDC]. The RP
+receives the entire signed JWT embedded in `_claim_sources`, including claims that are not listed
+in `_claim_names`. The OP MUST ensure that every claim it discloses in the embedded JWT is
+authorized for disclosure to that RP. If a Claim Set includes claims the OP cannot disclose,
+the OP MUST obtain a suitable Claim Set from the CP or omit that JWT from the response.
 
 ## Claims Verification
 
@@ -438,6 +442,15 @@ The CP MUST NOT allow a different client to use that `client_id`, including thro
 
 The audience check binds the Claim Set to the OP that obtained it. The RP also verifies the CP's signature
 and determines whether it trusts the CP to issue the claims.
+
+## Cross-User Claim Substitution
+
+A compromised or malicious OP can include a Claim Set for one Subject in a response for
+another Subject. The substituted Claim Set can have a valid CP signature and the expected OP
+audience. The RP's signature and audience checks therefore cannot detect this substitution.
+The trust model in (#trust-model) relies on the OP to preserve the account binding through
+collection, storage, and disclosure. A Federation Trust Mark can attest to an OP's compliance
+with operational requirements. It does not prove the account binding for a particular response.
 
 # Privacy Considerations
 
@@ -499,9 +512,10 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
-* Down scoping clarified
+* Clarified downscoping, offline access, and the use of stored Claim Sets
 * Anti RP-RP' Linkability provision added
-* Stated trust model
+* Stated the L1 trust model and described the risk of cross-user claim substitution
+* Clarified how RPs request claims and how the aggregating OP advertises support
 
 -03
 
