@@ -1,0 +1,24 @@
+name: Specification feedback
+description: Submit feedback on the specification. A signed OIDF Contribution Agreement for AB/Connect WG is required.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting specification feedback through this form, make sure
+        you are covered by a signed [OpenID Foundation Contribution Agreement](https://openid.net/intellectual-property/openid-foundation-contribution-agreements/)
+        for the AB/Connect Working Group, either individually or as a designated
+        representative of an organization with a signed agreement for the group.
+  - type: checkboxes
+    id: contribution-agreement
+    attributes:
+      label: Contribution Agreement
+      options:
+        - label: I am covered by a signed OIDF Contribution Agreement for the AB/Connect Working Group.
+          required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Specification feedback
+      description: Include the draft version, section number, and proposed wording if applicable.
+    validations:
+      required: true
