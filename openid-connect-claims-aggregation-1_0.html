@@ -1277,7 +1277,7 @@ li > p:last-of-type:only-child {
       <h2 id="name-foreword">
 <a href="#name-foreword" class="section-name selfRef">Foreword</a>
       </h2>
-<p id="section-note.2-1">The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.<a href="#section-note.2-1" class="pilcrow">¶</a></p>
+<p id="section-note.2-1">The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it comprises over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.<a href="#section-note.2-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note" id="section-note.3">
       <h2 id="name-introduction">
@@ -1322,7 +1322,7 @@ from the subject to obtain claims from the CP for the purpose of creating aggreg
 claims response for future RP requests in which OP will collect a new consent from the subject.<a href="#section-note.3-8" class="pilcrow">¶</a></p>
 <p id="section-note.3-9">The mechanism used for this is to obtain an access token and a refresh token that corresponds
 to a suitably wide scope for the purpose.<a href="#section-note.3-9" class="pilcrow">¶</a></p>
-<p id="section-note.3-10">The claims are returned from the Clams Provider's UserInfo endpoint and are always signed.<a href="#section-note.3-10" class="pilcrow">¶</a></p>
+<p id="section-note.3-10">The claims are returned from the Claims Provider's UserInfo endpoint and are always signed.<a href="#section-note.3-10" class="pilcrow">¶</a></p>
 <p id="section-note.3-11">Note: Refresh tokens are optional in this specification, but profiles and trust frameworks may require the use of
 refresh tokens.<a href="#section-note.3-11" class="pilcrow">¶</a></p>
 <p id="section-note.3-12">There are four phases defined in this document.<a href="#section-note.3-12" class="pilcrow">¶</a></p>
@@ -1689,7 +1689,7 @@ via Dynamic Registration, as described in OpenID Connect Dynamic Client Registra
       </h2>
 <p id="section-8-1">In this phase, the OP obtains an access token (and optionally refresh token)
 that is bound to the current user so that the OP can obtain the claims about the current user
-from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP requests.<a href="#section-8-1" class="pilcrow">¶</a></p>
+from the CP subsequently without taking the user to the CP and show them the consent dialogue for every RP request.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="compact type-1" id="section-8-2">
 <li id="section-8-2.1">This has to be done at least once for each CP that a user of an OP who wishes to use the facility this document explains.<a href="#section-8-2.1" class="pilcrow">¶</a>
 </li>
@@ -1723,7 +1723,9 @@ To do so, it typically goes through the following steps:<a href="#section-9-1" c
 </li>
         <li id="section-9-2.4">(Claims Collection) The OP accesses relevant Claims Provider's UserInfo Endpoints with Access Tokens to collect signed claims<a href="#section-9-2.4" class="pilcrow">¶</a>
 </li>
-        <li id="section-9-2.5">(Claims Verification) The RP verifies the received response.<a href="#section-9-2.5" class="pilcrow">¶</a>
+        <li id="section-9-2.5">(Claims Delivery) The OP returns the Aggregated Claims response to the RP.<a href="#section-9-2.5" class="pilcrow">¶</a>
+        </li>
+        <li id="section-9-2.6">(Claims Verification) The RP verifies the received response.<a href="#section-9-2.6" class="pilcrow">¶</a>
 </li>
       </ol>
 <p id="section-9-3">Claims Collection MAY be done out of sync. That is, the signed claim sets can be obtained before the RP requests.<a href="#section-9-3" class="pilcrow">¶</a></p>
@@ -1780,7 +1782,7 @@ that the authorization code that it is going to return will be bound to this cli
         </h3>
 <p id="section-9.4-1">The OP collects the required claims from the relevant UserInfo Endpoint.
 This process can be performed before the RP's request.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
-<p id="section-9.4-2">To minimize the information returned from the UserInfo Endpoint, the OP SHOULD downscope the access token to return only the claims requested by the RP's authorization request. This OP retrieves a downscoped access token by making a request to the CP's Token Endpoint as described in 12 of OpenID Connect 1.0 <a href="https://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>. The <code>scope</code> parameter value SHOULD only allow access to the claims requested by the RP at the CP.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+<p id="section-9.4-2">To minimize the information returned from the UserInfo Endpoint, the OP SHOULD downscope the access token to return only the claims requested by the RP's authorization request. The OP retrieves a downscoped access token by making a request to the CP's Token Endpoint as described in 12 of OpenID Connect 1.0 <a href="https://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>. The <code>scope</code> parameter value SHOULD only allow access to the claims requested by the RP at the CP.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
 <div id="userinfo-endpoint-request">
 <section id="section-9.4.1">
           <h4 id="name-userinfo-endpoint-request">
@@ -1791,7 +1793,7 @@ This process can be performed before the RP's request.<a href="#section-9.4-1" c
 <li id="section-9.4.1-2.1">MUST send OAuth protected resource request to the UserInfo Endpoint using previously obtained Access Token as described in 5.3.1 of OpenID Connect 1.0 <a href="https://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>;<a href="#section-9.4.1-2.1" class="pilcrow">¶</a>
 </li>
           </ol>
-<p id="section-9.4.1-3">This process will be repeated for as each Claims Providers as necessary.<a href="#section-9.4.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.4.1-3">This process will be repeated for each Claims Provider as necessary.<a href="#section-9.4.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1801,7 +1803,7 @@ This process can be performed before the RP's request.<a href="#section-9.4-1" c
         <h3 id="name-claims-delivery">
 <a href="#section-9.5" class="section-number selfRef">9.5. </a><a href="#name-claims-delivery" class="section-name selfRef">Claims Delivery</a>
         </h3>
-<p id="section-9.5-1">Once the necessary claim sets were collected,
+<p id="section-9.5-1">Once the necessary claim sets have been collected,
 the OP creates the Aggregated Claims response to be returned as described in 5.6.2 of OpenID Connect 1.0 <a href="https://openid.net/specs/openid-connect-core-1_0.html">OIDC</a> .<a href="#section-9.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
