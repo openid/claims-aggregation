@@ -41,7 +41,7 @@ OpenID Providers within OpenID Connect assume many roles, one of these is provid
 This document specifies the methods for
 
 * an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
-* the OP to perform client registration to the Claims Provider;
+* the OP to establish itself as a client of the Claims Provider;
 * the OP to obtain claims from the Claims Provider; 
 * an RP to ask for verified claims to the OP;  
 * the OP to return obtained claims from CP to the RP; and 
@@ -110,7 +110,7 @@ refresh tokens.
 There are four phases defined in this document. 
 
 1. CP Discovery Phase: OP discovers CP metadata. 
-1. OP Registration Phase: OP registers to CP as an RP. 
+1. Client Configuration Phase: OP establishes itself as a client of the CP.
 1. Setup Phase: OP obtains the access and refresh tokens from CP by the permission of the subject. 
 1. RP Phase: 
     1. RP makes authentication and claims request, 
@@ -137,7 +137,7 @@ capitals, as shown here.
 This document specifies the methods for
 
 * an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
-* the OP to perform client registration to the Claims Provider;
+* the OP to establish itself as a client of the Claims Provider;
 * the OP to obtain claims from the Claims Provider; 
 * the OP to return obtained claims from CP to the RP; and 
 * the RP to verify the claims.
@@ -162,6 +162,9 @@ The following referenced documents are indispensable for the application of this
 
 [OpenID.Registration] - OpenID Connect Registration 1.0
 [OpenID.Registration]: http://openid.net/specs/openid-connect-registration-1_0.html
+
+[OpenID.Federation] - OpenID Federation 1.0
+[OpenID.Federation]: https://openid.net/specs/openid-federation-1_0.html
 
 [JWT] - JSON Web Token
 [JWT]: http://tools.ietf.org/html/draft-ietf-oauth-json-web-token
@@ -254,12 +257,14 @@ The provision for the Claims Provider are as follows:
 
 1. It MUST support signed UserInfo response. 
 1. It SHOULD support the Discovery Metadata extension defined by this document. 
-1. It SHOULD support the registration of the OPs with extensions defined in this document. 
-1. It SHOULD support the registration of the OPs through Dynamic Registration. 
+1. It MUST support OpenID Federation Automatic Registration as specified in (#client-configuration-phase).
 
 ### UserInfo Endpoint
 The UserInfo Endpoint is described in 5.3 of OpenID Connect 1.0 [OIDC] as an OAuth 2.0 Protected Resource that returns Claims about the authenticated Subject.
 
+For Claims Aggregation, the CP MUST set the `aud` Claim of the signed UserInfo JWT to the `client_id`
+of the OP to which the access token was issued, in accordance with Section 5.3.2 of [OIDC].
+The `aud` Claim MUST identify only that client, either as a string or as an array containing that string as its only element.
 
 
 ## OP
@@ -280,7 +285,7 @@ The provision for the OP is as follows:
 
 # Discovery Phase
 
-Before registering itself as an OpenID Connect Client to a CP, the OP needs to obtain 
+Before making an OpenID Connect Authentication Request to a CP, the OP needs to obtain
 configuration information from the CP, 
 including its Authorization Endpoint, Token Endpoint, and UserInfo Endpoint locations. 
 
@@ -291,7 +296,7 @@ The following OpenID Connect Discovery 1.0 [OpenID.Discovery] parameters are req
 `userinfo_endpoint`
 : **Required**. Claims Endpoint. URL at the Issuing-Authority that provides signed claims.
 
-`userinfo_signed_response_alg`
+`userinfo_signing_alg_values_supported`
 : **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the UserInfo Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 
 
@@ -300,17 +305,29 @@ The following optional OpenID Connect Discovery 1.0 [OpenID.Discovery] parameter
 - `claim_types_supported`. The Claims Types supported by the Claims Provider. It MUST contain the value *aggregated*.
 
 
-# Registration Phase
+# Client Configuration Phase
 
-Before starting to make requests to a CP, the OP MUST register itself to the CP. 
-The registration SHOULD be performed 
-via Dynamic Registration, as described in OpenID Connect Dynamic Client Registration 1.0 [OpenID.Registration].  
+The OP acts as an OpenID Connect client of the CP. The OP and the CP MUST use Automatic Registration
+as specified in Section 12.1 of [OpenID.Federation].
+The OP MUST publish `openid_provider` and `openid_relying_party` metadata in its Entity Configuration
+under the same Entity Identifier. The OP MUST use this Entity Identifier as both its Issuer Identifier
+and its `client_id` at the CP. The OP and the CP MUST perform Trust Chain and metadata resolution
+as required by [OpenID.Federation].
 
-The OP MUST register the following client parameters :
+For example, an OP with the Issuer Identifier `https://op.example` uses `https://op.example` as its
+`client_id` at the CP and publishes its Entity Configuration at
+`https://op.example/.well-known/openid-federation`.
 
-- `userinfo_signed_response_alg`. Signing algorithm supported by the Claims Provider.
+## Client Metadata
 
-In addition, the OP MUST NOT register `userinfo_encrypted_response_alg` value.
+The OP MUST include the following client metadata defined in [OpenID.Registration] in its
+`openid_relying_party` metadata.
+
+- `userinfo_signed_response_alg`. An asymmetric signing algorithm supported by the CP so that the RP
+  can verify the Claim Set using the CP's public key.
+- `policy_uri`. URL of the OP's privacy policy to be shown to the Subject during the Setup Phase.
+
+The OP MUST omit `userinfo_encrypted_response_alg`.
 
 
 # Setup Phase
@@ -326,7 +343,7 @@ The CP MUST show a dialogue to the Subject explaining that the OP will be
 getting signed claims set from this CP as appropriate to provide claims to RPs as directed 
 by the Subject. 
 
-The dialogue MUST provide the link to the `policy_url` provided by the OP during its registration. 
+The dialogue MUST provide the link to the `policy_uri` in the OP's client metadata.
 
 The actual act of granting MUST involve active user interaction. 
 
@@ -401,12 +418,26 @@ For Claims Verification,
 1. the RP MUST verify the signature of the Aggregate Claim according to  [JWS] using the algorithm specified in the JWT  *alg*  Header Parameter the keys provided by the Issuer of the Aggregate Claim for the signature verification; 
 1. the RP MUST extract the signed claims from JWT and other relevant members and verify according to their verification rule; 
 1. the RP MUST verify that issuers of the signed claims in the aggregated claims are the ones it trusts; 
-1. the RP MUST verify that the *aud* (audience) Claim is that of the OP's Issuer Identifier;
+1. the RP MUST verify that each signed Claim Set has exactly one `aud` value and that it matches
+   the Issuer Identifier of the OP used for the OpenID Connect transaction. The RP MUST use the Issuer
+   Identifier established for that OP during OpenID Connect validation. When the Aggregated Claims
+   are delivered in a UserInfo response, the RP uses the OP associated with the access token used for
+   that request. The RP MUST compare the strings without normalization as specified in Section 14 of [OIDC];
 1. The RP MUST reject the response if any of the verification above fails. 
 
 # Security Considerations
 
-The security considerations of OpenID Connect 1.0 [OIDC] and OpenID Connect Dynamic Client Registration 1.0 [OpenID.Registration] apply.
+The security considerations of [OIDC] and [OpenID.Federation] apply.
+
+## Audience Binding
+
+The RP uses the OP's Issuer Identifier to check the audience of each Claim Set. This check relies on
+the CP binding that `client_id` to the correct client. The CP MUST establish the client as specified
+in (#client-configuration-phase) before issuing a signed UserInfo response for Claims Aggregation.
+The CP MUST NOT allow a different client to use that `client_id`, including through a separate registration.
+
+The audience check binds the Claim Set to the OP that obtained it. The RP also verifies the CP's signature
+and determines whether it trusts the CP to issue the claims.
 
 # Privacy Considerations
 
