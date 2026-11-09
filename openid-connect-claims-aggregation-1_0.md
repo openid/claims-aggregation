@@ -136,6 +136,12 @@ The following referenced documents are indispensable for the application of this
 [RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
 [RFC6750]: https://tools.ietf.org/html/rfc6750
 
+[RFC9207] - OAuth 2.0 Authorization Server Issuer Identification
+[RFC9207]: https://www.rfc-editor.org/rfc/rfc9207.html
+
+[RFC9700] - Best Current Practice for OAuth 2.0 Security
+[RFC9700]: https://www.rfc-editor.org/rfc/rfc9700.html
+
 [OIDC] - OpenID Connect Core 1.0 incorporating errata set 1
 [OIDC]: https://openid.net/specs/openid-connect-core-1_0.html
 
@@ -287,6 +293,8 @@ The Claims Provider Metadata uses the following parameters from [OpenID.Discover
 `userinfo_signing_alg_values_supported`
 : **Optional**. JSON array containing a list of the  JWS [JWS] signing algorithms (alg values) JWA [JWA] supported by the UserInfo Endpoint to encode the Claims in a  JWT [JWT]. The value *none* MUST NOT be included.
 
+The CP MUST set `authorization_response_iss_parameter_supported` to `true` in its
+`openid_provider` metadata as specified in [RFC9207].
 
 ## Aggregating OP Metadata
 
@@ -337,6 +345,17 @@ conditions permitting offline access are in place.
 The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
 to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
 `policy_uri` in the OP's client metadata. Granting access MUST involve active user interaction.
+
+## Authorization Response Issuer Validation
+
+The CP MUST include the `iss` parameter in authorization responses as specified in [RFC9207].
+For each authorization request, the OP MUST store the expected CP Issuer Identifier from the
+validated CP metadata and bind it to the authorization transaction and the user-agent session.
+
+On receiving the authorization response, the OP MUST compare the `iss` parameter to the stored
+Issuer Identifier as specified in Section 2.4 of [RFC9207]. The OP MUST reject the response if
+`iss` is missing or the values differ. The OP MUST perform this check before sending the
+authorization code to the Token Endpoint associated with the original request.
 
 # Delivery Phase (RP Phase)
 
@@ -432,6 +451,10 @@ For Claims Verification,
 # Security Considerations
 
 The security considerations of [OIDC] and [OpenID.Federation] apply.
+
+Section 4.4 of [RFC9700] describes mix-up attacks. The check in
+(#authorization-response-issuer-validation) allows an OP that uses multiple CPs to detect an
+issuer mismatch before sending an authorization code to a Token Endpoint.
 
 ## Audience Binding
 
