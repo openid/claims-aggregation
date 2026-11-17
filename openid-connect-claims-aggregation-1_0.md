@@ -817,12 +817,20 @@ JWT lifetimes and RP acceptance policies limit the age of artifacts accepted off
 
 Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the subject using the `sub` value in the JWT included in the aggregated claim.
 
+Reusing the same CP-signed JWT across presentations allows recipients that compare their
+received JWTs to correlate those presentations, including across colluding RPs. The JWT
+itself, including its signature, provides a common value for comparison even when identifiers
+used elsewhere are ephemeral or pairwise. Obtaining a newly issued JWT does not necessarily
+prevent correlation if it contains stable identifiers or identifying combinations of claims.
+
 Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into the timing
 of the Subject's interactions with RPs. Updating claims in response to an RP's request for
 fresher information can trigger CP UserInfo calls whose timing and frequency may be
-correlated with downstream activity. The OP SHOULD explain this tradeoff to the Subject when
-obtaining authorization for collection and disclosure. It MAY use privacy policies and rate
-limits when servicing user-directed updates.
+correlated with downstream activity. The OP SHOULD explain both the correlation risk of
+reusing a JWT and the CP timing-visibility risk of obtaining updates when obtaining the
+Subject's authorization for collection and disclosure. The Subject can then choose whether
+to authorize reuse or request an update, subject to the RP's acceptance policy. The OP MAY
+use privacy policies and rate limits when servicing user-directed updates.
 
 
 {backmatter}
