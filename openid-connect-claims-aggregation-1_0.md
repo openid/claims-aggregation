@@ -409,6 +409,10 @@ of the following procedures before exchanging the code.
    cookie or equivalent session credential held by the initiating application, verify its
    binding to the initiating OP account and transaction, and consume the handle at most once.
    Presentation of the handle alone MUST NOT complete Setup.
+   The handle MUST expire no later than the pending transaction and, when the CP's authorization
+   code expiration time is known from its policy or deployment configuration, no later than
+   that code. If the CP rejects the code as expired, the OP MUST invalidate the handle and
+   require a new Setup transaction.
 1. The OP reauthenticates the Subject, verifies that the authenticated OP account matches the
    account that initiated the pending transaction, and validates the returned `state` against
    that transaction before completing Setup.
@@ -550,26 +554,25 @@ issuer mismatch before sending an authorization code to a Token Endpoint.
 
 ## Setup Transaction and Session Integrity
 
-The Setup requirements in (#authorization-request-and-transaction-binding),
-(#authorization-response-session-validation), (#authorization-response-issuer-validation),
-and (#token-request-and-account-binding) protect the OP's connections to multiple CPs.
-Authorization Code Flow, issuer-bound metadata
-resolution with valid caching, and RFC 9207 validation implement the issuer-based countermeasure
-for connection confusion described in Section 2.2.2 of [OAuth.Security.Update]. The OP also
-preserves the selected client registration and any connection or tenant context throughout
-the transaction.
+The Setup requirements in (#authorization-request-and-transaction-binding), (#authorization-
+response-session-validation), (#authorization-response-issuer-validation), and (#token-
+request-and-account-binding) protect the OP's connections to multiple CPs. Authorization Code
+Flow, issuer-bound metadata resolution with valid caching, and RFC 9207 validation implement
+the issuer-based countermeasure for connection confusion described in Section 2.2.2 of
+[OAuth.Security.Update]. The OP also preserves the selected client registration and any
+connection or tenant context throughout the transaction.
 
 PKCE binds an authorization code to the OP's token request. An attacker can still initiate
-Setup for the attacker's OP account and induce a victim to authorize access to the victim's
-CP account. PKCE alone does not detect this cross-user session fixation attack, described in
-Section 2.3 of [OAuth.Security.Update], with countermeasures in Section 2.3.2. Before exchanging
-the code, the OP verifies the completion session's binding to the initiating authenticated
-OP account. A valid `state`
-received through a URL is insufficient without this session validation. Comparing a previously
-stored CP subject identifier detects account changes. Checking for the same CP (`iss`, `sub`)
-on another OP account can also detect an attempted new binding when that CP identity is
-already known to the OP. Neither check establishes a relationship for a CP identity that has
-never been linked at the OP. The L1 trust assumptions in (#trust-model) continue to apply.
+Setup for the attacker's OP account and induce a victim to authorize access to the victim's CP
+account. PKCE alone does not detect this cross-user session fixation attack, described in
+Section 2.3 of [OAuth.Security.Update], with countermeasures in Section 2.3.2. Before
+exchanging the code, the OP verifies the completion session's binding to the initiating
+authenticated OP account. A valid `state` received through a URL is insufficient without this
+session validation. Comparing a previously stored CP subject identifier detects account
+changes. Checking for the same CP (`iss`, `sub`) on another OP account can also detect an
+attempted new binding when that CP identity is already known to the OP. Neither check
+establishes a relationship for a CP identity that has never been linked at the OP. The L1
+trust assumptions in (#trust-model) continue to apply.
 
 ## Audience Binding
 
@@ -596,6 +599,11 @@ Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the su
 
 
 {backmatter}
+
+# Bibliography
+
+[OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
+[OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
 
 # Notices
 
@@ -686,8 +694,3 @@ We would like to thank the following people for their valuable feedback and cont
 * defined claims endpoint & discovery metadata
 * defined registration of claims endpoint response signature and encryption algs
 * defined c_token in claims object to request claims from claims endpoint
-
-# Bibliography
-
-[OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
-[OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
