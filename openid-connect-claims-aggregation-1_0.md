@@ -80,12 +80,12 @@ OpenID Connect Core defines the representation of Aggregated Claims returned by 
 Provider to a Relying Party, but does not prescribe the OP-to-CP protocol for obtaining the JWT
 used in that representation. In particular, it does not require the JWT to be a UserInfo
 response. This specification provides implementation guidance for that interaction and defines
-an OAuth-protected Claim Set Endpoint, together with discovery, authorization, account binding,
+an OAuth-protected Claims Endpoint, together with discovery, authorization, account binding,
 storage, disclosure, and verification requirements. Its scope is Aggregated Claims; the endpoint
 used by an RP to retrieve Distributed Claims in Section 5.6.2 of [OIDC] is distinct from the
 OP-to-CP collection interface defined here.
 
-The Claim Set Endpoint separates OP-facing account-binding information from the CP-signed Claim
+The Claims Endpoint separates OP-facing account-binding information from the CP-signed Claim
 Set disclosed to the RP. This permits a Claim Set without a `sub` claim: the OP verifies the CP
 account association when collecting it and preserves that association when storing and
 disclosing it. The RP relies on the OP for Subject binding under the L1 trust model. Omitting
@@ -255,22 +255,22 @@ performance of contract, consent, and other lawful basis.
 ## CP
 
 CP, Claims Provider, is a role assumed by an OpenID Provider 
-that supports the Claim Set Endpoint defined here and has the OP as a client.
+that supports the Claims Endpoint defined here and has the OP as a client.
 
 The provision for the Claims Provider are as follows: 
 
-1. It MUST support the Claim Set Endpoint and signed Claim Set format defined below.
+1. It MUST support the Claims Endpoint and signed Claim Set format defined below.
 1. It MUST support OpenID Federation Automatic Registration as specified in (#client-configuration-phase).
 1. It SHOULD provide an authenticated Subject with a user interface to review and revoke
    standing grants issued to OPs, including the claims and operations those grants permit.
 
-### Claim Set Endpoint
+### Claims Endpoint
 
-The Claim Set Endpoint is an OAuth 2.0 Protected Resource used by the OP to obtain
+The Claims Endpoint is an OAuth 2.0 Protected Resource used by the OP to obtain
 CP-signed Claim Sets. It is distinct from the UserInfo Endpoint in Section 5.3 of [OIDC]
 and from the RP-facing endpoint for Distributed Claims in Section 5.6.2 of [OIDC]. Its
-request and response are defined in (#claim-set-endpoint-request) and
-(#claim-set-endpoint-response).
+request and response are defined in (#claims-endpoint-request) and
+(#claims-endpoint-response).
 
 ### Signed Claim Set Format
 
@@ -291,7 +291,12 @@ Claims supplied to the RP MUST appear as top-level members that can be reference
 `_claim_names` as specified in Section 5.6.2 of [OIDC]. The format does not introduce a
 holder proof or require a per-presentation identifier or `jti`.
 
-The CP MUST sign the JWT using the `signing_alg` accepted in the Claim Set request. It MUST
+The CP MUST implement `RS256` signing, and the OP and RP MUST implement `RS256` signature
+verification for Claim Sets. The OP MUST support selecting `RS256` in a Claims Endpoint
+request. Implementations MAY support additional asymmetric signing algorithms, subject to
+metadata and policy validation in (#signature-validation).
+
+The CP MUST sign the JWT using the `signing_alg` accepted in the Claims Endpoint request. It MUST
 NOT use the same signing key with more than one signature algorithm. For each key used to
 sign Claim Sets, it MUST publish the intended algorithm in the `alg` parameter of every
 JWK representation it advertises for that key.
@@ -301,9 +306,15 @@ advertised verification-key sources until all Claim Sets signed with that key ha
 including the clock-skew allowance used by the deployment. Compromised keys MAY be withdrawn
 earlier under the deployment's key revocation policy.
 
-[[ Editor's note: The new endpoint, metadata members, request/response members, and explicit
-JWT type in this draft are proposed protocol elements. Their registration requirements and
-final names need review before publication; they are not existing OIDC registrations. ]]
+The name Claims Endpoint and the metadata names `claims_endpoint` and
+`claims_signing_alg_values_supported` restore terminology used in an earlier draft of this
+specification. This does not restore that draft's wire format: this profile separates
+OP-facing account binding from the signed JWT disclosed to the RP.
+
+[[ Editor's note: This draft defines the names and semantics of its endpoint, metadata,
+request/response members, and explicit JWT type. Registration considerations and formal
+registrations remain follow-up work before publication; previous use of a name in a draft
+does not establish its registration. ]]
 
 ## OP
 
@@ -332,7 +343,7 @@ The OP MUST bind the CP's Issuer Identifier and Subject Identifier (`iss`, `sub`
 the validated CP ID Token during Setup, to the authenticated OP account that initiated Setup.
 The OP MUST bind the corresponding authorization grant and its access and refresh tokens to the
 same OP account. Token refresh and downscoping MUST preserve this binding. When collecting a
-Claim Set, the OP MUST validate the CP response according to (#claim-set-endpoint-response) and the signed JWT according to (#claims-verification),
+Claim Set, the OP MUST validate the CP response according to (#claims-endpoint-response) and the signed JWT according to (#claims-verification),
 including matching the response `account_ref` against the stored CP Subject Identifier
 and the JWT `iss` against the stored CP Issuer Identifier. The OP MUST use
 those tokens and any Claim Sets obtained with them only for the bound OP account. This
@@ -359,7 +370,7 @@ authentication requirements.
 
 Before making an OpenID Connect Authentication Request to a CP, the OP needs to obtain
 configuration information from the CP, 
-including its Authorization Endpoint, Token Endpoint, and Claim Set Endpoint locations.
+including its Authorization Endpoint, Token Endpoint, and Claims Endpoint locations.
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
@@ -373,22 +384,22 @@ Once those validity conditions cease to hold, the OP MUST successfully refresh a
 the metadata and, when applicable, reevaluate trust before continuing the transaction.
 The OP MUST retain the association between the issuer and the resolved endpoints throughout
 the transaction.
-The OP MUST NOT treat the Authorization Endpoint, Token Endpoint, or Claim Set Endpoint as
+The OP MUST NOT treat the Authorization Endpoint, Token Endpoint, or Claims Endpoint as
 independently configurable values detached from the CP's Issuer Identifier.
 
 The CP MUST publish the following metadata in its `openid_provider` metadata and, if it
 also publishes an [OpenID.Discovery] configuration document, in that document with the same
 values. These parameters extend the metadata in [OpenID.Discovery].
 
-`claim_set_endpoint`
-: **Required**. HTTPS URL of the CP's Claim Set Endpoint. It MUST NOT contain a fragment.
+`claims_endpoint`
+: **Required**. HTTPS URL of the CP's Claims Endpoint. It MUST NOT contain a fragment.
 
-`claim_set_signing_alg_values_supported`
+`claims_signing_alg_values_supported`
 : **Required**. Non-empty JSON array of asymmetric JWS signing algorithms supported for
   Claim Sets. `none` and symmetric MAC algorithms MUST NOT be included. The CP MUST support
-  each advertised algorithm through the request selection defined below. The OP MUST find
-  an algorithm permitted by its local policy or abort collection. Profiles or trust
-  frameworks SHOULD specify a common mandatory-to-implement algorithm for interoperability.
+  each advertised algorithm through the request selection defined below and MUST include
+  `RS256` in this array. The OP MUST find an algorithm permitted by its local policy or
+  abort collection. Additional asymmetric algorithms MAY be advertised and selected.
 
 The endpoint and its signing algorithms MUST remain bound to the validated CP issuer.
 The CP's UserInfo metadata does not select the Claim Set signing algorithm.
@@ -450,9 +461,9 @@ The OP MUST include `policy_uri`, defined in [OpenID.Registration], in its
 `openid_relying_party` metadata so the CP can show its privacy policy during Setup.
 
 Claim Set signing algorithms are selected per collection request from the CP's validated
-`claim_set_signing_alg_values_supported`, subject to OP policy. They are not selected using
+`claims_signing_alg_values_supported`, subject to OP policy. They are not selected using
 `userinfo_signed_response_alg`. UserInfo response signing and encryption metadata do not
-control the Claim Set Endpoint. The OP's single Federation RP metadata object therefore
+control the Claims Endpoint. The OP's single Federation RP metadata object therefore
 does not need to declare a different Claim Set signing algorithm for each CP.
 
 ## OP Client Authentication
@@ -516,11 +527,11 @@ also satisfy the requirements in Section 12.1.1.2 of [OpenID.Federation].
 The OP obtains the Subject's authorization to collect claims from each CP it will use. The OP
 MUST use the OpenID Connect Authorization Code Flow with `response_type=code` to obtain the grant.
 It SHOULD identify the requested claims and collection permissions using scopes supported
-by the CP. The grant MUST authorize access to the Claim Set Endpoint for the requested
+by the CP. The grant MUST authorize access to the Claims Endpoint for the requested
 claims. This specification does not assign new meaning to `claims.userinfo` or
 `claims.id_token` for that resource; mapping claim permissions to scopes is defined by the
 CP or an applicable profile or trust framework. UserInfo-only tokens MUST NOT be assumed
-to authorize access to the Claim Set Endpoint. An existing grant without the required
+to authorize access to the Claims Endpoint. An existing grant without the required
 resource permission requires new authorization before collection.
 The OP SHOULD limit the requested grant to claims and operations needed for the collection
 purposes authorized by the Subject, as described in Section 2.3 of [RFC9700].
@@ -549,7 +560,7 @@ requested access. These restrictions do not require access tokens to use a JWT f
 
 The OP and CP SHOULD use sender-constrained access tokens, using certificate binding as
 specified in Section 3 of [RFC8705] or DPoP as specified in [RFC9449]. When such tokens are
-issued, the OP MUST present the applicable proof and the CP's Claim Set Endpoint MUST verify
+issued, the OP MUST present the applicable proof and the CP's Claims Endpoint MUST verify
 the token's binding to that proof before returning claims. Client authentication, token
 sender-constraining, and PKCE serve distinct purposes; none replaces the other applicable
 checks. mTLS client authentication alone does not imply certificate-bound access tokens.
@@ -661,7 +672,7 @@ To do so, it typically goes through the following steps:
 1. (Claims Request) The RP sends an OpenID Connect Authentication Request to the OP.
 1. (Request Verification) The OP verifies if the request is valid. 
 1. (Subject Granting) The OP shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
-1. (Claims Collection) The OP accesses relevant Claims Providers' Claim Set Endpoints with Access Tokens to collect signed claims
+1. (Claims Collection) The OP accesses relevant Claims Providers' Claims Endpoints with Access Tokens to collect signed claims
 1. (Claims Verification) The RP verifies the received response. 
 
 ## Claims Request by RP to OP
@@ -886,9 +897,9 @@ collection or refresh attempt does not by itself require suspension of disclosur
 otherwise acceptable stored Claim Set.
 
 
-### Claim Set Endpoint Request
+### Claims Endpoint Request
 
-The OP MUST send an HTTPS POST request to the CP's validated `claim_set_endpoint`, with
+The OP MUST send an HTTPS POST request to the CP's validated `claims_endpoint`, with
 `Content-Type: application/json` and an access token authorized for that resource. For a
 bearer token, it MUST follow [RFC6750]. For a DPoP-bound token, it MUST use the authorization
 scheme and proof in Section 7 of [RFC9449]. For a certificate-bound token, it MUST present
@@ -912,13 +923,13 @@ The request body MUST be a JSON object with these members:
 
 `signing_alg`
 : **Required**. A single asymmetric JWS algorithm selected from the CP's validated
-  `claim_set_signing_alg_values_supported` and permitted by OP policy. The OP MUST bind this
+  `claims_signing_alg_values_supported` and permitted by OP policy. The OP MUST bind this
   selection to the pending operation. The CP MUST reject a selection it does not support.
 
 For example (the access token and nonce are illustrative):
 
 ```http
-POST /claim-sets HTTP/1.1
+POST /claims HTTP/1.1
 Host: cp.example
 Authorization: Bearer ACCESS_TOKEN
 Content-Type: application/json
@@ -926,7 +937,7 @@ Content-Type: application/json
 {
   "nonce": "request-specific-random-value",
   "claims": {"birthdate": null},
-  "signing_alg": "ES256"
+  "signing_alg": "RS256"
 }
 ```
 
@@ -943,7 +954,7 @@ or the applicable error rules of [RFC9449]; the endpoint's JSON request errors d
 those authentication challenges.
 The OP repeats collection for each CP as necessary.
 
-### Claim Set Endpoint Response
+### Claims Endpoint Response
 
 A successful response MUST use HTTP 200, `Content-Type: application/json`, and
 `Cache-Control: no-store`. Its body MUST be a JSON object with these members:
@@ -974,7 +985,7 @@ For example (the compact JWS is abbreviated):
 An illustrative decoded protected header and payload of `claim_set` are:
 
 ```json
-{"typ":"claims-aggregation+jwt","alg":"ES256","kid":"cp-app-key-1"}
+{"typ":"claims-aggregation+jwt","alg":"RS256","kid":"cp-app-key-1"}
 ```
 
 ```json
@@ -987,7 +998,7 @@ An illustrative decoded protected header and payload of `claim_set` are:
 }
 ```
 
-`ES256` is an example, not a mandatory-to-implement algorithm selected by this example.
+The example uses the common mandatory-to-implement algorithm `RS256`.
 The timestamps start at 2026-11-18T00:00:00Z. The response's cache directive prevents HTTP
 caching; it does not prohibit Subject-authorized storage under (#claims-collection).
 
@@ -1067,7 +1078,7 @@ front-channel response handling, as discussed in (#rp-request-integrity-and-brok
 
 ## Claims Verification
 
-The OP MUST obtain Claim Sets from the CP's Claim Set Endpoint and MUST NOT substitute a
+The OP MUST obtain Claim Sets from the CP's Claims Endpoint and MUST NOT substitute a
 Setup or refreshed ID Token or a UserInfo JWT. It MUST validate each CP-signed Claim Set when
 collecting it and before disclosing a stored Claim Set. The RP MUST validate the OP's enclosing ID Token or
 UserInfo response according to [OIDC] and validate each embedded CP-signed JWT before accepting its claims.
@@ -1103,7 +1114,7 @@ specified in (#claims-collection) and (#claims-delivery).
 
 The verifier MUST require an asymmetrically signed JWS and reject an unsecured JWT, `alg=none`,
 or a symmetric MAC algorithm. It MUST establish an allowed set of algorithms from its local
-policy and the CP's validated `claim_set_signing_alg_values_supported` metadata before
+policy and the CP's validated `claims_signing_alg_values_supported` metadata before
 verifying the signature. The JWT's `alg` MUST be in both sets. At acquisition, the OP MUST
 also verify that `alg` equals the `signing_alg` bound to the collection operation.
 
@@ -1125,7 +1136,7 @@ After verifying the signature, the verifier MUST perform the following checks.
    containing `sub`. Require `iss`, `aud`, `iat`, and `exp`; `iss` MUST be a non-empty string.
    The issuer MUST be the CP whose metadata and keys were validated. The OP MUST match the
    issuer and validate the acquisition or stored binding record under (#trust-model) and
-   (#claim-set-endpoint-response).
+   (#claims-endpoint-response).
    The RP MUST apply its trust policy to decide whether that CP is trusted for the claims.
    The RP relies on the OP for the subject binding described in (#trust-model).
 1. Require exactly one `aud` value, expressed as a string or a single-element array of strings.
@@ -1306,7 +1317,7 @@ making every CP maintain a shared nonce-replay database.
 The OP binds the selected signing algorithm to the operation before sending the request
 and checks the returned JWT against it. A request or response that traverses an untrusted
 internal processing boundary needs integrity protection across that boundary as described
-in (#claim-set-endpoint-response); token sender-constraining alone does not authenticate
+in (#claims-endpoint-response); token sender-constraining alone does not authenticate
 arbitrary JSON request or response bodies across such a boundary.
 
 ## CP Credential Exposure and Claim Set Replay
@@ -1449,14 +1460,14 @@ audience, consent, and verification rules.
 
 Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into the timing
 of the Subject's interactions with RPs. Updating claims in response to an RP's request for
-fresher information can trigger CP Claim Set Endpoint calls whose timing and frequency may be
+fresher information can trigger CP Claims Endpoint calls whose timing and frequency may be
 correlated with downstream activity. The OP SHOULD explain both the correlation risk of
 reusing a JWT and the CP timing-visibility risk of obtaining updates when obtaining the
 Subject's authorization for collection and disclosure. The Subject can then choose whether
 to authorize reuse or request an update, subject to the RP's acceptance policy. The OP MAY
 use privacy policies and rate limits when servicing user-directed updates.
 
-This avoids requiring a Claim Set Endpoint call for each presentation; it does not guarantee that
+This avoids requiring a Claims Endpoint call for each presentation; it does not guarantee that
 the CP learns nothing about RP use. RP-CP information sharing and retrieval of metadata,
 verification keys, or status information can create other observation paths. Valid metadata
 and key caches tied to the issuer can reduce some such contact, subject to the requirements
@@ -1569,7 +1580,8 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
-* Defined a dedicated CP Claim Set Endpoint and an explicit JWT type without `sub`
+* Restored Claims Endpoint terminology and defined an explicit JWT type without `sub`
+* Required common RS256 signing and verification support for Claim Sets
 * Separated acquisition account binding from RP-facing signed attributes and protected stored bindings
 * Added endpoint and algorithm metadata, per-request signing selection, and explicit RP type support
 * Explained Core Aggregated Claims implementation guidance and the limits of subless presentation
