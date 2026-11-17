@@ -247,8 +247,9 @@ The `iat` and `exp` values MUST be NumericDate values as defined in [JWT], and `
 later than `iat`. These timestamps describe the issuance and expiration of the signed JWT.
 They do not establish when the underlying attributes were last verified.
 
-The CP MUST NOT use the same signing key with more than one signature algorithm. It SHOULD
-publish the intended algorithm in the JWK's `alg` parameter.
+The CP MUST NOT use the same signing key with more than one signature algorithm. For each
+key used to sign Claim Sets, it MUST publish the intended algorithm in the `alg` parameter
+of every JWK representation it advertises for that key.
 
 When rotating signing keys, the CP SHOULD keep each retired public key available through its
 advertised verification-key sources until all Claim Sets signed with that key have expired,
