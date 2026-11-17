@@ -136,6 +136,9 @@ The following referenced documents are indispensable for the application of this
 [RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
 [RFC6750]: https://tools.ietf.org/html/rfc6750
 
+[RFC7636] - Proof Key for Code Exchange by OAuth Public Clients
+[RFC7636]: https://www.rfc-editor.org/rfc/rfc7636.html
+
 [RFC9207] - OAuth 2.0 Authorization Server Issuer Identification
 [RFC9207]: https://www.rfc-editor.org/rfc/rfc9207.html
 
@@ -165,6 +168,11 @@ The following referenced documents are indispensable for the application of this
 
 [JWA] - JSON Web Algorithms
 [JWA]: http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms
+
+# Informative references
+
+[OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
+[OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
 
 
 # Terms and definitions
@@ -285,6 +293,14 @@ including its Authorization Endpoint, Token Endpoint, and UserInfo Endpoint loca
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
+For each Setup transaction, the OP MUST identify the CP by its Issuer Identifier and perform
+runtime resolution of the CP's metadata for that issuer. Resolution using [OpenID.Discovery],
+[OpenID.Federation], or another metadata acquisition mechanism MUST validate that the issuer
+in the resolved metadata matches the selected CP's Issuer Identifier. The OP MUST retain the
+association between that issuer and the resolved endpoints throughout the transaction.
+The OP MUST NOT treat the Authorization Endpoint, Token Endpoint, or UserInfo Endpoint as
+independently configurable values detached from the CP's Issuer Identifier.
+
 The Claims Provider Metadata uses the following parameters from [OpenID.Discovery].
 
 `userinfo_endpoint`
@@ -295,6 +311,12 @@ The Claims Provider Metadata uses the following parameters from [OpenID.Discover
 
 The CP MUST set `authorization_response_iss_parameter_supported` to `true` in its
 `openid_provider` metadata as specified in [RFC9207].
+
+The CP MUST support the Authorization Code Flow and PKCE with the `S256` code challenge method
+as specified in [RFC7636]. Its `openid_provider` metadata MUST include `code` in
+`response_types_supported` and `S256` in `code_challenge_methods_supported`. If the CP also
+publishes a configuration document using [OpenID.Discovery], it MUST advertise these
+capabilities and support for the authorization response `iss` parameter there as well.
 
 ## Aggregating OP Metadata
 
@@ -333,18 +355,56 @@ The OP MUST omit `userinfo_encrypted_response_alg`.
 # Setup Phase
 
 The OP obtains the Subject's authorization to collect claims from each CP it will use. The OP
-MUST use an OpenID Connect Authentication Request to obtain the grant. It SHOULD identify the
-requested claims using `scope`, `claims.userinfo`, or both. It MUST associate the grant and tokens
-with the authenticated OP account as specified in (#trust-model).
+MUST use the OpenID Connect Authorization Code Flow with `response_type=code` to obtain the grant.
+It SHOULD identify the requested claims using `scope`, `claims.userinfo`, or both.
+It MUST associate the grant and tokens with the authenticated OP account as specified in
+(#trust-model).
 
 When requesting a refresh token for offline access, the OP MUST include `offline_access` in
-`scope` and use a response type that returns an authorization code. The OP and CP MUST follow
-the consent requirements in Section 11 of [OIDC], including `prompt=consent` unless other
+`scope`. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC],
+including `prompt=consent` unless other
 conditions permitting offline access are in place.
 
 The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
 to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
 `policy_uri` in the OP's client metadata. Granting access MUST involve active user interaction.
+
+## Authorization Request and Transaction Binding
+
+Before starting Setup, the OP MUST authenticate the Subject and create an authorization
+transaction bound to that OP account and the initiating user-agent session. The transaction
+MUST also identify the selected CP issuer, its resolved metadata, the OP's client registration
+at that CP, and the `redirect_uri` used for the request. If the OP supports multiple connection
+configurations or tenants for a CP, it MUST bind the selected configuration and tenant to the
+transaction as well.
+
+The OP MUST use PKCE with `code_challenge_method=S256` for every Setup request, including when
+it acts as a confidential client. Before sending the request, it MUST verify that the validated
+CP metadata advertises support for `S256` and abort Setup if that support is absent.
+It MUST generate a new, unpredictable `code_verifier` for each transaction as specified in
+[RFC7636] and bind it to that transaction. The CP MUST reject
+Setup requests without an `S256` challenge and MUST validate the corresponding `code_verifier`
+before issuing tokens, including the downgrade protection in Section 4.8.2 of [RFC9700].
+
+The OP MUST send an unpredictable, transaction-specific `state` value securely bound to the
+transaction and initiating user-agent session. The OP MUST give each transaction a limited
+lifetime, accept it at most once, and reject expired transactions. If the OP sends a `nonce`,
+it MUST bind it to the transaction and validate the returned ID Token's `nonce` according to [OIDC].
+
+## Authorization Response Session Validation
+
+Before sending an authorization code to a Token Endpoint, the OP MUST validate the returned
+`state` against the pending transaction and verify that the user-agent session completing
+Setup is bound to the authenticated OP account that initiated it. It MUST abort Setup if
+`state` is missing or mismatched, the transaction is expired or already used, or the session
+binding cannot be verified. A `state` value or an authorization-session identifier carried
+in a URL MUST NOT by itself establish the authenticated OP account or its user-agent session.
+
+If the initiating session is not available at the redirection endpoint, the OP MUST restore
+access to it through a securely bound return to the initiating origin or user agent, or
+reauthenticate the Subject and verify the binding to the initiating OP account and transaction.
+The OP MUST complete this validation before exchanging the code. Any further redirection used
+for this purpose MUST use an OP-controlled destination that an attacker cannot override.
 
 ## Authorization Response Issuer Validation
 
@@ -356,6 +416,17 @@ On receiving the authorization response, the OP MUST compare the `iss` parameter
 Issuer Identifier as specified in Section 2.4 of [RFC9207]. The OP MUST reject the response if
 `iss` is missing or the values differ. The OP MUST perform this check before sending the
 authorization code to the Token Endpoint associated with the original request.
+
+The OP MUST use the client registration, `redirect_uri`, and PKCE verifier bound to the
+validated transaction for the code exchange. It MUST NOT select a different CP, connection
+configuration, tenant, or Token Endpoint based on the received response. After validating the
+CP's ID Token according to [OIDC], the OP MUST establish the account binding in (#trust-model)
+before using or storing the resulting tokens or Claim Sets for that account.
+
+If the OP has a stored CP subject binding for the OP account and the same CP issuer, it SHOULD
+compare the new CP `sub` with the stored value. If it detects a different CP `sub`, the OP
+MUST treat it as account relinking and obtain explicit confirmation from the authenticated
+Subject before replacing the binding.
 
 # Delivery Phase (RP Phase)
 
@@ -456,6 +527,24 @@ Section 4.4 of [RFC9700] describes mix-up attacks. The check in
 (#authorization-response-issuer-validation) allows an OP that uses multiple CPs to detect an
 issuer mismatch before sending an authorization code to a Token Endpoint.
 
+## Setup Transaction and Session Integrity
+
+The Setup requirements in (#authorization-request-and-transaction-binding),
+(#authorization-response-session-validation), and (#authorization-response-issuer-validation)
+protect the OP's connections to multiple CPs. Authorization Code Flow, issuer-bound metadata
+resolution, and RFC 9207 validation implement the issuer-based countermeasure for connection
+confusion described in Section 2.2.2 of [OAuth.Security.Update]. The OP also preserves the
+selected client registration and any connection or tenant context throughout the transaction.
+
+PKCE binds an authorization code to the OP's token request. An attacker can still initiate
+Setup for the attacker's OP account and induce a victim to authorize access to the victim's
+CP account. PKCE alone does not detect this cross-user session fixation attack, described in
+Section 2.3 of [OAuth.Security.Update]. Before exchanging the code, the OP verifies the
+completion session's binding to the initiating authenticated OP account. A valid `state`
+received through a URL is insufficient without this session validation. Comparing a previously
+stored CP subject identifier can detect an account change, but provides no protection for an
+initial binding. The L1 trust assumptions in (#trust-model) continue to apply.
+
 ## Audience Binding
 
 The RP uses the OP's Issuer Identifier to check the audience of each Claim Set. This check relies on
@@ -535,6 +624,8 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Required Authorization Code Flow, PKCE S256, and transaction and session validation during Setup
+* Bound CP endpoint resolution and code exchange to the selected issuer and connection context
 * Clarified downscoping, offline access, and the use of stored Claim Sets
 * Anti RP-RP' Linkability provision added
 * Stated the L1 trust model and described the risk of cross-user claim substitution
