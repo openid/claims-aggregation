@@ -169,12 +169,6 @@ The following referenced documents are indispensable for the application of this
 [JWA] - JSON Web Algorithms
 [JWA]: http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms
 
-# Informative references
-
-[OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
-[OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
-
-
 # Terms and definitions
 For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] and the following apply.
 
@@ -293,11 +287,16 @@ including its Authorization Endpoint, Token Endpoint, and UserInfo Endpoint loca
 
 This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
 
-For each Setup transaction, the OP MUST identify the CP by its Issuer Identifier and perform
-runtime resolution of the CP's metadata for that issuer. Resolution using [OpenID.Discovery],
-[OpenID.Federation], or another metadata acquisition mechanism MUST validate that the issuer
-in the resolved metadata matches the selected CP's Issuer Identifier. The OP MUST retain the
-association between that issuer and the resolved endpoints throughout the transaction.
+For each Setup transaction, the OP MUST identify the CP by its Issuer Identifier and use
+metadata resolved for that issuer. The OP MUST validate the issuer as required by Section 4.3
+of [OpenID.Discovery] or Section 5.1.3 of [OpenID.Federation]. Other metadata acquisition
+mechanisms MUST provide the same validated issuer binding. The OP MAY reuse metadata cached
+for that issuer while it remains valid under the applicable caching rules and, when using
+Federation, the Trust Chain validity requirements in Section 12.3 of [OpenID.Federation].
+Once those validity conditions cease to hold, the OP MUST successfully refresh and validate
+the metadata and, when applicable, reevaluate trust before continuing the transaction.
+The OP MUST retain the association between the issuer and the resolved endpoints throughout
+the transaction.
 The OP MUST NOT treat the Authorization Endpoint, Token Endpoint, or UserInfo Endpoint as
 independently configurable values detached from the CP's Issuer Identifier.
 
@@ -361,9 +360,8 @@ It MUST associate the grant and tokens with the authenticated OP account as spec
 (#trust-model).
 
 When requesting a refresh token for offline access, the OP MUST include `offline_access` in
-`scope`. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC],
-including `prompt=consent` unless other
-conditions permitting offline access are in place.
+`scope`. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC], including
+`prompt=consent` unless other conditions permitting offline access are in place.
 
 The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
 to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
@@ -382,9 +380,11 @@ The OP MUST use PKCE with `code_challenge_method=S256` for every Setup request, 
 it acts as a confidential client. Before sending the request, it MUST verify that the validated
 CP metadata advertises support for `S256` and abort Setup if that support is absent.
 It MUST generate a new, unpredictable `code_verifier` for each transaction as specified in
-[RFC7636] and bind it to that transaction. The CP MUST reject
-Setup requests without an `S256` challenge and MUST validate the corresponding `code_verifier`
-before issuing tokens, including the downgrade protection in Section 4.8.2 of [RFC9700].
+[RFC7636] and bind it to that transaction. For clients registered to use Claims Aggregation
+under (#client-configuration-phase), identified by their `client_id`, the CP MUST reject
+authorization requests without an `S256` challenge. The CP MUST validate the corresponding
+`code_verifier` before issuing tokens, including the downgrade protection in Section 4.8.2
+of [RFC9700].
 
 The OP MUST send an unpredictable, transaction-specific `state` value securely bound to the
 transaction and initiating user-agent session. The OP MUST give each transaction a limited
@@ -400,11 +400,21 @@ Setup is bound to the authenticated OP account that initiated it. It MUST abort 
 binding cannot be verified. A `state` value or an authorization-session identifier carried
 in a URL MUST NOT by itself establish the authenticated OP account or its user-agent session.
 
-If the initiating session is not available at the redirection endpoint, the OP MUST restore
-access to it through a securely bound return to the initiating origin or user agent, or
-reauthenticate the Subject and verify the binding to the initiating OP account and transaction.
-The OP MUST complete this validation before exchanging the code. Any further redirection used
-for this purpose MUST use an OP-controlled destination that an attacker cannot override.
+If the initiating session is not available at the redirection endpoint, the OP MUST use one
+of the following procedures before exchanging the code.
+
+1. The OP stores the received authorization response with its pending transaction and returns
+   the user agent to the initiating origin or application with an unpredictable, short-lived,
+   one-time handle for that response and transaction. The OP MUST require the original session
+   cookie or equivalent session credential held by the initiating application, verify its
+   binding to the initiating OP account and transaction, and consume the handle at most once.
+   Presentation of the handle alone MUST NOT complete Setup.
+1. The OP reauthenticates the Subject, verifies that the authenticated OP account matches the
+   account that initiated the pending transaction, and validates the returned `state` against
+   that transaction before completing Setup.
+
+Any further redirection used for this purpose MUST use an OP-controlled destination that an
+attacker cannot override.
 
 ## Authorization Response Issuer Validation
 
@@ -417,16 +427,27 @@ Issuer Identifier as specified in Section 2.4 of [RFC9207]. The OP MUST reject t
 `iss` is missing or the values differ. The OP MUST perform this check before sending the
 authorization code to the Token Endpoint associated with the original request.
 
+## Token Request and Account Binding
+
 The OP MUST use the client registration, `redirect_uri`, and PKCE verifier bound to the
 validated transaction for the code exchange. It MUST NOT select a different CP, connection
 configuration, tenant, or Token Endpoint based on the received response. After validating the
 CP's ID Token according to [OIDC], the OP MUST establish the account binding in (#trust-model)
 before using or storing the resulting tokens or Claim Sets for that account.
 
-If the OP has a stored CP subject binding for the OP account and the same CP issuer, it SHOULD
+If the OP has a stored CP subject binding for the OP account and the same CP issuer, it MUST
 compare the new CP `sub` with the stored value. If it detects a different CP `sub`, the OP
 MUST treat it as account relinking and obtain explicit confirmation from the authenticated
 Subject before replacing the binding.
+
+Before establishing a new binding, the OP SHOULD check whether the validated CP (`iss`, `sub`)
+is already bound to another OP account within the applicable account namespace, including the
+tenant where accounts are tenant-scoped. If such a binding exists, the OP MUST either reject
+the new binding or require additional verification under the deployment's account-linking
+policy before making the CP's tokens or Claim Sets available to the new OP account. It MUST
+NOT automatically transfer or remove the existing binding. Deployments that permit a CP
+account to be linked to multiple OP accounts MUST define the conditions for doing so in that
+policy.
 
 # Delivery Phase (RP Phase)
 
@@ -530,20 +551,25 @@ issuer mismatch before sending an authorization code to a Token Endpoint.
 ## Setup Transaction and Session Integrity
 
 The Setup requirements in (#authorization-request-and-transaction-binding),
-(#authorization-response-session-validation), and (#authorization-response-issuer-validation)
-protect the OP's connections to multiple CPs. Authorization Code Flow, issuer-bound metadata
-resolution, and RFC 9207 validation implement the issuer-based countermeasure for connection
-confusion described in Section 2.2.2 of [OAuth.Security.Update]. The OP also preserves the
-selected client registration and any connection or tenant context throughout the transaction.
+(#authorization-response-session-validation), (#authorization-response-issuer-validation),
+and (#token-request-and-account-binding) protect the OP's connections to multiple CPs.
+Authorization Code Flow, issuer-bound metadata
+resolution with valid caching, and RFC 9207 validation implement the issuer-based countermeasure
+for connection confusion described in Section 2.2.2 of [OAuth.Security.Update]. The OP also
+preserves the selected client registration and any connection or tenant context throughout
+the transaction.
 
 PKCE binds an authorization code to the OP's token request. An attacker can still initiate
 Setup for the attacker's OP account and induce a victim to authorize access to the victim's
 CP account. PKCE alone does not detect this cross-user session fixation attack, described in
-Section 2.3 of [OAuth.Security.Update]. Before exchanging the code, the OP verifies the
-completion session's binding to the initiating authenticated OP account. A valid `state`
+Section 2.3 of [OAuth.Security.Update], with countermeasures in Section 2.3.2. Before exchanging
+the code, the OP verifies the completion session's binding to the initiating authenticated
+OP account. A valid `state`
 received through a URL is insufficient without this session validation. Comparing a previously
-stored CP subject identifier can detect an account change, but provides no protection for an
-initial binding. The L1 trust assumptions in (#trust-model) continue to apply.
+stored CP subject identifier detects account changes. Checking for the same CP (`iss`, `sub`)
+on another OP account can also detect an attempted new binding when that CP identity is
+already known to the OP. Neither check establishes a relationship for a CP identity that has
+never been linked at the OP. The L1 trust assumptions in (#trust-model) continue to apply.
 
 ## Audience Binding
 
@@ -660,4 +686,8 @@ We would like to thank the following people for their valuable feedback and cont
 * defined claims endpoint & discovery metadata
 * defined registration of claims endpoint response signature and encryption algs
 * defined c_token in claims object to request claims from claims endpoint
-* 
+
+# Bibliography
+
+[OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
+[OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
