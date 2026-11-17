@@ -350,14 +350,6 @@ using [OpenID.Discovery], it MUST advertise the same capabilities there. These p
 describe the OP's capabilities for serving RPs. A CP that only serves signed UserInfo to the OP
 has no requirement to advertise `aggregated` in that role.
 
-The OP MUST also set `claims_max_age_supported` to `true` in its `openid_provider` metadata
-and in any [OpenID.Discovery] configuration document it publishes. This Boolean parameter
-indicates support for (#claim-set-freshness-request). Its absence means that support has not
-been advertised. An RP MUST verify that this value is `true` in the OP's validated metadata
-before relying on the OP to process `claims_max_age`.
-This check distinguishes support for this request parameter from the Aggregated Claims
-capability advertised by OPs implementing earlier versions of this specification.
-
 
 # Client Configuration Phase
 
@@ -510,70 +502,8 @@ as described in Section 5.5 of [OIDC]. The OP MUST support this parameter. The R
 The OP selects CPs associated with the Subject's account and MUST use the Aggregated Claims format
 for claims it returns from those CPs. The RP can apply its own policy to the CP's signed `iss`
 when deciding whether to use the claims. The request syntax defined here covers claim names.
-Requesting a specific CP requires an extension. The RP can limit the age of CP-signed JWTs
-using (#claim-set-freshness-request).
-
-### Claim Set Freshness Request
-
-The optional Authentication Request parameter `claims_max_age` specifies the maximum
-acceptable age, in seconds, of every CP-signed JWT delivered as Aggregated Claims in the
-resulting ID Token or UserInfo responses. It applies to the signed JWT's `iat` and does not
-specify the age of the underlying attributes or their verification. The OIDC `max_age`
-parameter retains its meaning as the maximum authentication age at the OP.
-
-The value MUST be a non-negative integer. In an HTTP query or form, it MUST be encoded as
-one or more ASCII decimal digits. In a Request Object, it MUST be a JSON integer. The OP
-MUST reject a malformed or negative value with `invalid_request` according to
-[OIDC]. Omitting the parameter imposes no additional JWT-age limit through this mechanism;
-the expiration, authorization, and other validation requirements still apply.
-
-For a positive value `N`, each JWT MUST satisfy `now - iat <= N` when the OP delivers it and
-when the RP validates it. Each party uses its own current time for `now`. For example,
-`claims_max_age=300` requests JWTs issued no more than five minutes earlier. This condition
-is additional to the `exp` check in (#claim-validation).
-
-The value `0` requires a new collection from the CP's UserInfo Endpoint for each response
-containing the affected Claim Sets.
-The OP MUST initiate that collection after receiving the request that produces the response.
-This is the Authentication Request for an ID Token returned by the Authorization Endpoint,
-the token request for an ID Token returned by the Token Endpoint, including during refresh,
-or the UserInfo request for a UserInfo response. The JWT's `iat` MUST be at or after that
-request's receipt time at the OP. The RP MUST check that `iat` is at or after the start time
-of its corresponding request. The OP and RP MAY allow a small leeway for clock skew and
-timestamp resolution in these comparisons, including for positive values. A new UserInfo
-request to a CP does not by itself prove that the returned JWT has a
-new `iat`; the OP MUST check the returned value.
-
-The OP MUST bind the requested value to the RP's authorization transaction and retain it
-with the resulting authorization grant and its access and refresh tokens. Token refresh
-MUST preserve the requirement for replacement access tokens and any refreshed ID Token.
-The OP MUST apply the value to every UserInfo response authorized by those tokens. The RP MUST
-retain the value and the relevant request start time in its transaction or access-token
-context and associate each response with that context. The RP MUST independently check
-the CP-signed `iat`, including when the OP has advertised support for this parameter.
-
-If the OP cannot obtain a Claim Set satisfying the limit, it MUST omit that Claim Set and
-the `_claim_names` entries that would reference it. The RP MUST treat missing or excessively
-old claims as unavailable and enforce its application's required-claim policy. Profiles MAY
-require rejection of the entire response. The OP MUST NOT substitute ordinary OP-issued
-claims for CP-signed claims to claim that this freshness requirement has been met.
-An RP whose policy requires CP-signed claims MUST verify that those claims are delivered in
-the Aggregated Claims representation and validated under (#claims-verification).
-
-The OP MAY enforce privacy and resource-use policies, including minimum collection intervals
-and rate limits for an RP or CP connection. If such a policy prevents the collection needed
-to satisfy `claims_max_age`, the OP MUST omit the affected Claim Sets and their `_claim_names`
-entries. It MUST NOT silently increase the requested age limit or use a cached Claim Set
-that fails the limit. Supporting this parameter does not commit the OP to unlimited CP calls.
-
-This parameter provides a common ceiling on the age of the JWTs carrying Aggregated Claims.
-The `max_age` query member in Section 5.5.2 of [OpenID4IDA] constrains a requested date or
-timestamp value at request time, such as `verification.time`. Reusing that syntax for CP JWT
-issuance times requires an additional mapping to each embedded JWT and rules for subsequent
-UserInfo responses. This specification uses a common limit across the CP JWTs. Profiles MAY
-add finer-grained constraints, but MUST satisfy the common limit as well. If multiple JWT-age
-constraints apply to one JWT, it MUST satisfy each applicable constraint. Constraints on
-verification or evidence timestamps apply independently to those timestamps.
+Requesting a specific CP requires an extension. The RP applies its own freshness policy as
+described in (#local-freshness-policy-and-user-directed-updates).
 
 
 ## RP authentication and the request verification
@@ -599,14 +529,15 @@ After verifying the request, the OP
 
 The OP MAY collect Claim Sets before an RP requests them if the CP grant and the Subject's
 authorization permit it. The OP MAY reuse a stored Claim Set if it still meets the applicable
-validity, authorization, account-binding, and (#claim-set-freshness-request) requirements.
+validity, authorization, and account-binding requirements, including the OP's collection and
+storage policies.
 
-If the requested freshness limit is not met and collection is permitted by the controls in
-(#claim-set-freshness-request), the OP MUST attempt a new collection from the CP before
-returning the affected claims. If policy prevents collection, it MUST omit the affected
-Claim Sets. It MUST check the new JWT against the same limit
-and omit it if it still fails. Renewing an access token alone does not refresh a stored
-Claim Set. The OP MUST preserve the CP-signed JWT and its `iat` when storing and disclosing it.
+The OP SHOULD provide a means for the authenticated Subject to request updated claims from
+a selected CP. It MAY perform a new collection using the Subject's existing authorization
+and valid CP tokens, or obtain the necessary authorization at the CP as described in
+(#setup-phase). The OP MAY apply privacy policies and rate limits to such updates.
+Renewing an access token alone does not update a stored Claim Set. The OP MUST preserve the
+CP-signed JWT and its `iat` when storing and disclosing it.
 
 For a new collection, the OP SHOULD use an access token with the narrowest scope available for
 the claims it needs. If the available access token grants broader access than needed, and a
@@ -642,7 +573,7 @@ authorization. It MUST NOT fall back to a stored Claim Set to bypass that failur
 token refresh alone MUST NOT lift this suspension. This deliberately requires a successful
 authorized UserInfo collection even if a temporary CP failure prevents collection; the OP
 omits the affected Claim Sets in the meantime. A known revocation or consent withdrawal MUST
-take precedence over an otherwise unexpired JWT or a satisfied freshness limit.
+take precedence over an otherwise unexpired JWT.
 
 
 ### UserInfo Endpoint Request
@@ -733,9 +664,6 @@ After verifying the signature, the verifier MUST perform the following checks.
    MUST reject a JWT whose `iat` is in the future or whose `exp` has been reached. It MAY
    allow a small leeway for clock skew. If `nbf` is present, it MUST also validate that claim
    according to Section 4.1.5 of [JWT], with the same clock-skew allowance.
-1. Apply any `claims_max_age` requirement bound to this transaction or access token as
-   specified in (#claim-set-freshness-request). Each JWT MUST meet the requirement when
-   validated; validating the enclosing OP response alone is insufficient.
 
 The RP MUST also verify the `_claim_names` and `_claim_sources` structure according to
 Section 5.6.2 of [OIDC], including that each referenced JWT contains the claims mapped to it,
@@ -747,6 +675,27 @@ claims mapped to it by `_claim_names` as unavailable. The RP MAY reject the enti
 response. If it continues processing, it MUST independently validate the enclosing OP response
 and every other Claim Set it uses, and enforce its application's required-claim policy before
 completing the requested operation. Profiles MAY require rejection of the entire response.
+
+### Local Freshness Policy and User-Directed Updates
+
+The RP MUST apply its application's freshness requirements before using claims. It MAY
+enforce a maximum acceptable JWT age based on the CP-signed `iat`, in addition to checking
+`exp`. If a Claim Set is too old for the intended use, the RP MUST treat its claims as
+unavailable for that use and enforce its required-claim policy.
+
+The RP SHOULD explain to the Subject when updated information is needed. It MAY direct the
+Subject to the OP's claim-management interface to request an update, after which the Subject
+can retry the RP interaction using the existing OpenID Connect flow. Retrying authentication
+alone does not require the OP to recollect CP claims. The RP MUST validate the returned
+Claim Sets and apply its freshness policy again after an update.
+
+Applications requiring constraints on the age of identity verification or evidence can use
+the existing request and validation mechanisms in [OpenID4IDA] with supporting providers.
+For example, the `max_age` query member in Section 5.5.2 constrains `verification.time` or
+another requested date or timestamp. The RP evaluates the relevant verification or evidence
+timestamp, separately from the JWT's `iat`. When [OpenID4IDA] is used, its request, validation,
+and assertion-format requirements apply.
+
 
 # Security Considerations
 
@@ -823,57 +772,29 @@ with operational requirements. It does not prove the account binding for a parti
 
 The signed `iat` establishes the age of the JWT. An OP collection timestamp or the enclosing
 ID Token's `iat` MUST NOT replace it in freshness checks. A CP can issue a new JWT containing
-attributes verified earlier. Deployments requiring a maximum age for attribute verification
-need an additional profile with the corresponding signed evidence and validation rules.
+attributes verified earlier. Applications needing freshness of identity verification or
+evidence can use the corresponding signed data and validation rules in [OpenID4IDA], as
+described in (#local-freshness-policy-and-user-directed-updates).
 
 Revoking OAuth tokens, including through [RFC7009], does not by itself invalidate copies of
 CP-signed JWTs already delivered to RPs. This specification defines no CP-to-OP notification
 or RP status-check protocol for such copies. Offline verification therefore cannot establish
 that a grant remains authorized or that an attribute has not changed since issuance.
 Deployments requiring prompt revocation detection MUST define an authenticated notification
-or status-check mechanism in an additional profile. Short JWT lifetimes and freshness limits
-reduce the age of artifacts accepted offline, subject to the CP's issuance policy.
+or status-check mechanism in an additional profile. Short JWT lifetimes and RP acceptance
+policies reduce the age of artifacts accepted offline, subject to the CP's issuance policy.
 
 # Privacy Considerations
 
 Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the subject using the `sub` value in the JWT included in the aggregated claim.
 
 Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into the timing
-of the Subject's interactions with RPs. A zero or small `claims_max_age` can instead trigger
-CP UserInfo calls in response to RP activity. The CP can observe the timing and frequency of
-those calls and may correlate them with downstream activity. The OP SHOULD explain this
-timing-disclosure tradeoff to the Subject when obtaining authorization for collection and
-disclosure. The policy and rate-limit controls in (#claim-set-freshness-request) allow the
-OP to restrict such calls while preserving the RP's requested acceptance limit.
+of the Subject's interactions with RPs. Updating claims in response to an RP's request for
+fresher information can trigger CP UserInfo calls whose timing and frequency may be
+correlated with downstream activity. The OP SHOULD explain this tradeoff to the Subject when
+obtaining authorization for collection and disclosure. It MAY use privacy policies and rate
+limits when servicing user-directed updates.
 
-
-# IANA Considerations
-
-This specification requests registration of the following entries.
-
-## OAuth Parameters Registration
-
-The following entry is requested in the OAuth Parameters registry defined in Section 11.2
-of [RFC6749].
-
-| Field | Value |
-|---|---|
-| Parameter name | `claims_max_age` |
-| Parameter usage location | Authorization request |
-| Change controller | OpenID Foundation Artifact Binding/Connect Working Group, openid-specs-ab@lists.openid.net |
-| Specification document | (#claim-set-freshness-request) |
-
-## OAuth Authorization Server Metadata Registration
-
-The following entry is requested in the OAuth Authorization Server Metadata registry defined
-in Section 7.1 of [RFC8414].
-
-| Field | Value |
-|---|---|
-| Metadata name | `claims_max_age_supported` |
-| Metadata description | Boolean indicating support for the `claims_max_age` request parameter |
-| Change controller | OpenID Foundation Artifact Binding/Connect Working Group, openid-specs-ab@lists.openid.net |
-| Specification document | (#aggregating-op-metadata) |
 
 {backmatter}
 
@@ -881,9 +802,6 @@ in Section 7.1 of [RFC8414].
 
 [RFC7009] - OAuth 2.0 Token Revocation
 [RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
-
-[RFC8414] - OAuth 2.0 Authorization Server Metadata
-[RFC8414]: https://www.rfc-editor.org/rfc/rfc8414.html
 
 [OpenID4IDA] - OpenID Connect for Identity Assurance 1.0 incorporating errata set 1
 [OpenID4IDA]: https://openid.net/specs/openid-connect-4-identity-assurance-1_0-errata1.html
@@ -944,7 +862,7 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
-* Defined JWT-age requests, collection behavior, and authorization withdrawal and revocation handling
+* Clarified local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
 * Defined CP signing algorithm selection, verification key resolution, and Claim Set validation
 * Required issuance and expiration timestamps in CP-signed UserInfo JWTs
 * Required Authorization Code Flow, PKCE S256, and transaction and session validation during Setup
