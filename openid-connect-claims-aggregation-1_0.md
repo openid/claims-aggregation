@@ -136,14 +136,23 @@ The following referenced documents are indispensable for the application of this
 [RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
 [RFC6750]: https://tools.ietf.org/html/rfc6750
 
+[RFC7009] - OAuth 2.0 Token Revocation
+[RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
+
 [RFC7636] - Proof Key for Code Exchange by OAuth Public Clients
 [RFC7636]: https://www.rfc-editor.org/rfc/rfc7636.html
+
+[RFC8705] - OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens
+[RFC8705]: https://www.rfc-editor.org/rfc/rfc8705.html
 
 [RFC8725] - JSON Web Token Best Current Practices
 [RFC8725]: https://www.rfc-editor.org/rfc/rfc8725.html
 
 [RFC9207] - OAuth 2.0 Authorization Server Issuer Identification
 [RFC9207]: https://www.rfc-editor.org/rfc/rfc9207.html
+
+[RFC9449] - OAuth 2.0 Demonstrating Proof of Possession (DPoP)
+[RFC9449]: https://www.rfc-editor.org/rfc/rfc9449.html
 
 [RFC9700] - Best Current Practice for OAuth 2.0 Security
 [RFC9700]: https://www.rfc-editor.org/rfc/rfc9700.html
@@ -385,12 +394,69 @@ The OP MUST include the following client metadata defined in [OpenID.Registratio
 
 The OP MUST omit `userinfo_encrypted_response_alg`.
 
+## OP Client Authentication
+
+The OP MUST act as a confidential client of the CP. The OP and CP MUST support
+`private_key_jwt` client authentication as specified in Section 9 of [OIDC]. In the base
+profile, the OP MUST set `token_endpoint_auth_method` to `private_key_jwt` in its
+`openid_relying_party` metadata and use that method for client authentication.
+
+The OP publishes one `openid_relying_party` metadata object in its Entity Configuration.
+Its declared authentication method is therefore common to all CPs using that configuration,
+rather than selected separately for each CP. A profile or trust framework MAY instead
+require `self_signed_tls_client_auth`, as defined in Section 2.2 of [RFC8705], if it requires
+all participating OPs and CPs to support and use that method. In that case, the OP MUST
+declare `self_signed_tls_client_auth` as its single `token_endpoint_auth_method` and use it
+consistently. mTLS support remains OPTIONAL for base-profile participants; an OP declaring
+it cannot assume interoperability with CPs that only support the base method.
+
+The CP MUST advertise `private_key_jwt` and any supported mTLS alternative in
+`token_endpoint_auth_methods_supported` in its `openid_provider` metadata and, if published,
+its [OpenID.Discovery] configuration document. The OP MUST NOT select `none` or a shared-secret
+client authentication method for this profile.
+
+Automatic Registration requests MUST prove possession of the OP's RP keys as required by
+Section 12.1.1 of [OpenID.Federation], using a signed Request Object or authenticated PAR.
+The OP MUST also authenticate at the CP's Token Endpoint for both authorization code
+exchange and refresh token use. For OP clients under this specification, the CP MUST reject
+unauthenticated Token Requests and refresh tokens presented by a different client. Other CP
+endpoints requiring client authentication MUST use a mutually supported method consistent
+with the resolved metadata.
+The OP MUST keep each authenticated request bound to the selected CP issuer and its
+validated endpoint metadata, including requests to a revocation or PAR endpoint.
+
+For `private_key_jwt`, the OP and CP MUST apply the assertion creation and validation rules
+in Section 9 of [OIDC], with the following audience restriction. The assertion's `aud` MUST
+contain exactly one value equal to the CP's validated Issuer Identifier, expressed as a
+string or a single-element array. The OP MUST obtain that identifier through the issuer
+validation in (#discovery-phase), not derive it from an endpoint URI. The CP MUST reject
+assertions that do not satisfy this audience restriction. This requirement applies at
+every CP endpoint where the OP uses `private_key_jwt`, including the Token, PAR, and
+revocation endpoints. It implements Section 2.1.2.1 of [OAuth.Security.Update] in place of
+the Token Endpoint audience recommendation in Section 9 of [OIDC].
+
+The CP MUST validate the assertion signature using the OP's resolved `openid_relying_party`
+keys and applicable algorithm restrictions. It MUST verify that `iss` and `sub` identify the
+OP's `client_id` and that `exp` has not been reached. The OP MUST use a fresh `jti` for each
+assertion. Assertions SHOULD have short lifetimes, for example no more than a few minutes.
+The OP MUST follow any additional assertion lifetime limits specified by the applicable
+profile or trust framework. The CP MUST reject assertion reuse and retain a replay record
+for each accepted (`client_id`, `jti`) until the assertion's `exp`, including any clock-skew
+allowance under which it could still be accepted.
+
+When `self_signed_tls_client_auth` is used at any endpoint, the CP MUST match the presented
+certificate against the certificates published in the OP's resolved RP JWK Set and perform
+the certificate and client binding checks in Section 2.2 of [RFC8705]. PAR requests MUST
+also satisfy the requirements in Section 12.1.1.2 of [OpenID.Federation].
+
 
 # Setup Phase
 
 The OP obtains the Subject's authorization to collect claims from each CP it will use. The OP
 MUST use the OpenID Connect Authorization Code Flow with `response_type=code` to obtain the grant.
 It SHOULD identify the requested claims using `scope`, `claims.userinfo`, or both.
+The OP SHOULD limit the requested grant to claims and operations needed for the collection
+purposes authorized by the Subject, as described in Section 2.3 of [RFC9700].
 It MUST associate the grant and tokens with the authenticated OP account as specified in
 (#trust-model).
 
@@ -405,6 +471,34 @@ The dialogue MUST explain that collected Claim Sets may continue to be used or d
 the OP until they expire, including after the CP grant is revoked. It MUST explain that the
 Subject controls further disclosure at the OP and must use the OP's controls to stop it, as
 described in (#authorization-withdrawal-and-grant-revocation).
+
+## CP Token Issuance and Use
+
+The CP SHOULD issue short-lived access tokens, choosing lifetimes according to the exposure
+and sensitivity of the authorized claims. It SHOULD restrict each access token to its
+UserInfo resource and the claims and operations authorized by the Subject. The UserInfo
+Endpoint MUST verify that a presented token is intended for that resource and permits the
+requested access. These restrictions do not require access tokens to use a JWT format.
+
+The OP and CP SHOULD use sender-constrained access tokens, using certificate binding as
+specified in Section 3 of [RFC8705] or DPoP as specified in [RFC9449]. When such tokens are
+issued, the OP MUST present the applicable proof and the CP's UserInfo Endpoint MUST verify
+the token's binding to that proof before returning claims. Client authentication, token
+sender-constraining, and PKCE serve distinct purposes; none replaces the other applicable
+checks. mTLS client authentication alone does not imply certificate-bound access tokens.
+
+The CP MUST assess the risk of issuing a refresh token and, if issued, bind it to the OP
+client and the Subject-authorized scope and resources as specified in Section 4.14.2 of
+[RFC9700]. The CP MUST validate this binding and authenticate the OP on every refresh.
+This profile uses confidential clients; it does not require the separate refresh-token
+key binding specified for public clients in [RFC9449]. The CP MAY rotate refresh tokens as
+an additional replay-detection measure following Section 4.14.2 of [RFC9700]. When the CP
+returns a replacement refresh token, the OP MUST replace the old token as specified in
+Section 6 of [RFC6749], preserving the account binding in (#trust-model).
+
+The CP SHOULD support token revocation as specified in [RFC7009]. Token expiration,
+rotation, and revocation govern further collection; their effect on stored signed Claim
+Sets is specified in (#authorization-withdrawal-and-grant-revocation).
 
 ## Authorization Request and Transaction Binding
 
@@ -629,6 +723,21 @@ If a new collection is needed and the OP cannot obtain a suitable Claim Set usin
 access token or a refresh token, it MUST obtain the necessary authorization from the Subject
 at the CP or omit the affected claims.
 
+### Token and Claim Set Storage
+
+The OP MUST protect stored CP access tokens, refresh tokens, client authentication and
+proof-of-possession private keys, and signed Claim Sets against unauthorized disclosure,
+modification, and use. It MUST enforce the account and CP bindings in (#trust-model) when
+accessing stored material. These protections MUST cover persistent stores, backups, and
+operational access. The OP MUST prevent tokens, private keys, and Claim Sets from being
+exposed through logs or diagnostics accessible to unauthorized parties.
+
+The OP SHOULD encrypt sensitive stored material at rest and protect encryption keys
+separately from the data. Key isolation and access controls SHOULD limit the impact of a
+compromised component. The storage architecture, including the use of Subject-controlled
+encryption keys, is an implementation choice. These safeguards do not impose a retention
+deadline on Claim Sets or change the Subject's control over their disclosure.
+
 ### Authorization Withdrawal and Grant Revocation
 
 The OP MUST preserve the association of stored Claim Sets with the authenticated OP account
@@ -660,9 +769,13 @@ otherwise acceptable stored Claim Set.
 
 For claims collection, the OP
 
-1. MUST send OAuth protected resource request to the UserInfo Endpoint using previously obtained Access Token as described in 5.3.1 of OpenID Connect 1.0 [OIDC];
+1. MUST send an OAuth protected resource request to the UserInfo Endpoint using the obtained
+   access token as described in Section 5.3.1 of [OIDC] and the applicable token usage rules.
+   For a bearer token, it MUST follow [RFC6750]. For a DPoP-bound token, it MUST use the
+   authorization scheme and proof specified in Section 7 of [RFC9449]. For a
+   certificate-bound token, it MUST present the certificate as specified in [RFC8705].
 
-This process will be repeated for as each Claims Providers as necessary.
+The OP repeats this process for each CP as necessary.
 
 ## Claims Delivery
 
@@ -893,6 +1006,57 @@ The trust model in (#trust-model) relies on the OP to preserve the account bindi
 collection, storage, and disclosure. A Federation Trust Mark can attest to an OP's compliance
 with operational requirements. It does not prove the account binding for a particular response.
 
+## CP Credential Exposure and Claim Set Replay
+
+Pre-collection permits an OP to hold a grant that covers future Subject-authorized uses
+beyond a single RP request. The least-privilege requirements in (#setup-phase) and
+(#claims-collection) limit requested access. Downscoping an access token does not by itself
+reduce the authority of the original refresh token. The protections in
+(#cp-token-issuance-and-use) and (#token-and-claim-set-storage) address the resulting
+concentration of credentials and personal data at the OP.
+
+The assertion audience restriction in (#op-client-authentication) implements the preferred
+audience-injection countermeasure in Section 2.1.2.1 of [OAuth.Security.Update]. The OP's
+Entity Identifier is its `client_id` at every CP, so uniqueness of client identifiers
+across CPs is not an available countermeasure. Using different authentication keys for
+different CPs can provide additional isolation only when each CP's accepted key set is
+also restricted accordingly. Publishing several keys in a common RP key set does not by
+itself establish that isolation.
+
+The single Entity Configuration also limits how client authentication represents device
+instances. In this profile, the client authentication keys are managed by the OP Entity,
+and an on-device application acts as that Entity's user interface or agent. The CP resolves
+one client identity and one RP metadata object for the OP's Entity Identifier; this
+specification does not define a separate enrollment or authentication binding for each
+device instance. Distributing the same authentication private key to all devices expands
+the risk of key extraction. Listing every device key in the common RP JWK Set can cause
+unbounded growth and expose device population and churn, without establishing separate
+client identities at the CP.
+
+Confidential-client status does not require server-side execution. Device-generated keys
+and instance-specific registration can support secure client authentication, but combining
+them with this profile's common Entity Identifier, OP issuer, and RP metadata requires a
+separate profile. Such a profile could define per-instance Explicit Registration or Dynamic
+Client Registration, or an Entity-backed client-attestation mechanism for instance keys
+while retaining the Entity Identifier as `client_id`. It would need to define the binding
+between each instance, its credentials, `client_id`, and the OP issuer, and the
+authentication-method selection rules. Giving an instance a different `client_id` while
+retaining a common OP issuer would change the identity relationship required by this base
+profile. These instance profiles are outside the scope of this specification.
+
+Client authentication and sender-constrained CP access tokens protect collection, not the
+subsequent presentation of a signed Claim Set. A Claim Set's audience identifies the OP,
+not an individual RP or presentation. An RP or another holder can copy that JWT and send
+it elsewhere. Acceptance depends on the recipient's enclosing-response validation,
+account-binding trust, and Claim Set verification rules in (#claims-verification); possession
+of the embedded JWT alone does not authenticate the Subject. Short Claim Set lifetimes
+limit the exposure period but do not prevent copying or reuse before expiration.
+
+The L1 model therefore continues to rely on the OP's account binding and disclosure
+controls. These protections neither require per-presentation CP contact nor cause CP grant
+revocation to invalidate stored Claim Sets. Storage remains under the Subject's control
+within the limits described in (#freshness-and-revocation-limits).
+
 ## Freshness and Revocation Limits
 
 The signed `iat` establishes the age of the JWT. An OP collection timestamp or the enclosing
@@ -944,9 +1108,6 @@ use privacy policies and rate limits when servicing user-directed updates.
 {backmatter}
 
 # Bibliography
-
-[RFC7009] - OAuth 2.0 Token Revocation
-[RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
 
 [OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
 [OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
@@ -1004,6 +1165,9 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Required confidential OP clients with `private_key_jwt` support and optional mTLS authentication
+* Bound client assertion audiences to the CP issuer and defined token and storage protections
+* Explained the limits of sender-constraining and replay protection for stored Claim Sets
 * Defined RP request validation, authorization code and PKCE checks, and per-RP consent
 * Required RP `policy_uri` metadata and corrected its use in the consent dialogue
 * Bound remembered consent to CP sources and distinguished verified RP display information
