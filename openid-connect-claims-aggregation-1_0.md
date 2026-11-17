@@ -160,6 +160,9 @@ The following referenced documents are indispensable for the application of this
 [OpenID.Federation] - OpenID Federation 1.0
 [OpenID.Federation]: https://openid.net/specs/openid-federation-1_0.html
 
+[OpenID4IDA] - OpenID Connect for Identity Assurance 1.0 incorporating errata set 1
+[OpenID4IDA]: https://openid.net/specs/openid-connect-4-identity-assurance-1_0-errata1.html
+
 [JWT] - JSON Web Token
 [JWT]: https://www.rfc-editor.org/rfc/rfc7519.html
 
@@ -394,6 +397,10 @@ When requesting a refresh token for offline access, the OP MUST include `offline
 The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
 to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
 `policy_uri` in the OP's client metadata. Granting access MUST involve active user interaction.
+The dialogue MUST explain that collected Claim Sets may continue to be used or disclosed by
+the OP until they expire, including after the CP grant is revoked. It MUST explain that the
+Subject controls further disclosure at the OP and must use the OP's controls to stop it, as
+described in (#authorization-withdrawal-and-grant-revocation).
 
 ## Authorization Request and Transaction Binding
 
@@ -502,7 +509,8 @@ as described in Section 5.5 of [OIDC]. The OP MUST support this parameter. The R
 The OP selects CPs associated with the Subject's account and MUST use the Aggregated Claims format
 for claims it returns from those CPs. The RP can apply its own policy to the CP's signed `iss`
 when deciding whether to use the claims. The request syntax defined here covers claim names.
-Requesting a specific CP or specifying freshness requirements for CP data requires an extension.
+Requesting a specific CP requires an extension. The RP applies its own freshness policy as
+described in (#local-freshness-policy-and-user-directed-updates).
 
 
 ## RP authentication and the request verification
@@ -528,7 +536,15 @@ After verifying the request, the OP
 
 The OP MAY collect Claim Sets before an RP requests them if the CP grant and the Subject's
 authorization permit it. The OP MAY reuse a stored Claim Set if it still meets the applicable
-validity, authorization, and account-binding requirements.
+validity, authorization, and account-binding requirements, including the OP's collection and
+storage policies.
+
+The OP SHOULD provide a means for the authenticated Subject to request updated claims from
+a selected CP. It MAY perform a new collection using the Subject's existing authorization
+and valid CP tokens, or obtain the necessary authorization at the CP as described in
+(#setup-phase). The OP MAY apply privacy policies and rate limits to such updates.
+Renewing an access token alone does not update a stored Claim Set. The OP MUST preserve the
+CP-signed JWT and its `iat` when storing and disclosing it.
 
 For a new collection, the OP SHOULD use an access token with the narrowest scope available for
 the claims it needs. If the available access token grants broader access than needed, and a
@@ -538,8 +554,35 @@ and Section 6 of [RFC6749]. The requested scope MUST be within the scope of the 
 The OP MUST successfully reevaluate trust in the CP before continuing to make requests after
 the Trust Chain expires, as specified in Section 12.3 of [OpenID.Federation].
 
-If the OP cannot collect a suitable Claim Set using a valid access token or a refresh token,
-it MUST obtain the necessary authorization from the Subject at the CP or omit the affected claims.
+If a new collection is needed and the OP cannot obtain a suitable Claim Set using a valid
+access token or a refresh token, it MUST obtain the necessary authorization from the Subject
+at the CP or omit the affected claims.
+
+### Authorization Withdrawal and Grant Revocation
+
+The OP MUST preserve the association of stored Claim Sets with the authenticated OP account
+and the CP identifiers established in (#trust-model). Further collection from the CP is
+governed by the OAuth grant and token validity requirements of [RFC6749] and [RFC6750].
+Token revocation, when supported, follows [RFC7009]. The OP MUST handle token errors through
+the applicable recovery or reauthorization procedure when further collection is needed.
+
+Expiration or revocation of a CP access token, refresh token, or grant does not by itself
+invalidate previously collected signed Claim Sets. The OP MAY continue to disclose a stored
+Claim Set under the Subject's authorization if it satisfies the applicable signature,
+expiration, account-binding, and trust-policy requirements. The RP applies its own acceptance
+and freshness policies to that Claim Set. Obtaining fresh CP authorization or successfully
+calling the CP again is not a prerequisite for such use.
+
+If the Subject withdraws authorization for collection or disclosure at the OP, the OP MUST
+stop the corresponding collection or disclosure until the Subject authorizes it again.
+Withdrawal limited to a particular RP MUST stop disclosure of affected Claim Sets to that
+RP, according to the scope of the withdrawal.
+
+The `invalid_token` error in [RFC6750] can indicate expiration, revocation, or other failure,
+and the `invalid_grant` error in [RFC6749] can also have several causes. Neither error alone
+establishes the scope of a revocation or the validity of a stored Claim Set. A failed
+collection or refresh attempt does not by itself require suspension of disclosure of an
+otherwise acceptable stored Claim Set.
 
 
 ### UserInfo Endpoint Request
@@ -642,6 +685,35 @@ response. If it continues processing, it MUST independently validate the enclosi
 and every other Claim Set it uses, and enforce its application's required-claim policy before
 completing the requested operation. Profiles MAY require rejection of the entire response.
 
+### Local Freshness Policy and User-Directed Updates
+
+The RP MUST apply its application's freshness requirements before using claims. It MAY
+enforce a maximum acceptable JWT age based on the CP-signed `iat`, in addition to checking
+`exp`. If a Claim Set is too old for the intended use, the RP MUST treat its claims as
+unavailable for that use and enforce its required-claim policy.
+
+The RP SHOULD explain to the Subject when updated information is needed. It MAY direct the
+Subject to the OP's claim-management interface to request an update, after which the Subject
+can retry the RP interaction using the existing OpenID Connect flow. Retrying authentication
+alone does not require the OP to recollect CP claims. The RP MUST validate the returned
+Claim Sets and apply its freshness policy again after an update.
+
+Applications requiring constraints on the age of identity verification or evidence can use
+the existing request and validation mechanisms in [OpenID4IDA] with supporting providers.
+For example, the `max_age` query member in Section 5.5.2 constrains `verification.time` or
+another requested date or timestamp. When using these constraints, the RP MUST evaluate the
+returned verification or evidence timestamps against its requirements according to the
+query semantics in [OpenID4IDA], separately from the JWT's `iat`.
+
+Under this specification, the OP MAY reflect supported `verified_claims` constraints,
+including `max_age`, in requests to a CP, or use them to select stored Claim Sets. Neither
+forwarding those constraints nor filtering stored Claim Sets against them is required by
+this specification. The RP MUST perform its acceptance checks after receipt regardless of
+whether the OP performs either operation. An OP that separately implements [OpenID4IDA]
+remains subject to that specification's applicable OP requirements. When its external
+assertion format is used, the requirements in Section 6.1 of [OpenID4IDA] apply.
+
+
 # Security Considerations
 
 The security considerations of [OIDC], [OpenID.Federation], and [RFC8725] apply.
@@ -713,14 +785,60 @@ The trust model in (#trust-model) relies on the OP to preserve the account bindi
 collection, storage, and disclosure. A Federation Trust Mark can attest to an OP's compliance
 with operational requirements. It does not prove the account binding for a particular response.
 
+## Freshness and Revocation Limits
+
+The signed `iat` establishes the age of the JWT. An OP collection timestamp or the enclosing
+ID Token's `iat` MUST NOT replace it in freshness checks. A CP can issue a new JWT containing
+attributes verified earlier. Applications needing freshness of identity verification or
+evidence can use the corresponding signed data and validation rules in [OpenID4IDA], as
+described in (#local-freshness-policy-and-user-directed-updates).
+
+This specification treats a signed Claim Set held by the OP as an artifact under the
+Subject's control. A CP's revocation of the OP's OAuth grant, including unilateral revocation,
+cannot thereby prevent the Subject from continuing to present previously issued Claim Sets
+until they expire, subject to the validation and acceptance requirements of this specification.
+The Subject controls further disclosure at the OP as described in
+(#authorization-withdrawal-and-grant-revocation). This protection is bounded by the `exp`
+chosen by the CP, which can issue Claim Sets with short lifetimes. Within this model,
+legitimate changes requiring prompt invalidation, such as revocation of a driver's license,
+are handled through short lifetimes or a separate authenticated status mechanism for the
+issued Claim Set. OAuth grant revocation alone does not provide that mechanism.
+
+OAuth token and grant revocation controls further access to the CP. It does not by itself
+invalidate signed Claim Sets already held by the OP or delivered to RPs, as described in
+(#authorization-withdrawal-and-grant-revocation). Offline verification establishes the
+properties of the signed artifact; it cannot establish that the underlying attributes have
+remained unchanged since issuance. Deployments requiring a current status check on an issued
+Claim Set need a separate authenticated status mechanism and acceptance policy. Such a check
+concerns the issued Claim Set's status, independently of the OAuth collection grant. Short
+JWT lifetimes and RP acceptance policies limit the age of artifacts accepted offline.
+
 # Privacy Considerations
 
 Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the subject using the `sub` value in the JWT included in the aggregated claim.
+
+Reusing the same CP-signed JWT across presentations allows recipients that compare their
+received JWTs to correlate those presentations, including across colluding RPs. The JWT
+itself, including its signature, provides a common value for comparison even when identifiers
+used elsewhere are ephemeral or pairwise. Obtaining a newly issued JWT does not necessarily
+prevent correlation if it contains stable identifiers or identifying combinations of claims.
+
+Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into the timing
+of the Subject's interactions with RPs. Updating claims in response to an RP's request for
+fresher information can trigger CP UserInfo calls whose timing and frequency may be
+correlated with downstream activity. The OP SHOULD explain both the correlation risk of
+reusing a JWT and the CP timing-visibility risk of obtaining updates when obtaining the
+Subject's authorization for collection and disclosure. The Subject can then choose whether
+to authorize reuse or request an update, subject to the RP's acceptance policy. The OP MAY
+use privacy policies and rate limits when servicing user-directed updates.
 
 
 {backmatter}
 
 # Bibliography
+
+[RFC7009] - OAuth 2.0 Token Revocation
+[RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
 
 [OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
 [OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
@@ -778,6 +896,7 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Defined local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
 * Defined CP signing algorithm selection, verification key resolution, and Claim Set validation
 * Required issuance and expiration timestamps in CP-signed UserInfo JWTs
 * Required Authorization Code Flow, PKCE S256, and transaction and session validation during Setup
