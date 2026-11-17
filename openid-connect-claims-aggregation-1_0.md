@@ -775,9 +775,12 @@ is subject to (#authorization-withdrawal-and-grant-revocation).
 The OP SHOULD let the authenticated Subject review disclosure history identifying which
 RPs received which Claim Sets, their CP sources, and when disclosure occurred. Any retained
 history MUST be protected according to (#token-and-claim-set-storage) and subject to the
-Subject's deletion and backup-restoration controls described above. The OP SHOULD minimize
-the information retained for that history rather than retain complete signed JWTs solely
-to provide it.
+Subject's deletion and backup-restoration controls described above, subject to applicable
+legal retention obligations. Records retained solely to meet those obligations MUST be
+excluded from ordinary viewing and disclosure flows and remain subject to the same storage
+protections. Access to those records MUST be restricted to authorized purposes for meeting
+those obligations. The OP SHOULD minimize the information retained for that history rather
+than retain complete signed JWTs solely to provide it.
 
 The OP MAY let the authenticated Subject export their stored CP-signed Claim Sets without
 altering the signed JWTs. Such export does not change their audience, account-binding, or
