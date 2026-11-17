@@ -765,6 +765,26 @@ Withdrawal of disclosure authorization stops the corresponding disclosure, indep
 of whether the Subject retains a private copy. Revoking the CP grant governs further CP
 access, not the validity of previously issued Claim Sets.
 
+The OP SHOULD NOT automatically recollect claims deleted by the Subject from the same CP
+without a subsequent explicit instruction from the Subject to collect those claims again.
+An RP request or previously remembered disclosure consent does not by itself constitute
+such an instruction. The OP SHOULD offer a single operation to delete selected Claim Sets
+and withdraw the corresponding collection authorization. Withdrawal through that operation
+is subject to (#authorization-withdrawal-and-grant-revocation).
+
+The OP SHOULD let the authenticated Subject review disclosure history identifying which
+RPs received which Claim Sets, their CP sources, and when disclosure occurred. Any retained
+history MUST be protected according to (#token-and-claim-set-storage) and subject to the
+Subject's deletion and backup-restoration controls described above. The OP SHOULD minimize
+the information retained for that history rather than retain complete signed JWTs solely
+to provide it.
+
+The OP MAY let the authenticated Subject export their stored CP-signed Claim Sets without
+altering the signed JWTs. Such export does not change their audience, account-binding, or
+verification requirements. The OP SHOULD explain that exported artifacts remain
+transferable signed personal data with the correlation and onward-transfer risks described
+in (#correlation-and-transferable-signed-data).
+
 This specification does not impose a retention deadline on the Subject's stored Claim
 Sets. A Subject can choose to retain an expired Claim Set as a record; its retention does
 not permit accepting or disclosing it as valid after `exp`. The validation requirements in
@@ -1224,12 +1244,19 @@ restricts valid use rather than imposing deletion. The safeguards in
 (#token-and-claim-set-storage) address the resulting storage risks without imposing a
 protocol retention deadline or a particular archival encryption design.
 
+Disclosure history can help the Subject identify RPs that already received their data,
+including when seeking deletion from those RPs. That history is itself sensitive personal
+data and remains subject to protection, minimization, and Subject deletion controls in
+(#subject-control-of-stored-claim-sets). Export can give the Subject an independent copy of
+an issued artifact, but does not remove the transferability or correlation risks described
+in (#correlation-and-transferable-signed-data).
+
 
 {backmatter}
 
 # Bibliography
 
-[SD-JWT] - Selective Disclosure for JSON Web Tokens
+[SD-JWT] - RFC 9901 - Selective Disclosure for JSON Web Tokens
 [SD-JWT]: https://www.rfc-editor.org/rfc/rfc9901.html
 
 [OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
@@ -1289,6 +1316,7 @@ We would like to thank the following people for their valuable feedback and cont
 -04
 
 * Defined Subject controls for stored Claim Set deletion and authorization review and withdrawal
+* Added deletion/recollection safeguards, disclosure history controls, and optional Subject export
 * Recommended CP grant-management interfaces and described OP visibility and transferable signed data
 * Explained correlation and the tradeoffs of stored, batch-issued, and on-demand credentials
 * Required confidential OP clients with `private_key_jwt` support and optional mTLS authentication
