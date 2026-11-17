@@ -243,6 +243,8 @@ The provision for the Claims Provider are as follows:
 
 1. It MUST support signed UserInfo response. 
 1. It MUST support OpenID Federation Automatic Registration as specified in (#client-configuration-phase).
+1. It SHOULD provide an authenticated Subject with a user interface to review and revoke
+   standing grants issued to OPs, including the claims and operations those grants permit.
 
 ### UserInfo Endpoint
 The UserInfo Endpoint is described in 5.3 of OpenID Connect 1.0 [OIDC] as an OAuth 2.0 Protected Resource that returns Claims about the authenticated Subject.
@@ -279,7 +281,8 @@ The provision for the OP is as follows:
 1. It MUST support OpenID Connect Aggregated Claims as an OpenID Provider. 
 1. It MUST act as an OpenID Connect relying party to CPs to fetch claims from CPs according to instructions given by the Subject. 
 1. It MAY store the signed claims obtained from CPs with appropriate safeguarding controls. 
-1. To the authenticated Subject, it MUST provide a user interface to show what claims about the subject it stores. 
+1. It MUST provide the authenticated Subject with the storage and authorization controls
+   described in (#subject-control-of-stored-claim-sets), including a view of stored claims.
 1. It MUST NOT provide claims to RPs without the Subject's permission. 
 
 
@@ -738,6 +741,36 @@ compromised component. The storage architecture, including the use of Subject-co
 encryption keys, is an implementation choice. These safeguards do not impose a retention
 deadline on Claim Sets or change the Subject's control over their disclosure.
 
+### Subject Control of Stored Claim Sets
+
+The OP MUST provide an authenticated Subject with a user interface to inspect stored Claim
+Sets and their CP sources, delete selected stored Claim Sets, and review and withdraw the
+OP's collection and RP-specific disclosure authorizations. The interface MUST distinguish
+deletion of stored data, stopping further collection, stopping disclosure, and revoking a
+grant at the CP. The OP SHOULD direct the Subject to a CP's grant-management interface when
+one is available. No new grant-management URL metadata is defined by this specification.
+
+When the Subject requests deletion, the OP MUST remove the selected Claim Sets from its
+active stores and MUST NOT disclose retained copies of those deleted Claim Sets. The OP
+MUST explain the scope and timing of deletion, including any backup retention, and that
+deletion at the OP does not erase copies already delivered to RPs. Before returning backup
+data to active use, the OP MUST apply the Subject's recorded deletion and withdrawal
+decisions so that restoration does not silently reactivate deleted data or withdrawn
+permissions. Retained backups remain subject to (#token-and-claim-set-storage).
+
+Deletion alone does not withdraw collection authorization; a new authorized collection can
+obtain the claims again. The OP MUST make that distinction clear and allow the Subject to
+stop further collection as specified in (#authorization-withdrawal-and-grant-revocation).
+Withdrawal of disclosure authorization stops the corresponding disclosure, independently
+of whether the Subject retains a private copy. Revoking the CP grant governs further CP
+access, not the validity of previously issued Claim Sets.
+
+This specification does not impose a retention deadline on the Subject's stored Claim
+Sets. A Subject can choose to retain an expired Claim Set as a record; its retention does
+not permit accepting or disclosing it as valid after `exp`. The validation requirements in
+(#claims-verification) continue to apply. Storage and encryption architecture, including
+Subject-controlled archival keys, remain implementation choices.
+
 ### Authorization Withdrawal and Grant Revocation
 
 The OP MUST preserve the association of stored Claim Sets with the authenticated OP account
@@ -1087,13 +1120,61 @@ JWT lifetimes and RP acceptance policies limit the age of artifacts accepted off
 
 # Privacy Considerations
 
-Unless ephemeral identifiers are used at CPs, colluding RPs CAN correlate the subject using the `sub` value in the JWT included in the aggregated claim.
+## OP Visibility and Reliance on Subject Instructions
+
+The OP processes the contents of Claim Sets from CPs and knows which RPs receive them. This
+combination can reveal attributes and relationships across services. In a deployment where
+a third party operates the OP and can access that processing or its records, the Subject
+places substantial trust in that operator. Encryption at rest protects stored data against
+some compromises; it does not by itself hide data from the OP while processing it. A
+distributed-claims deployment does not necessarily hide information from the OP either;
+visibility depends on which components actually obtain and process the data.
+
+At Setup, the Subject authorizes the CP to release claims to the OP for future use under
+the Subject's direction. The CP relies on the OP to enforce the later RP-specific
+authorization in (#subject-granting). A CP signature authenticates the issued data; it does
+not prove that the OP obtained authorization for a particular disclosure. Federation trust
+and policy information can inform a trust decision, but do not by themselves prove that
+the OP honored the Subject's instructions in an individual transaction.
+
+The least-privilege and disclosure requirements in (#setup-phase), (#claims-collection),
+and (#claims-delivery) limit what the OP obtains and discloses. In particular, the RP
+receives all claims in an embedded signed JWT, including claims not listed in
+`_claim_names`. The OP cannot remove individual claims from that JWT while preserving the
+CP's signature. A deployment seeking stronger limits on OP visibility or finer-grained
+disclosure needs an appropriate architecture or extension, rather than relying on storage
+encryption alone.
+
+## Correlation and Transferable Signed Data
+
+Even if the CP uses pairwise Subject Identifiers, the pairwise relationship is based on
+the OP's Sector Identifier as the CP's client, not on each downstream RP, as specified in
+Section 8.1 of [OIDC]. RPs receiving the same CP `iss` and `sub` can therefore correlate
+their records. Pairwise identifiers in the OP's enclosing responses do not conceal those
+embedded identifiers. An RP that shares a Claim Set with the CP can also enable the CP to
+recognize its own Subject Identifier and associate the disclosed data with that RP.
 
 Reusing the same CP-signed JWT across presentations allows recipients that compare their
 received JWTs to correlate those presentations, including across colluding RPs. The JWT
 itself, including its signature, provides a common value for comparison even when identifiers
 used elsewhere are ephemeral or pairwise. Obtaining a newly issued JWT does not necessarily
 prevent correlation if it contains stable identifiers or identifying combinations of claims.
+
+An RP can also pass a CP-signed JWT to a third party that can independently verify the CP's
+signature and the signed contents. This makes disclosure of signed personal data more
+consequential than disclosure of an unauthenticated assertion. The signature is evidence of
+what the CP issued, not proof that the Subject presented it to a particular RP or that the
+attributes remain current. The base format does not cryptographically prevent onward
+transfer. The Subject's controls at the OP cannot recover copies already held by RPs.
+
+Selective disclosure can reduce the attributes revealed to a recipient, but does not by
+itself ensure unlinkability. For example, Section 10.1 of [SD-JWT] explains that recipients
+can correlate reuse of an issuer-signed credential and that colluding issuers and verifiers
+can recognize the same credential. SD-JWT is an example for future profiles, not a format
+introduced by this specification. Such profiles would need compatible subject-binding,
+audience, consent, and verification rules.
+
+## Pre-Collection, Batch Issuance, and On-Demand Issuance
 
 Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into the timing
 of the Subject's interactions with RPs. Updating claims in response to an RP's request for
@@ -1104,10 +1185,52 @@ Subject's authorization for collection and disclosure. The Subject can then choo
 to authorize reuse or request an update, subject to the RP's acceptance policy. The OP MAY
 use privacy policies and rate limits when servicing user-directed updates.
 
+This avoids requiring a UserInfo call for each presentation; it does not guarantee that
+the CP learns nothing about RP use. RP-CP information sharing and retrieval of metadata,
+verification keys, or status information can create other observation paths. Valid metadata
+and key caches tied to the issuer can reduce some such contact, subject to the requirements
+in (#cp-metadata-and-verification-keys).
+
+An alternative design can pre-issue a batch of distinct credentials for one-time use,
+combining advance collection with avoidance of a common reused artifact. This introduces
+inventory and replenishment requirements. Section 10.1 of [SD-JWT] describes batch issuance
+for presentation and verifier-verifier unlinkability, including the need to avoid other
+common identifiers and timing values. It does not solve issuer-verifier collusion.
+
+Another design can obtain a newly issued credential with a fresh presentation identifier
+for each use. This avoids maintaining a stock of unused credentials, but requires CP
+availability and continued willingness to issue, and exposes issuance timing to the CP.
+It does not require revealing the RP's identity to the CP, but issuance timing can still
+correlate with RP use. Stable attributes or other identifying values can still link the
+new credentials. This tradeoff concerns issuance and reuse choices, rather than a property
+unique to either an OP-mediated or issuer-holder-verifier architecture.
+
+Per-presentation identifiers are not implemented by simply changing the `sub` in this
+profile's UserInfo JWT. Section 5.3.2 of [OIDC] requires UserInfo `sub` to match the ID Token
+`sub`, and (#trust-model) binds that identifier to the OP account. A profile separating a
+stable account-binding identifier from a presentation identifier would need to define that
+binding and its validation. Batch and per-presentation issuance of this kind are future
+profile options, not new requirements here. The current ability to reuse a stored Claim
+Set without fresh CP authorization or issuance remains unchanged.
+
+## Subject Control of Retention and Disclosure
+
+The controls in (#subject-control-of-stored-claim-sets) let the Subject distinguish stored
+data from collection and disclosure permissions. They complement the CP's grant-management
+interface: revoking a CP grant does not retract issued Claim Sets, while withdrawal at the
+OP controls further OP disclosure. Neither operation retracts data already received by an
+RP. A Subject may retain a Claim Set as a personal record even after it expires; expiration
+restricts valid use rather than imposing deletion. The safeguards in
+(#token-and-claim-set-storage) address the resulting storage risks without imposing a
+protocol retention deadline or a particular archival encryption design.
+
 
 {backmatter}
 
 # Bibliography
+
+[SD-JWT] - Selective Disclosure for JSON Web Tokens
+[SD-JWT]: https://www.rfc-editor.org/rfc/rfc9901.html
 
 [OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
 [OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
@@ -1165,6 +1288,9 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Defined Subject controls for stored Claim Set deletion and authorization review and withdrawal
+* Recommended CP grant-management interfaces and described OP visibility and transferable signed data
+* Explained correlation and the tradeoffs of stored, batch-issued, and on-demand credentials
 * Required confidential OP clients with `private_key_jwt` support and optional mTLS authentication
 * Bound client assertion audiences to the CP issuer and defined token and storage protections
 * Explained the limits of sender-constraining and replay protection for stored Claim Sets
