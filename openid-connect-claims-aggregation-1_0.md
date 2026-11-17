@@ -547,33 +547,35 @@ and Section 6 of [RFC6749]. The requested scope MUST be within the scope of the 
 The OP MUST successfully reevaluate trust in the CP before continuing to make requests after
 the Trust Chain expires, as specified in Section 12.3 of [OpenID.Federation].
 
-If the OP cannot collect a suitable Claim Set using a valid access token or a refresh token,
-it MUST obtain the necessary authorization from the Subject at the CP or omit the affected claims.
+If a new collection is needed and the OP cannot obtain a suitable Claim Set using a valid
+access token or a refresh token, it MUST obtain the necessary authorization from the Subject
+at the CP or omit the affected claims.
 
 ### Authorization Withdrawal and Grant Revocation
 
-The OP MUST associate stored Claim Sets with the CP grant and OP account under which they
-were collected. If the OP learns that the CP grant has been revoked, it MUST stop using the
-affected tokens and disclosing Claim Sets collected under that grant. It MUST obtain fresh
-authorization at the CP and collect new Claim Sets before resuming use of that CP connection.
+The OP MUST preserve the association of stored Claim Sets with the authenticated OP account
+and the CP identifiers established in (#trust-model). Further collection from the CP is
+governed by the OAuth grant and token validity requirements of [RFC6749] and [RFC6750].
+Token revocation, when supported, follows [RFC7009]. The OP MUST handle token errors through
+the applicable recovery or reauthorization procedure when further collection is needed.
+
+Expiration or revocation of a CP access token, refresh token, or grant does not by itself
+invalidate previously collected signed Claim Sets. The OP MAY continue to disclose a stored
+Claim Set under the Subject's authorization if it satisfies the applicable signature,
+expiration, account-binding, and trust-policy requirements. The RP applies its own acceptance
+and freshness policies to that Claim Set. Obtaining fresh CP authorization or successfully
+calling the CP again is not a prerequisite for such use.
 
 If the Subject withdraws authorization for collection or disclosure at the OP, the OP MUST
 stop the corresponding collection or disclosure until the Subject authorizes it again.
 Withdrawal limited to a particular RP MUST stop disclosure of affected Claim Sets to that
 RP, according to the scope of the withdrawal.
 
-An access token's expiration alone does not invalidate a previously collected Claim Set.
-Likewise, the `invalid_token` error in [RFC6750] can indicate expiration, revocation, or other
-failure, and the `invalid_grant` error in [RFC6749] can also have several causes. The OP MUST
-follow the applicable token recovery or reauthorization procedure and MUST NOT interpret
-either error alone as proof of the scope of a grant revocation. After receiving either
-error, the OP MUST suspend disclosure of Claim Sets collected under the grant associated
-with the affected credentials until it successfully collects a Claim Set under valid
-authorization. It MUST NOT fall back to a stored Claim Set to bypass that failure. Successful
-token refresh alone MUST NOT lift this suspension. This deliberately requires a successful
-authorized UserInfo collection even if a temporary CP failure prevents collection; the OP
-omits the affected Claim Sets in the meantime. A known revocation or consent withdrawal MUST
-take precedence over an otherwise unexpired JWT.
+The `invalid_token` error in [RFC6750] can indicate expiration, revocation, or other failure,
+and the `invalid_grant` error in [RFC6749] can also have several causes. Neither error alone
+establishes the scope of a revocation or the validity of a stored Claim Set. A failed
+collection or refresh attempt does not by itself require suspension of disclosure of an
+otherwise acceptable stored Claim Set.
 
 
 ### UserInfo Endpoint Request
@@ -776,13 +778,14 @@ attributes verified earlier. Applications needing freshness of identity verifica
 evidence can use the corresponding signed data and validation rules in [OpenID4IDA], as
 described in (#local-freshness-policy-and-user-directed-updates).
 
-Revoking OAuth tokens, including through [RFC7009], does not by itself invalidate copies of
-CP-signed JWTs already delivered to RPs. This specification defines no CP-to-OP notification
-or RP status-check protocol for such copies. Offline verification therefore cannot establish
-that a grant remains authorized or that an attribute has not changed since issuance.
-Deployments requiring prompt revocation detection MUST define an authenticated notification
-or status-check mechanism in an additional profile. Short JWT lifetimes and RP acceptance
-policies reduce the age of artifacts accepted offline, subject to the CP's issuance policy.
+OAuth token and grant revocation controls further access to the CP. It does not by itself
+invalidate signed Claim Sets already held by the OP or delivered to RPs, as described in
+(#authorization-withdrawal-and-grant-revocation). Offline verification establishes the
+properties of the signed artifact; it cannot establish that the underlying attributes have
+remained unchanged since issuance. Deployments requiring a current status check on an issued
+Claim Set need a separate authenticated status mechanism and acceptance policy. Such a check
+concerns the issued Claim Set's status, independently of the OAuth collection grant. Short
+JWT lifetimes and RP acceptance policies limit the age of artifacts accepted offline.
 
 # Privacy Considerations
 
