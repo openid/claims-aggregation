@@ -148,14 +148,14 @@ The following referenced documents are indispensable for the application of this
 [RFC9700] - Best Current Practice for OAuth 2.0 Security
 [RFC9700]: https://www.rfc-editor.org/rfc/rfc9700.html
 
-[OIDC] - OpenID Connect Core 1.0 incorporating errata set 1
+[OIDC] - OpenID Connect Core 1.0 incorporating errata set 2
 [OIDC]: https://openid.net/specs/openid-connect-core-1_0.html
 
 [OpenID.Discovery] - OpenID Connect Discovery 1.0
 [OpenID.Discovery]: https://openid.net/specs/openid-connect-discovery-1_0.html
 
-[OpenID.Registration] - OpenID Connect Registration 1.0
-[OpenID.Registration]: http://openid.net/specs/openid-connect-registration-1_0.html
+[OpenID.Registration] - OpenID Connect Dynamic Client Registration 1.0 incorporating errata set 2
+[OpenID.Registration]: https://openid.net/specs/openid-connect-registration-1_0.html
 
 [OpenID.Federation] - OpenID Federation 1.0
 [OpenID.Federation]: https://openid.net/specs/openid-federation-1_0.html
@@ -353,6 +353,10 @@ using [OpenID.Discovery], it MUST advertise the same capabilities there. These p
 describe the OP's capabilities for serving RPs. A CP that only serves signed UserInfo to the OP
 has no requirement to advertise `aggregated` in that role.
 
+For authorization code responses to RPs, the OP MUST support PKCE with `S256` as specified in
+[RFC7636]. It MUST include `S256` in `code_challenge_methods_supported` in its
+`openid_provider` metadata and, if published, its [OpenID.Discovery] configuration document.
+
 
 # Client Configuration Phase
 
@@ -506,6 +510,10 @@ individual claims, the RP MUST use the standard `claims` parameter with `userinf
 as described in Section 5.5 of [OIDC]. The OP MUST support this parameter. The RP can also use
 `scope` as defined in [OIDC].
 
+The RP MUST provide `policy_uri` in its client metadata as defined in Section 2 of
+[OpenID.Registration]. This specification requires that otherwise optional parameter so the
+OP can show the RP's privacy policy to the Subject during authorization.
+
 The OP selects CPs associated with the Subject's account and MUST use the Aggregated Claims format
 for claims it returns from those CPs. The RP can apply its own policy to the CP's signed `iss`
 when deciding whether to use the claims. The request syntax defined here covers claim names.
@@ -515,22 +523,71 @@ described in (#local-freshness-policy-and-user-directed-updates).
 
 ## RP authentication and the request verification
 
-Upon receipt of the request, the OP 
+The OP MUST validate the Authentication Request according to [OIDC], including the
+`client_id`, required parameters, and the client metadata registered or resolved for that RP.
+When a Request Object is used, the OP MUST also apply the validation requirements in
+Section 6.3 of [OIDC], including signature verification when it is signed. A valid signature
+does not replace the other request validation requirements.
 
-1. MUST verify that the request is not tampered and is from a valid registered RP if the request is signed; and 
-1. MUST at least verify that the client_id is valid and make sure 
-   that the authorization code that it is going to return will be bound to this client_id if the request is not signed. 
+The OP MUST compare the request's `redirect_uri` with the registered `redirect_uris` using
+exact string matching, except for the native application loopback port exception described
+in Section 4.1.3 of [RFC9700]. This comparison is required even when the request is signed.
+If the `client_id` or `redirect_uri` is missing or invalid, the OP MUST NOT redirect the user
+agent to that URI, including to return an error. Other request errors MUST be handled using
+the applicable Authentication Error Response in [OIDC].
 
-NOTE: RP MUST be authenticated at one point or another before completion of the transaction. 
+When an authorization code is issued, the OP MUST bind it to the RP's `client_id`, the
+`redirect_uri` used in the Authentication Request, and the PKCE challenge and method, if
+present. At the Token Endpoint, it MUST validate the code, its client and redirect URI
+bindings, and any client authentication according to Section 3.1.3.2 of [OIDC] and
+Sections 4.1.2 and 4.1.3 of [RFC6749], including rejecting expired or previously used codes.
+
+A confidential RP MUST authenticate to the OP's Token Endpoint using the method registered
+for its `client_id`. For flows that issue an authorization code, a public RP MUST use PKCE
+and a confidential RP SHOULD also use PKCE.
+When using PKCE under this specification, the RP MUST use `S256` with a transaction-specific
+verifier securely bound to the initiating client and user agent. The OP MUST reject a public
+RP's authorization request that would issue a code without an `S256` challenge. When a
+challenge was supplied, the OP MUST reject the Token Request unless the verifier matches
+that challenge. It MUST also reject a Token Request containing a `code_verifier` if no
+challenge was present in the corresponding Authentication Request, as required by
+Section 4.8.2 of [RFC9700]. Client authentication does not replace these PKCE checks when
+PKCE is used.
+
+RPs MUST prevent CSRF and authorization code injection according to Section 2.1 of [RFC9700].
+A confidential RP using the OIDC `nonce` alternative to PKCE MUST meet the additional
+requirements in Section 4.5.3.2 of [RFC9700], including transaction and user-agent binding
+and validation of the `nonce` in the ID Token returned from the Token Endpoint before using
+any issued tokens.
 
 ## Subject Granting
 
-After verifying the request, the OP 
+After verifying the request, the OP MUST authenticate the Subject if necessary and obtain
+the Subject's authorization to disclose claims to the requesting RP. It MUST obtain that
+RP-specific authorization before initiating a CP authorization request on behalf of that RP
+and, in all cases, before disclosing claims, including previously collected Claim Sets.
 
-1. MUST authenticate the Subject if it has not yet been; 
-1. MUST show the Subject what is being requested from the RP; 
-1. MUST show the Subject the link to the RP provided policy_url; and 
-1. MUST obtain grant from the Subject through explicit action. 
+When obtaining consent, the OP MUST show a dialogue that:
+
+1. Identifies the requesting RP using its `client_id` and, if present, its `client_name` from
+   the client metadata registered or resolved for that `client_id`;
+1. Shows the claims to be disclosed to that RP, including any additional claims in an
+   embedded JWT as described in (#claims-delivery);
+1. Provides a link to the RP's `policy_uri` from that client metadata; and
+1. Obtains the Subject's consent through explicit action.
+
+The OP MAY remember a consent decision for the same authenticated Subject and RP
+`client_id`, limited to the claims authorized for disclosure. It MUST NOT skip the dialogue
+based on consent given to a different RP or on the CP grant authorizing the OP to collect
+claims. Remembered consent MUST NOT be used after withdrawal or for claims outside its
+authorized scope. Withdrawal is handled as specified in
+(#authorization-withdrawal-and-grant-revocation).
+
+When the RP requests `prompt=consent`, the OP MUST obtain fresh consent through explicit
+action. When `prompt=none` is requested, the OP MUST NOT display a dialogue. If valid consent
+covering the disclosure to that RP is unavailable, it MUST return `consent_required` as
+defined in Section 3.1.2.6 of [OIDC]. Other authentication or interaction requirements are
+handled using the applicable errors in that section.
 
 ## Claims Collection
 
@@ -766,6 +823,27 @@ attempted new binding when that CP identity is already known to the OP. Neither 
 establishes a relationship for a CP identity that has never been linked at the OP. The L1
 trust assumptions in (#trust-model) continue to apply.
 
+## RP Request Integrity and Broker-Side Consent
+
+The requirements in (#rp-authentication-and-the-request-verification) apply to signed and
+unsigned requests. Request signatures do not replace redirect URI validation, authorization
+code binding, or the applicable Token Endpoint authentication and PKCE checks. PKCE proves
+possession of a transaction-specific verifier; it is not client authentication.
+
+The OP acts as the broker between downstream RPs and upstream CPs in the topology described
+in Section 2.4 of [OAuth.Security.Update]. This specification uses the broker-side consent
+screen countermeasure in Section 2.4.2.2 rather than registering every RP as a separate
+client at every CP. The Subject's authorization at the OP in (#subject-granting) identifies
+the RP and controls disclosure to it. The CP's grant authorizes collection by the OP; it
+does not authorize disclosure to any particular RP. Reusing that collection grant or a
+stored Claim Set MUST NOT bypass RP-specific authorization.
+
+This choice permits collection independently of RP activity without requiring the CP to
+learn which RP receives the claims. For an RP-triggered CP authorization request, the OP
+obtains the necessary RP-specific authorization first. For pre-collected Claim Sets, the
+OP enforces that authorization before disclosure. The OP MUST honor Subject withdrawal
+even when it has remembered consent or the CP grant remains valid.
+
 ## Audience Binding
 
 The RP uses the OP's Issuer Identifier to check the audience of each Claim Set. This check relies on
@@ -896,6 +974,8 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Defined RP request validation, authorization code and PKCE checks, and per-RP consent
+* Required RP policy_uri metadata and corrected its use in the consent dialogue
 * Defined local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
 * Defined CP signing algorithm selection, verification key resolution, and Claim Set validation
 * Required issuance and expiration timestamps in CP-signed UserInfo JWTs
