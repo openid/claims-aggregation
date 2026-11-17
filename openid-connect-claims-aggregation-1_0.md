@@ -160,6 +160,9 @@ The following referenced documents are indispensable for the application of this
 [OpenID.Federation] - OpenID Federation 1.0
 [OpenID.Federation]: https://openid.net/specs/openid-federation-1_0.html
 
+[OpenID4IDA] - OpenID Connect for Identity Assurance 1.0 incorporating errata set 1
+[OpenID4IDA]: https://openid.net/specs/openid-connect-4-identity-assurance-1_0-errata1.html
+
 [JWT] - JSON Web Token
 [JWT]: https://www.rfc-editor.org/rfc/rfc7519.html
 
@@ -394,6 +397,10 @@ When requesting a refresh token for offline access, the OP MUST include `offline
 The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
 to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
 `policy_uri` in the OP's client metadata. Granting access MUST involve active user interaction.
+The dialogue MUST explain that collected Claim Sets may continue to be used or disclosed by
+the OP until they expire, including after the CP grant is revoked. It MUST explain that the
+Subject controls further disclosure at the OP and must use the OP's controls to stop it, as
+described in (#authorization-withdrawal-and-grant-revocation).
 
 ## Authorization Request and Transaction Binding
 
@@ -694,9 +701,17 @@ Claim Sets and apply its freshness policy again after an update.
 Applications requiring constraints on the age of identity verification or evidence can use
 the existing request and validation mechanisms in [OpenID4IDA] with supporting providers.
 For example, the `max_age` query member in Section 5.5.2 constrains `verification.time` or
-another requested date or timestamp. The RP evaluates the relevant verification or evidence
-timestamp, separately from the JWT's `iat`. When [OpenID4IDA] is used, its request, validation,
-and assertion-format requirements apply.
+another requested date or timestamp. When using these constraints, the RP MUST evaluate the
+returned verification or evidence timestamps against its requirements according to the
+query semantics in [OpenID4IDA], separately from the JWT's `iat`.
+
+Under this specification, the OP MAY reflect supported `verified_claims` constraints,
+including `max_age`, in requests to a CP, or use them to select stored Claim Sets. Neither
+forwarding those constraints nor filtering stored Claim Sets against them is required by
+this specification. The RP MUST perform its acceptance checks after receipt regardless of
+whether the OP performs either operation. An OP that separately implements [OpenID4IDA]
+remains subject to that specification's applicable OP requirements. When its external
+assertion format is used, the requirements in Section 6.1 of [OpenID4IDA] apply.
 
 
 # Security Considerations
@@ -778,6 +793,17 @@ attributes verified earlier. Applications needing freshness of identity verifica
 evidence can use the corresponding signed data and validation rules in [OpenID4IDA], as
 described in (#local-freshness-policy-and-user-directed-updates).
 
+This specification treats a signed Claim Set held by the OP as an artifact under the
+Subject's control. A CP's revocation of the OP's OAuth grant, including unilateral revocation,
+cannot thereby prevent the Subject from continuing to present previously issued Claim Sets
+until they expire, subject to the validation and acceptance requirements of this specification.
+The Subject controls further disclosure at the OP as described in
+(#authorization-withdrawal-and-grant-revocation). This protection is bounded by the `exp`
+chosen by the CP, which can issue Claim Sets with short lifetimes. Within this model,
+legitimate changes requiring prompt invalidation, such as revocation of a driving licence,
+are handled through short lifetimes or a separate authenticated status mechanism for the
+issued Claim Set. OAuth grant revocation alone does not provide that mechanism.
+
 OAuth token and grant revocation controls further access to the CP. It does not by itself
 invalidate signed Claim Sets already held by the OP or delivered to RPs, as described in
 (#authorization-withdrawal-and-grant-revocation). Offline verification establishes the
@@ -805,9 +831,6 @@ limits when servicing user-directed updates.
 
 [RFC7009] - OAuth 2.0 Token Revocation
 [RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
-
-[OpenID4IDA] - OpenID Connect for Identity Assurance 1.0 incorporating errata set 1
-[OpenID4IDA]: https://openid.net/specs/openid-connect-4-identity-assurance-1_0-errata1.html
 
 [OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
 [OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
@@ -865,7 +888,7 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
-* Clarified local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
+* Defined local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
 * Defined CP signing algorithm selection, verification key resolution, and Claim Set validation
 * Required issuance and expiration timestamps in CP-signed UserInfo JWTs
 * Required Authorization Code Flow, PKCE S256, and transaction and session validation during Setup
