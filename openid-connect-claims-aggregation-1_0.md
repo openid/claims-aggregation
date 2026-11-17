@@ -397,10 +397,19 @@ The OP MUST omit `userinfo_encrypted_response_alg`.
 ## OP Client Authentication
 
 The OP MUST act as a confidential client of the CP. The OP and CP MUST support
-`private_key_jwt` client authentication as specified in Section 9 of [OIDC]. The OP MUST use
-this method unless both parties support and select `self_signed_tls_client_auth` as defined
-in Section 2.2 of [RFC8705]. Support for this mTLS alternative is OPTIONAL. The OP MUST
-declare the selected `token_endpoint_auth_method` in its `openid_relying_party` metadata.
+`private_key_jwt` client authentication as specified in Section 9 of [OIDC]. In the base
+profile, the OP MUST set `token_endpoint_auth_method` to `private_key_jwt` in its
+`openid_relying_party` metadata and use that method for client authentication.
+
+The OP publishes one `openid_relying_party` metadata object in its Entity Configuration.
+Its declared authentication method is therefore common to all CPs using that configuration,
+rather than selected separately for each CP. A profile or trust framework MAY instead
+require `self_signed_tls_client_auth`, as defined in Section 2.2 of [RFC8705], if it requires
+all participating OPs and CPs to support and use that method. In that case, the OP MUST
+declare `self_signed_tls_client_auth` as its single `token_endpoint_auth_method` and use it
+consistently. mTLS support remains OPTIONAL for base-profile participants; an OP declaring
+it cannot assume interoperability with CPs that only support the base method.
+
 The CP MUST advertise `private_key_jwt` and any supported mTLS alternative in
 `token_endpoint_auth_methods_supported` in its `openid_provider` metadata and, if published,
 its [OpenID.Discovery] configuration document. The OP MUST NOT select `none` or a shared-secret
@@ -429,11 +438,16 @@ the Token Endpoint audience recommendation in Section 9 of [OIDC].
 The CP MUST validate the assertion signature using the OP's resolved `openid_relying_party`
 keys and applicable algorithm restrictions. It MUST verify that `iss` and `sub` identify the
 OP's `client_id` and that `exp` has not been reached. The OP MUST use a fresh `jti` for each
-assertion and an expiration within the CP's accepted assertion lifetime. The CP MUST reject
-assertion reuse. When the mTLS alternative is used, the parties MUST perform certificate
-and client binding validation according to [RFC8705] and [OpenID.Federation], using the
-certificate published in the OP's RP JWK Set as required by Section 12.1.1.2 of
-[OpenID.Federation] when that method authenticates a PAR request.
+assertion. Assertions SHOULD have short lifetimes, for example no more than a few minutes.
+The OP MUST follow any additional assertion lifetime limits specified by the applicable
+profile or trust framework. The CP MUST reject assertion reuse and retain a replay record
+for each accepted (`client_id`, `jti`) until the assertion's `exp`, including any clock-skew
+allowance under which it could still be accepted.
+
+When `self_signed_tls_client_auth` is used at any endpoint, the CP MUST match the presented
+certificate against the certificates published in the OP's resolved RP JWK Set and perform
+the certificate and client binding checks in Section 2.2 of [RFC8705]. PAR requests MUST
+also satisfy the requirements in Section 12.1.1.2 of [OpenID.Federation].
 
 
 # Setup Phase
@@ -761,7 +775,7 @@ For claims collection, the OP
    authorization scheme and proof specified in Section 7 of [RFC9449]. For a
    certificate-bound token, it MUST present the certificate as specified in [RFC8705].
 
-This process will be repeated for as each Claims Providers as necessary.
+The OP repeats this process for each CP as necessary.
 
 ## Claims Delivery
 
@@ -1002,12 +1016,33 @@ reduce the authority of the original refresh token. The protections in
 concentration of credentials and personal data at the OP.
 
 The assertion audience restriction in (#op-client-authentication) implements the preferred
-audience-injection countermeasure in Section 2.1.2 of [OAuth.Security.Update]. The OP's
+audience-injection countermeasure in Section 2.1.2.1 of [OAuth.Security.Update]. The OP's
 Entity Identifier is its `client_id` at every CP, so uniqueness of client identifiers
 across CPs is not an available countermeasure. Using different authentication keys for
 different CPs can provide additional isolation only when each CP's accepted key set is
 also restricted accordingly. Publishing several keys in a common RP key set does not by
 itself establish that isolation.
+
+The single Entity Configuration also limits how client authentication represents device
+instances. In this profile, the client authentication keys are managed by the OP Entity,
+and an on-device application acts as that Entity's user interface or agent. The CP resolves
+one client identity and one RP metadata object for the OP's Entity Identifier; this
+specification does not define a separate enrollment or authentication binding for each
+device instance. Distributing the same authentication private key to all devices expands
+the risk of key extraction. Listing every device key in the common RP JWK Set can cause
+unbounded growth and expose device population and churn, without establishing separate
+client identities at the CP.
+
+Confidential-client status does not require server-side execution. Device-generated keys
+and instance-specific registration can support secure client authentication, but combining
+them with this profile's common Entity Identifier, OP issuer, and RP metadata requires a
+separate profile. Such a profile could define per-instance Explicit Registration or Dynamic
+Client Registration, or an Entity-backed client-attestation mechanism for instance keys
+while retaining the Entity Identifier as `client_id`. It would need to define the binding
+between each instance, its credentials, `client_id`, and the OP issuer, and the
+authentication-method selection rules. Giving an instance a different `client_id` while
+retaining a common OP issuer would change the identity relationship required by this base
+profile. These instance profiles are outside the scope of this specification.
 
 Client authentication and sender-constrained CP access tokens protect collection, not the
 subsequent presentation of a signed Claim Set. A Claim Set's audience identifies the OP,
