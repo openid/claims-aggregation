@@ -247,6 +247,14 @@ The `iat` and `exp` values MUST be NumericDate values as defined in [JWT], and `
 later than `iat`. These timestamps describe the issuance and expiration of the signed JWT.
 They do not establish when the underlying attributes were last verified.
 
+The CP MUST NOT use the same signing key with more than one signature algorithm. It SHOULD
+publish the intended algorithm in the JWK's `alg` parameter.
+
+When rotating signing keys, the CP SHOULD keep each retired public key available through its
+advertised verification-key sources until all Claim Sets signed with that key have expired,
+including the clock-skew allowance used by the deployment. Compromised keys MAY be withdrawn
+earlier under the deployment's key revocation policy.
+
 
 ## OP
 
@@ -314,7 +322,7 @@ independently configurable values detached from the CP's Issuer Identifier.
 The Claims Provider Metadata uses the following parameters from [OpenID.Discovery].
 
 `userinfo_endpoint`
-: **Required**. Claims Endpoint. URL at the Issuing-Authority that provides signed claims.
+: **Required**. URL of the CP's UserInfo Endpoint that returns signed Claim Sets.
 
 `userinfo_signing_alg_values_supported`
 : **Required**. Non-empty JSON array of the JWS [JWS] signing algorithms (`alg` values) from
@@ -551,9 +559,10 @@ the OP MUST obtain a suitable Claim Set from the CP or omit that JWT from the re
 
 ## Claims Verification
 
-The OP MUST validate each CP-signed UserInfo JWT when collecting it and before disclosing a
-stored Claim Set. The RP MUST validate the OP's enclosing ID Token or UserInfo response
-according to [OIDC] and validate each embedded CP-signed JWT before accepting its claims.
+The OP MUST obtain Claim Sets from the CP's UserInfo Endpoint and MUST NOT substitute an ID
+Token obtained during Setup. It MUST validate each CP-signed UserInfo JWT when collecting it
+and before disclosing a stored Claim Set. The RP MUST validate the OP's enclosing ID Token or
+UserInfo response according to [OIDC] and validate each embedded CP-signed JWT before accepting its claims.
 Both verifiers MUST apply the signature and claim validation rules below.
 
 ### CP Metadata and Verification Keys
@@ -577,6 +586,11 @@ associated with that issuer, including when cached, and MUST satisfy the applica
 and trust reevaluation requirements. Successful discovery of a key or verification of a
 signature MUST NOT by itself establish that the CP is trusted to issue the requested claims.
 
+If a signing key is unavailable or no longer trusted under the applicable key policy, the
+verifier MUST NOT accept the Claim Set on the basis of an earlier successful validation.
+The OP MUST obtain a replacement Claim Set from the CP or omit the affected Claim Set, as
+specified in (#claims-collection) and (#claims-delivery).
+
 ### Signature Validation
 
 The verifier MUST require an asymmetrically signed JWS and reject an unsecured JWT, `alg=none`,
@@ -590,7 +604,10 @@ the validated CP issuer. Key selection MUST respect the key type, signing use, a
 restrictions. A `kid`, if present, MUST select a suitable key only within that CP's trusted
 key set. The JWT header MUST NOT independently establish a trusted key source or override the
 allowed algorithms. The algorithm used in the cryptographic operation MUST match `alg`, and
-each key MUST be used with exactly one algorithm, as required by Section 3.1 of [RFC8725].
+the verifier MUST bind each public key to one algorithm using its JWK `alg` parameter or
+issuer-specific trusted configuration, as required by Section 3.1 of [RFC8725]. If the JWK
+includes `alg`, the verifier MUST check that it matches the JWT's `alg`. If the verifier
+cannot establish the key's algorithm binding, it MUST reject the Claim Set.
 
 ### Claim Validation
 
@@ -618,8 +635,11 @@ Section 5.6.2 of [OIDC], including that each referenced JWT contains the claims 
 and apply the validation rules for each claim it uses.
 
 If any required check fails, the OP MUST reject the invalid Claim Set and MUST NOT store or
-disclose it. If the failure is detected in a CP response, the OP MUST reject that response.
-The RP MUST reject the response containing the invalid Claim Set.
+disclose it. The RP MUST NOT use any claims from an invalid Claim Set and MUST treat the
+claims mapped to it by `_claim_names` as unavailable. The RP MAY reject the entire enclosing
+response. If it continues processing, it MUST independently validate the enclosing OP response
+and every other Claim Set it uses, and enforce its application's required-claim policy before
+completing the requested operation. Profiles MAY require rejection of the entire response.
 
 # Security Considerations
 
@@ -629,6 +649,23 @@ The algorithm in a JWT header is untrusted until signature verification succeeds
 in (#signature-validation) prevent a token from selecting an algorithm outside the verifier's
 policy or causing a CP public key to be used as an HMAC secret. Issuer-specific key resolution
 in (#cp-metadata-and-verification-keys) preserves the binding between a CP and its signing keys.
+
+The CP SHOULD choose Claim Set lifetimes according to the sensitivity and expected rate of
+change of the claims, the intended period of pre-collection and storage, and its ability to
+retain verification keys. Short lifetimes require more frequent collection, while long
+lifetimes extend the period during which previously issued attributes can be presented.
+Expiration limits the lifetime of the signed artifact. It does not guarantee that the
+underlying attributes remain current or that the CP's grant remains authorized. Key withdrawal
+can make a stored Claim Set unusable before its `exp`, as described in
+(#cp-metadata-and-verification-keys).
+
+A CP's ID Token can contain the same issuer, subject, audience, and timestamps as a signed
+UserInfo JWT. The base profile does not provide cryptographic separation of those JWT types
+to the RP. It relies on the L1 trust model and the OP's requirement to use the UserInfo
+Endpoint as the Claim Set source. The presence or absence of `nonce` or `auth_time` alone
+does not establish the JWT's purpose. Profiles requiring the RP to distinguish these token
+types independently MUST define mutually exclusive validation rules, for example distinct
+explicit types and their validation, as described in Section 3.12 of [RFC8725].
 
 Section 4.4 of [RFC9700] describes mix-up attacks. The check in
 (#authorization-response-issuer-validation) allows an OP that uses multiple CPs to detect an
