@@ -547,12 +547,14 @@ for its `client_id`. For flows that issue an authorization code, a public RP MUS
 and a confidential RP SHOULD also use PKCE.
 When using PKCE under this specification, the RP MUST use `S256` with a transaction-specific
 verifier securely bound to the initiating client and user agent. The OP MUST reject a public
-RP's authorization request that would issue a code without an `S256` challenge. When a
-challenge was supplied, the OP MUST reject the Token Request unless the verifier matches
-that challenge. It MUST also reject a Token Request containing a `code_verifier` if no
-challenge was present in the corresponding Authentication Request, as required by
-Section 4.8.2 of [RFC9700]. Client authentication does not replace these PKCE checks when
-PKCE is used.
+RP's authorization request that would issue a code without an `S256` challenge. For any RP,
+the OP MUST reject an authorization request containing `code_challenge` unless
+`code_challenge_method` is explicitly `S256`, including when the method is omitted and would
+default to `plain` under Section 4.3 of [RFC7636]. When a challenge was supplied, the OP MUST
+reject the Token Request unless the verifier matches that challenge. It MUST also reject a
+Token Request containing a `code_verifier` if no challenge was present in the corresponding
+Authentication Request, as required by Section 4.8.2 of [RFC9700]. Client authentication does
+not replace these PKCE checks when PKCE is used.
 
 RPs MUST prevent CSRF and authorization code injection according to Section 2.1 of [RFC9700].
 A confidential RP using the OIDC `nonce` alternative to PKCE MUST meet the additional
@@ -571,16 +573,27 @@ When obtaining consent, the OP MUST show a dialogue that:
 
 1. Identifies the requesting RP using its `client_id` and, if present, its `client_name` from
    the client metadata registered or resolved for that `client_id`;
-1. Shows the claims to be disclosed to that RP, including any additional claims in an
-   embedded JWT as described in (#claims-delivery);
+1. Identifies the CP source of each claim by its validated Issuer Identifier and shows the
+   claims to be disclosed to that RP, including the CP's `iss` and `sub` and any additional
+   claims in an embedded JWT as described in (#claims-delivery);
 1. Provides a link to the RP's `policy_uri` from that client metadata; and
 1. Obtains the Subject's consent through explicit action.
 
+The OP SHOULD prefer RP identity information verified under the applicable trust framework
+when presenting the RP to the Subject. Such information can include `organization_name`
+verified through Federation metadata policy or an applicable Trust Mark attesting to that
+identity information. Resolving signed metadata or validating a Trust Mark does not by
+itself verify every displayed name. The OP MUST NOT present an unverified `client_name` or
+other self-asserted identity information as verified. It SHOULD select language-tagged
+display values, such as `client_name#ja`, according to the Subject's language preferences,
+with fallback as described in Section 2.1 of [OpenID.Registration].
+
 The OP MAY remember a consent decision for the same authenticated Subject and RP
-`client_id`, limited to the claims authorized for disclosure. It MUST NOT skip the dialogue
-based on consent given to a different RP or on the CP grant authorizing the OP to collect
-claims. Remembered consent MUST NOT be used after withdrawal or for claims outside its
-authorized scope. Withdrawal is handled as specified in
+`client_id`, limited to the authorized claims and their CP sources identified by validated
+Issuer Identifiers. It MUST NOT skip the dialogue based on consent given to a different RP
+or on the CP grant authorizing the OP to collect claims. Remembered consent MUST NOT be
+used after withdrawal, for claims outside its authorized scope, or for a different CP
+source that the Subject has not authorized. Withdrawal is handled as specified in
 (#authorization-withdrawal-and-grant-revocation).
 
 When the RP requests `prompt=consent`, the OP MUST obtain fresh consent through explicit
@@ -657,6 +670,11 @@ receives the entire signed JWT embedded in `_claim_sources`, including claims th
 in `_claim_names`. The OP MUST ensure that every claim it discloses in the embedded JWT is
 authorized for disclosure to that RP. If a Claim Set includes claims the OP cannot disclose,
 the OP MUST obtain a suitable Claim Set from the CP or omit that JWT from the response.
+
+The OP SHOULD return Aggregated Claims in an ID Token obtained from the Token Endpoint or
+in a UserInfo response rather than in an ID Token returned from the Authorization Endpoint.
+This reduces exposure of the embedded CP-signed personal data through the browser and
+front-channel response handling, as discussed in (#rp-request-integrity-and-broker-side-consent).
 
 ## Claims Verification
 
@@ -835,14 +853,25 @@ in Section 2.4 of [OAuth.Security.Update]. This specification uses the broker-si
 screen countermeasure in Section 2.4.2.2 rather than registering every RP as a separate
 client at every CP. The Subject's authorization at the OP in (#subject-granting) identifies
 the RP and controls disclosure to it. The CP's grant authorizes collection by the OP; it
-does not authorize disclosure to any particular RP. Reusing that collection grant or a
-stored Claim Set MUST NOT bypass RP-specific authorization.
+does not authorize disclosure to any particular RP. The RP-specific authorization
+requirements apply equally when the OP reuses that collection grant or a stored Claim Set.
 
 This choice permits collection independently of RP activity without requiring the CP to
 learn which RP receives the claims. For an RP-triggered CP authorization request, the OP
 obtains the necessary RP-specific authorization first. For pre-collected Claim Sets, the
-OP enforces that authorization before disclosure. The OP MUST honor Subject withdrawal
-even when it has remembered consent or the CP grant remains valid.
+OP enforces that authorization before disclosure. The withdrawal requirements in
+(#authorization-withdrawal-and-grant-revocation) also apply when the OP has remembered
+consent or the CP grant remains valid.
+
+An ID Token returned from the Authorization Endpoint can expose embedded CP-signed Claim
+Sets to browser scripts and front-channel response handling. Depending on the response
+mode and implementation, those artifacts can persist in URLs, including fragments, browser
+history, or application and diagnostic logs. Unlike an authorization code, the signed
+personal data can be copied and presented to other parties, subject to their acceptance
+checks. The back-channel delivery recommendation in (#claims-delivery) reduces this
+exposure; it does not prevent an RP that receives a Claim Set from copying it. This is an
+additional reason to minimize front-channel exposure alongside the leakage risks discussed
+in Sections 4.2 and 4.3 of [RFC9700].
 
 ## Audience Binding
 
@@ -975,7 +1004,9 @@ We would like to thank the following people for their valuable feedback and cont
 -04
 
 * Defined RP request validation, authorization code and PKCE checks, and per-RP consent
-* Required RP policy_uri metadata and corrected its use in the consent dialogue
+* Required RP `policy_uri` metadata and corrected its use in the consent dialogue
+* Bound remembered consent to CP sources and distinguished verified RP display information
+* Recommended back-channel delivery of Aggregated Claims to limit front-channel exposure
 * Defined local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
 * Defined CP signing algorithm selection, verification key resolution, and Claim Set validation
 * Required issuance and expiration timestamps in CP-signed UserInfo JWTs
