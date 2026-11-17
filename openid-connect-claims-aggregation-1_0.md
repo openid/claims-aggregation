@@ -554,10 +554,10 @@ issuer mismatch before sending an authorization code to a Token Endpoint.
 
 ## Setup Transaction and Session Integrity
 
-The Setup requirements in (#authorization-request-and-transaction-binding), (#authorization-
-response-session-validation), (#authorization-response-issuer-validation), and (#token-
-request-and-account-binding) protect the OP's connections to multiple CPs. Authorization Code
-Flow, issuer-bound metadata resolution with valid caching, and RFC 9207 validation implement
+The Setup requirements in (#authorization-request-and-transaction-binding),
+(#authorization-response-session-validation), (#authorization-response-issuer-validation),
+and (#token-request-and-account-binding) protect the OP's connections to multiple CPs.
+Authorization Code Flow, issuer-bound metadata resolution with valid caching, and RFC 9207 validation implement
 the issuer-based countermeasure for connection confusion described in Section 2.2.2 of
 [OAuth.Security.Update]. The OP also preserves the selected client registration and any
 connection or tenant context throughout the transaction.
