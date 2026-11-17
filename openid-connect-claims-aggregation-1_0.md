@@ -800,7 +800,7 @@ until they expire, subject to the validation and acceptance requirements of this
 The Subject controls further disclosure at the OP as described in
 (#authorization-withdrawal-and-grant-revocation). This protection is bounded by the `exp`
 chosen by the CP, which can issue Claim Sets with short lifetimes. Within this model,
-legitimate changes requiring prompt invalidation, such as revocation of a driving licence,
+legitimate changes requiring prompt invalidation, such as revocation of a driver's license,
 are handled through short lifetimes or a separate authenticated status mechanism for the
 issued Claim Set. OAuth grant revocation alone does not provide that mechanism.
 
