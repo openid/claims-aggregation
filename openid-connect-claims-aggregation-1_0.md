@@ -573,9 +573,10 @@ When obtaining consent, the OP MUST show a dialogue that:
 
 1. Identifies the requesting RP using its `client_id` and, if present, its `client_name` from
    the client metadata registered or resolved for that `client_id`;
-1. Identifies the CP source of each claim by its validated Issuer Identifier and shows the
-   claims to be disclosed to that RP, including the CP's `iss` and `sub` and any additional
-   claims in an embedded JWT as described in (#claims-delivery);
+1. Identifies the CP source of each claim based on its validated Issuer Identifier, shows
+   the claims to be disclosed to that RP, including any additional claims in an embedded
+   JWT as described in (#claims-delivery), and indicates that the CP's Issuer Identifier
+   and the Subject's identifier at that CP will be disclosed to the RP;
 1. Provides a link to the RP's `policy_uri` from that client metadata; and
 1. Obtains the Subject's consent through explicit action.
 
