@@ -1311,46 +1311,22 @@ otherwise valid message unless indicated.
 
 ## Claims Delivery
 
-The OP creates the Aggregated Claims response as described in Section 5.6.2 of [OIDC].
+[OIDC] governs claim destinations, omission rules, and the Aggregated Claims representation.
 
-1. The OP MUST determine the destinations for claims requested through `scope` according to
-   Section 5.4 of [OIDC].
-1. The OP MUST add the individual requests for `id_token` and `userinfo` as specified in
-   Section 5.5 of [OIDC].
+1. The OP MUST apply the applicable request constraints to each response.
+2. The OP MUST omit `_claim_names` entries for claims it cannot supply in an authorized, valid Claim Set.
+3. The OP MUST limit each embedded JWT to claims the Subject authorizes for disclosure to that RP.
+4. The OP MUST replace or omit any Claim Set with claims outside the RP's disclosure authorization.
+5. The OP MUST preserve mappings for other claims it returns, including Distributed Claims.
+6. The OP MUST preserve the sources that those mappings reference.
+7. The OP MUST omit each `_claim_sources` entry that no remaining `_claim_names` entry references.
+8. If `_claim_names` would be empty, the OP MUST omit both `_claim_names` and `_claim_sources`.
+9. The OP MUST NOT forward CP error details to explain an omission.
+10. The RP MUST enforce its application's required-claim policy before completing the requested operation.
 
-An individual request does not cancel a scope-based request for the same claim at another
-destination.
-
-3. The OP MUST apply the applicable request constraints, disclosure authorization, and
-   availability checks to each response.
-1. If the OP cannot supply a requested aggregated claim in an authorized, valid Claim Set, the
-   OP MUST omit the claim from `_claim_names` in that response.
-
-The RP receives the entire signed JWT embedded in `_claim_sources`, including any claims
-that lack a mapping in `_claim_names`.
-
-5. The OP MUST ensure that every claim in the embedded JWT is authorized for disclosure to
-   that RP.
-1. If a Claim Set includes claims the OP cannot disclose, the OP MUST obtain a suitable Claim
-   Set from the CP or omit the entire JWT from that response.
-1. The OP MUST preserve mappings and their referenced sources for any other claims it returns
-   in that response, including Distributed Claims.
-1. The OP MUST omit any `_claim_sources` entry that no remaining `_claim_names` entry
-   references.
-1. If `_claim_names` has no remaining entries, the OP MUST omit both members.
-
-See (#authorization-withdrawal-and-grant-revocation) for the conditions under which the
-OP can use a previously collected Claim Set.
-
-10. The OP MUST apply the omission and error rules in Section 5.5.1 of [OIDC], including
-    claim-specific requirements.
-
-The `essential` flag alone does not make an omitted claim an authentication error. This
-specification defines no RP-facing error or reason code for an omitted aggregated claim.
-
-11. The OP MUST NOT forward CP error details to explain an omission.
-1. The RP MUST enforce its application's required-claim policy before completing the
-   requested operation, including when a claim is absent from an otherwise valid response.
+The RP receives all claims in the embedded JWT, including claims without a mapping in `_claim_names`.
+(#authorization-withdrawal-and-grant-revocation) specifies when the OP can use previously collected Claim Sets.
+The `essential` flag alone does not make an omission an authentication error under [OIDC].
 
 For example, the RP requests `birthdate` and `address` in the ID Token:
 
@@ -1388,186 +1364,140 @@ Aggregated Claims in an ID Token, the normal ID Token requirements still apply.
 The enclosing `sub` identifies the Subject at the OP. The CP's `account_ref` and acquisition
 nonce are not included in the embedded JWT or passed on as acquisition evidence to the RP.
 
-13. The OP SHOULD return Aggregated Claims in an ID Token obtained from the Token Endpoint or
-    in a UserInfo response rather than in an ID Token returned from the Authorization
-    Endpoint.
+11. The OP SHOULD return Aggregated Claims in a Token Endpoint ID Token or a UserInfo response.
 
-This reduces exposure of the embedded CP-signed personal data through the browser and
-front-channel response handling, as discussed in
-(#rp-request-integrity-and-broker-side-consent).
+This limits the front-channel exposure described in (#rp-request-integrity-and-broker-side-consent).
 
 ## Claims Verification
 
 ### Verification Responsibilities
 
 1. The OP MUST obtain Claim Sets from the CP's Claims Endpoint.
-1. The OP MUST NOT substitute a Setup ID Token, a refreshed ID Token, or a UserInfo JWT.
-1. The OP MUST validate each CP-signed Claim Set when collecting it.
-1. The OP MUST validate each stored Claim Set before disclosing it.
-1. The RP MUST validate the OP's enclosing ID Token or UserInfo response according to [OIDC]
-   and validate each embedded CP-signed JWT before accepting its claims.
-1. Both verifiers MUST apply the signature and claim validation rules below.
+2. The OP MUST NOT substitute a Setup ID Token, a refreshed ID Token, or a UserInfo JWT.
+3. The OP MUST validate each CP-signed Claim Set when collecting it.
+4. The OP MUST validate each stored Claim Set before disclosing it.
+5. The RP MUST validate each embedded CP-signed JWT before accepting any claim from it.
 
 ### CP Metadata and Verification Keys
 
-1. The verifier MUST obtain the CP's metadata and signature verification keys through one of
-   the following mechanisms, subject to its trust policy for the CP.
+The following sources supply CP metadata and its verification keys.
 
-- Use [OpenID.Discovery] to retrieve the CP's configuration, validate its `issuer` according
-   to Section 4.3 of that specification, and retrieve the public keys from its `jwks_uri`.
-- Resolve and validate a Trust Chain for the CP using [OpenID.Federation], then obtain its
-   application signing keys from the resolved `openid_provider` metadata using Section 5.2.1
-   of that specification.
-- Use metadata and public keys provisioned for that CP issuer by a trusted deployment
-   configuration or trust framework.
+- [OpenID.Discovery] supplies validated provider metadata and application keys via `jwks_uri`.
+- [OpenID.Federation] supplies application signing keys in resolved `openid_provider` metadata.
+- Trusted deployment configuration or a trust framework can provision metadata and keys for a CP issuer.
 
-2. The verifier MUST NOT substitute Federation Entity Keys for the CP's application signing
-   keys.
-1. The verifier MUST require an exact match between the CP issuer in the validated metadata or
-   trusted configuration and the JWT's `iss`.
-1. The verifier MAY use an unverified `iss` as input to key resolution only as permitted by
-   its issuer acceptance and network access policies.
-1. The verifier MUST associate the CP's metadata and keys with that issuer, including when it
-   caches them.
-1. The verifier MUST apply the applicable validity and trust reevaluation requirements to the
-   metadata and keys.
-1. Successful discovery of a key or verification of a signature MUST NOT by itself establish
-   that the CP is trusted to issue the requested claims.
-1. If a signing key is unavailable or no longer trusted under the applicable key policy, the
-   verifier MUST NOT accept the Claim Set on the basis of an earlier successful validation.
-1. The OP MUST obtain a replacement Claim Set from the CP or omit the affected Claim Set, as
-   specified in (#claims-collection) and (#claims-delivery).
-1. The CP MUST use each Claim Set signing key with one algorithm as specified in [RFC8725].
-1. The CP MUST publish each Claim Set signing key's algorithm in every advertised JWK's `alg`.
-1. The CP SHOULD keep retired public keys available through its advertised key sources until their signed Claim Sets expire.
-1. The CP SHOULD include its clock-skew allowance in that key retention period.
-1. The CP MAY withdraw compromised keys earlier under its deployment's key revocation policy.
+1. The verifier MUST obtain the CP's metadata and verification keys from one of these sources.
+2. The verifier MUST select a source according to its trust policy for the CP.
+3. The verifier MUST NOT substitute Federation Entity Keys for the CP's application signing keys.
+4. The verifier MUST match the JWT's `iss` exactly to the CP issuer in validated metadata or trusted configuration.
+5. The verifier MAY use unverified `iss` for key resolution only as its issuer acceptance and network policies permit.
+6. The verifier MUST associate the CP's metadata and keys with that issuer, including in caches.
+7. The verifier MUST apply the applicable validity requirements to metadata and keys.
+8. The verifier MUST apply the applicable trust reevaluation requirements to metadata and keys.
+9. The verifier MUST NOT rely on key discovery or signature verification alone to trust a CP for claims.
+10. The verifier MUST NOT rely on prior validation if the signing key becomes unavailable or untrusted.
+11. In that case, the OP MUST obtain a replacement Claim Set from the CP or omit the affected set.
+
+12. The CP MUST apply the key-to-algorithm binding rules in [RFC8725] when signing Claim Sets.
+13. The CP MUST publish each Claim Set signing key's algorithm in every advertised JWK's `alg`.
+14. The CP SHOULD keep retired public keys available through its advertised key sources until their signed Claim Sets expire.
+15. The CP SHOULD include its clock-skew allowance in that key retention period.
+16. The CP MAY withdraw compromised keys earlier under its deployment's key revocation policy.
 
 ### Signature Validation
 
-1. The verifier MUST require an asymmetrically signed JWS and reject an unsecured JWT,
-   `alg=none`, or a symmetric MAC algorithm.
-1. The verifier MUST establish an allowed set of algorithms from its local policy and the CP's
-   validated `claims_signing_alg_values_supported` metadata before verifying the signature.
-1. The verifier MUST require the JWT's `alg` to be in both sets.
-1. At acquisition, the OP MUST also verify that `alg` equals the `signing_alg` bound to the
-   collection operation.
-1. The verifier MUST verify the signature according to [JWS] using a public key associated
-   with the validated CP issuer.
-1. Key selection MUST respect the key type, signing use, and algorithm restrictions.
-1. A `kid`, if present, MUST select a suitable key only within that CP's trusted key set.
-1. The JWT header MUST NOT independently establish a trusted key source or override the
-   allowed algorithms.
-1. The verifier MUST use the cryptographic algorithm identified by `alg`.
-1. The verifier MUST bind each public key to one algorithm using its JWK `alg` parameter or
-   issuer-specific trusted configuration, as required by Section 3.1 of [RFC8725].
-1. If the JWK includes `alg`, the verifier MUST check that it matches the JWT's `alg`.
-1. If the verifier cannot establish the key's algorithm binding, it MUST reject the Claim
-   Set.
+[JWS] governs signature verification.
+
+1. The verifier MUST require an asymmetrically signed JWS.
+2. The verifier MUST determine its allowed algorithms before verifying the signature.
+3. The verifier MUST require `alg` in both local policy and the CP's validated `claims_signing_alg_values_supported`.
+4. At acquisition, the OP MUST match `alg` to the `signing_alg` bound to the collection operation.
+5. The verifier MUST use a public key bound to the validated CP issuer for signature verification.
+6. The verifier MUST honor key type, signing use, and algorithm restrictions when selecting a key.
+7. The verifier MUST resolve any `kid` only within the CP's trusted key set.
+8. The verifier MUST NOT trust a key source solely because the JWT header identifies it.
+9. The verifier MUST bind each key to one algorithm using JWK `alg` or trusted issuer-specific configuration.
+10. If the JWK includes `alg`, the verifier MUST match it to the JWT's `alg`.
+11. The verifier MUST reject the Claim Set if it cannot establish the key's algorithm binding.
 
 ### Claim Validation
 
-The verifier performs these checks after verifying the signature.
+The verifier checks claims after validating the signature.
+[JWT] governs time claim types, expiration, and not-before processing.
 
-1. The verifier MUST require protected-header `typ` to equal `claims-aggregation+jwt`.
-1. The verifier MUST reject a Claim Set whose payload contains `sub`.
-1. The verifier MUST require `iss`, `aud`, `iat`, and `exp`.
-1. The verifier MUST require a non-empty string for `iss`.
-1. The verifier MUST match `iss` to the CP whose metadata and keys it validated.
-1. The OP MUST validate its acquisition or stored binding record under (#trust-model) and
-   (#claims-endpoint-response).
-1. The RP MUST apply its trust policy to decide whether it trusts that CP for the claims.
-1. The verifier MUST require exactly one `aud` value as a string or as an array containing
-   only that string.
-1. The OP MUST compare `aud` with its own `client_id` at the CP.
-1. The RP MUST compare `aud` with the OP Issuer Identifier established during OpenID Connect
-   validation.
-1. For Aggregated Claims in a UserInfo response, the RP MUST use the validated OP issuer from
-   the OpenID Connect transaction that issued the access token.
-1. For Aggregated Claims in a UserInfo response, the RP MUST NOT infer a new issuer from the
-   CP JWT or an unsigned UserInfo body.
-1. The RP MUST preserve the OP issuer's association with that access token.
-1. The verifier MUST compare these identifiers without normalization as specified in Section
-   14 of [OIDC].
-1. The verifier MUST require NumericDate values for `iat` and `exp`.
-1. The verifier MUST require `exp` to be later than `iat`.
-1. The verifier MUST reject a JWT whose `iat` is in the future or whose `exp` has been
-   reached.
-1. The verifier MAY allow a small leeway for clock skew.
-1. If the JWT contains `nbf`, the verifier MUST validate it according to Section 4.1.5 of
-   [JWT], with the same clock-skew allowance.
+1. The verifier MUST require `claims-aggregation+jwt` in the protected header's `typ`.
+2. The verifier MUST reject a Claim Set whose payload contains `sub`.
+3. The verifier MUST require `iss`, `aud`, `iat`, and `exp`.
+4. The verifier MUST require a non-empty string for `iss`.
+5. The OP MUST validate the acquisition or stored binding under (#claims-endpoint-response).
+6. The RP MUST apply its trust policy to decide whether it trusts the CP for these claims.
+7. The verifier MUST require exactly one `aud` value as a string or single-element array.
+8. The OP MUST match `aud` exactly to its `client_id` at the CP.
+9. The RP MUST match `aud` exactly to the OP issuer it validated through OpenID Connect.
+10. The verifier MUST compare issuer and audience identifiers without normalization.
+11. The verifier MUST require `exp` to be later than `iat`.
+12. The verifier MUST reject a JWT with an `iat` in the future.
+13. The verifier MAY allow a small clock skew when comparing times to its clock.
+14. The verifier MUST apply any clock-skew allowance consistently to `iat`, `exp`, and `nbf`.
+
+The following requirements apply when the RP receives Aggregated Claims through UserInfo.
+
+15. The RP MUST use the validated OP issuer from the transaction that issued the access token.
+16. The RP MUST NOT infer a new issuer from the CP JWT or an unsigned UserInfo response.
+17. The RP MUST preserve the OP issuer's association with that access token.
 
 The RP relies on the OP for the Subject binding described in (#trust-model).
 
-20. The RP MUST also verify the `_claim_names` and `_claim_sources` structure according to
-    Section 5.6.2 of [OIDC], including that each referenced JWT contains the claims mapped to
-    it, and apply the validation rules for each claim it uses.
-1. If any required check fails, the OP MUST reject the invalid Claim Set.
-1. The OP MUST NOT store or disclose an invalid Claim Set.
-1. The RP MUST NOT use any claims from an invalid Claim Set.
-1. The RP MUST treat claims that `_claim_names` maps to an invalid Claim Set as unavailable.
-1. The RP MAY reject the entire enclosing response.
-1. If it continues processing, it MUST independently validate the enclosing OP response and
-   every other Claim Set it uses, and enforce its application's required-claim policy before
-   completing the requested operation.
-1. Profiles MAY require rejection of the entire response.
+18. The RP MUST validate the Aggregated Claims structure according to [OIDC].
+19. The RP MUST check that each mapped claim appears in its referenced JWT.
+20. The RP MUST apply the validation rules for each claim it uses.
+21. The OP MUST reject a Claim Set that fails any required check.
+22. The OP MUST NOT store an invalid Claim Set.
+23. The OP MUST NOT disclose an invalid Claim Set.
+24. The RP MUST NOT use claims from an invalid Claim Set.
+25. The RP MUST treat claims mapped to an invalid Claim Set as unavailable.
+26. The RP MAY reject the entire enclosing response.
+27. Profiles MAY require rejection of the entire enclosing response.
+
+The verification rules in (#verification-responsibilities) apply to every Claim Set the RP uses.
+(#claims-delivery) specifies when the RP can complete the requested operation.
 
 ### Local Freshness Policy and User-Directed Updates
 
+The RP's acceptance checks include Claim Set validation and its freshness policy.
+
 1. The RP MUST apply its application's freshness requirements before using claims.
-1. The RP MAY enforce a maximum acceptable JWT age based on the CP-signed `iat`, in addition
-   to checking `exp`.
-1. If a Claim Set is too old for the intended use, the RP MUST treat its claims as unavailable
-   for that use and enforce its required-claim policy.
-1. The RP SHOULD explain to the Subject when updated information is needed.
-1. The RP MAY direct the Subject to the OP's claim-management interface to request an update,
-   after which the Subject can retry the RP interaction using the existing OpenID Connect
-   flow.
+2. The RP MUST apply its acceptance checks to Claim Sets it uses after OP selection or a user-directed update.
+3. The RP MAY enforce a maximum JWT age based on the CP-signed `iat`.
+4. If a Claim Set is too old, the RP MUST treat its claims as unavailable for that use.
+5. The RP SHOULD explain to the Subject when updated information is necessary.
+6. The RP MAY direct the Subject to the OP's claim-management interface to request an update.
 
-Retrying authentication alone does not require the OP to recollect CP claims.
+The Subject can retry the OpenID Connect interaction after an update.
+Retrying authentication alone does not require the OP to recollect claims.
 
-6. The RP MUST validate the returned Claim Sets and apply its freshness policy again after an
-   update.
+[IDA.Schema] defines the `verified_claims` structure.
+Using it does not by itself implement the [OpenID4IDA] query protocol or external assertion format.
 
-Identity assurance data can be represented using the `verified_claims` structure defined
-in [IDA.Schema]. The data structure, the RP's query syntax, and the signed external
-assertion format are separate concerns. Using that structure in a Claim Set does not by
-itself implement the query protocol or external assertion profile in [OpenID4IDA].
+Implementations that support [OpenID4IDA] can use its existing request and validation mechanisms.
+For example, `max_age` constrains `verification.time` or another requested date or timestamp.
 
-At the RP-to-OP interface, implementations that separately support [OpenID4IDA] can use its
-existing request and validation mechanisms. For example, the `max_age` query member in
-Section 5.5.2 of [OpenID4IDA] constrains `verification.time` or another requested date or
-timestamp.
-
-7. When using these constraints, the RP MUST evaluate the returned verification or evidence
-   timestamps against its requirements according to those query semantics, separately from the
-   JWT's `iat`.
-
-A newly issued JWT does not by itself show that identity verification was performed again;
-fulfilling a verification-age requirement can require a new verification process at the CP.
-
+7. The RP MUST evaluate assurance timestamps separately from the JWT's `iat` when it uses [OpenID4IDA] freshness constraints.
 8. The OP MAY use supported constraints to select stored Claim Sets.
 
-Mapping them into a Claims Endpoint request requires a separately defined extension or
-profile; the base `claims` object accepts only `null` values. An RP's nested query is not
-automatically a valid CP acquisition request. This specification requires neither forwarding
-those constraints nor selecting stored Claim Sets against them.
+A new JWT does not show when the CP last verified the claims.
+Meeting a verification-age requirement can require renewed verification at the CP.
+Mapping constraints into a Claims Endpoint request requires a separate extension or profile.
+The base `claims` object accepts only `null` values.
+The OP can support [OpenID4IDA] without forwarding constraints or using them to select stored Claim Sets under this specification.
+[OpenID4IDA] still governs its implementers' query, filtering, and omission behavior.
 
-9. The RP MUST perform its acceptance checks after receipt regardless of whether the OP
-   performs such selection.
+The [OpenID4IDA] external assertion format uses `typ=provided-claims+jwt` and requires `sub`.
+That format prohibits `aud` and `exp`.
 
-An OP that separately implements [OpenID4IDA] remains subject to that specification's
-applicable OP requirements, including its restriction and omission rules; RP-side checks do
-not excuse returning data contrary to those requirements.
+9. The OP MUST NOT rewrite an existing signed assertion to convert it to this profile.
 
-The external assertion format in Section 6.1 of [OpenID4IDA] requires
-`typ=provided-claims+jwt` and `sub`, and prohibits `aud` and `exp`. It is not the signed
-Claim Set profile defined here.
-
-10. The OP MUST NOT rewrite an existing signed assertion to convert it to this profile.
-
-Full interoperability with that external assertion format requires a separate profile and is
-not claimed by this specification.
+Interoperability with that external assertion format requires a separate profile.
 
 
 # Security Considerations
