@@ -715,23 +715,16 @@ The Delivery Phase typically includes the following steps.
 
 ## Claims Request by RP to OP
 
-1. The RP MUST use an OpenID Connect Authentication Request as defined in [OIDC].
-1. To request individual claims, the RP MUST use the standard `claims` parameter with
-   `userinfo`, `id_token`, or both, as described in Section 5.5 of [OIDC].
-1. The OP MUST support this parameter.
+1. The RP MUST request claims in an [OIDC] Authentication Request.
+2. To request individual claims, the RP MUST use `userinfo`, `id_token`, or both in `claims`.
+3. The OP MUST support the `claims` parameter.
+4. The RP MUST include `policy_uri` in its client metadata.
+5. The OP MUST return claims from the selected CPs as Aggregated Claims.
 
-The RP can also use `scope` as defined in [OIDC].
-
-4. The RP MUST provide `policy_uri` in its client metadata as defined in Section 2 of
-   [OpenID.Registration]. This specification requires that otherwise optional parameter so the
-   OP can show the RP's privacy policy to the Subject during authorization.
-1. The OP selects CPs associated with the Subject's account and MUST use the Aggregated Claims
-   format for claims it returns from those CPs.
-
-The RP can apply its own policy to the CP's signed `iss` when deciding whether to use the
-claims. The request syntax defined here covers claim names. Requesting a specific CP
-requires an extension. The RP applies its own freshness policy as described in
-(#local-freshness-policy-and-user-directed-updates).
+The OP selects CPs associated with the Subject's account.
+[OIDC] defines `claims` and `scope`. Selecting a specific CP requires an extension.
+[OpenID.Registration] defines `policy_uri`. The OP uses it in (#subject-granting).
+(#claims-verification) specifies how the RP evaluates the CP and the age of its Claim Set.
 
 
 ## RP authentication and the request verification
@@ -1432,14 +1425,11 @@ Interoperability with that external assertion format requires a separate profile
 
 The security considerations of [OIDC], [OpenID.Federation], and [RFC8725] apply.
 
-The algorithm in a JWT header is untrusted until signature verification succeeds. The rules
-in (#signature-validation) prevent a token from selecting an algorithm outside the verifier's
-policy or causing a CP public key to be used as an HMAC secret. Issuer-specific key resolution
-in (#cp-metadata-and-verification-keys) preserves the binding between a CP and its signing keys.
+Before verifying the signature, the verifier constrains algorithms and keys under
+(#signature-validation) and (#cp-metadata-and-verification-keys). This prevents a JWT
+header from selecting an unauthorized algorithm or causing use of a CP public key as a MAC secret.
 
-1. The CP SHOULD choose Claim Set lifetimes according to the sensitivity and expected rate of
-   change of the claims, the intended period of pre-collection and storage, and its ability
-   to retain verification keys.
+1. The CP SHOULD consider claim sensitivity, change rate, storage duration, and verification key retention when choosing Claim Set lifetimes.
 
 Short lifetimes require more frequent collection, while long lifetimes extend the period
 during which previously issued attributes can be presented. Expiration limits the lifetime
@@ -1447,34 +1437,25 @@ of the signed artifact. It does not guarantee that the underlying attributes rem
 or that the CP's grant remains authorized. Key withdrawal can make a stored Claim Set
 unusable before its `exp`, as described in (#cp-metadata-and-verification-keys).
 
-The explicit type and absence of `sub` in (#signed-claim-set-format) provide validation
-rules distinct from ID Tokens and UserInfo JWTs, as recommended by Section 3.12 of [RFC8725].
-Calling a different URL alone does not prevent cross-JWT confusion. Verifiers still check
-the type, issuer, audience, signature, and remaining claims, and do not fall back to an old
-profile when those checks fail. The presence or absence of `nonce` or `auth_time` alone
-does not establish a JWT's purpose.
-
-Section 4.4 of [RFC9700] describes mix-up attacks. The check in
-(#authorization-response-issuer-validation) allows an OP that uses multiple CPs to detect an
-issuer mismatch before sending an authorization code to a Token Endpoint.
+The type and claim rules in (#signed-claim-set-format) distinguish Claim Sets from
+ID Tokens and UserInfo JWTs. [RFC8725] describes cross-JWT confusion. A separate URL
+or the presence or absence of `nonce` or `auth_time` does not by itself distinguish these JWTs.
 
 ## Setup Transaction and Session Integrity
 
-The Setup requirements in (#authorization-request-and-transaction-binding),
-(#authorization-response-session-validation), (#authorization-response-issuer-validation),
-and (#token-request-and-account-binding) protect the OP's connections to multiple CPs.
-Authorization Code Flow, issuer-bound metadata resolution with valid caching, and RFC 9207 validation implement
-the issuer-based countermeasure for connection confusion described in Section 2.2.2 of
-[OAuth.Security.Update]. The OP also preserves the selected client registration and any
-connection or tenant context throughout the transaction.
+The issuer-based countermeasure in [OAuth.Security.Update] protects connections to
+multiple CPs. (#cp-discovery-and-metadata) binds metadata to the selected issuer.
+(#authorization-response-issuer-validation) checks that issuer before code exchange.
+That check also addresses the mix-up risk in [RFC9700].
+(#token-request-and-account-binding) preserves the selected client and any connection or tenant context.
 
-PKCE binds an authorization code to the OP's token request. An attacker can still initiate
-Setup for the attacker's OP account and induce a victim to authorize access to the victim's CP
-account. PKCE alone does not detect this cross-user session fixation attack, described in
+PKCE binds the code to the OP's token request under (#authorization-request-and-transaction-binding).
+An attacker can still initiate Setup for the attacker's OP account and induce a victim to
+authorize access to the victim's CP account. PKCE alone does not detect this cross-user session fixation attack, described in
 Section 2.3 of [OAuth.Security.Update], with countermeasures in Section 2.3.2. Before
-exchanging the code, the OP verifies the completion session's binding to the initiating
-authenticated OP account. A valid `state` received through a URL is insufficient without this
-session validation. Comparing a previously stored CP subject identifier detects account
+exchanging the code, the OP verifies the completion session's binding under
+(#authorization-response-session-validation). A valid `state` received through a URL is insufficient
+without this session validation. Comparing a previously stored CP subject identifier detects account
 changes. Checking for the same CP (`iss`, `sub`) on another OP account can also detect an
 attempted new binding when that CP identity is already known to the OP. Neither check
 establishes a relationship for a CP identity that has never been linked at the OP. The trust
@@ -1484,20 +1465,12 @@ assumptions in (#trust-model) continue to apply.
 
 The checks in (#rp-authentication-and-the-request-verification) apply to signed and unsigned requests.
 
-The OP acts as the broker between downstream RPs and upstream CPs in the topology described
-in Section 2.4 of [OAuth.Security.Update]. This specification uses the broker-side consent
-screen countermeasure in Section 2.4.2.2 rather than registering every RP as a separate
-client at every CP. The Subject's authorization at the OP in (#subject-granting) identifies
-the RP and controls disclosure to it. The CP's grant authorizes collection by the OP; it
-does not authorize disclosure to any particular RP. The RP-specific authorization
-requirements apply equally when the OP reuses that collection grant or a stored Claim Set.
-
-This choice permits collection independently of RP activity without requiring the CP to
-learn which RP receives the claims. For an RP-triggered CP authorization request, the OP
-obtains the necessary RP-specific authorization first. For pre-collected Claim Sets, the
-OP enforces that authorization before disclosure. The withdrawal requirements in
-(#authorization-withdrawal-and-grant-revocation) also apply when the OP has remembered
-consent or the CP grant remains valid.
+The OP brokers requests between RPs and CPs using the broker-side consent approach
+in [OAuth.Security.Update]. The CP grant authorizes collection, and the Subject's
+authorization at the OP governs RP disclosure. (#subject-granting) covers both
+RP-triggered collection and reuse. The Subject can withdraw authorization under
+(#authorization-withdrawal-and-grant-revocation) even if the CP grant remains valid.
+Pre-collection can keep the recipient RP and its activity timing from the CP.
 
 An ID Token returned from the Authorization Endpoint can expose embedded CP-signed Claim
 Sets to browser scripts and front-channel response handling. Depending on the response
@@ -1511,16 +1484,11 @@ in Sections 4.2 and 4.3 of [RFC9700].
 
 ## Audience Binding
 
-The RP uses the OP's Issuer Identifier to check the audience of each Claim Set. This check
-relies on the CP binding that `client_id` to the correct client.
+The Claim Set audience identifies the OP that obtained it. The RP checks that audience
+under (#claim-validation) and applies its CP trust policy.
 
-1. The CP MUST establish the client as specified in (#client-configuration-phase) before
-   issuing a signed Claim Set for Claims Aggregation.
-1. The CP MUST NOT allow a different client to use that `client_id`, including through a
-   separate registration.
-
-The audience check binds the Claim Set to the OP that obtained it. The RP also verifies the CP's signature
-and determines whether it trusts the CP to issue the claims.
+1. The CP MUST establish the client under (#client-configuration-phase) before issuing a Claim Set.
+2. The CP MUST NOT let another client use that `client_id`, including through a separate registration.
 
 ## Cross-User Claim Substitution
 
@@ -1701,35 +1669,27 @@ within the limits described in (#freshness-and-revocation-limits).
 
 ## Freshness and Revocation Limits
 
-The signed `iat` establishes the age of the JWT.
+The CP's signed `iat` establishes the JWT's age for freshness checks.
 
-1. An OP collection timestamp or the enclosing ID Token's `iat` MUST NOT replace it in
-   freshness checks.
+1. The verifier MUST NOT substitute an OP collection timestamp or enclosing ID Token `iat` for the CP-signed `iat`.
 
 A CP can issue a new JWT containing attributes verified earlier. Applications needing
 freshness of identity verification or evidence can use the corresponding signed data and
 validation rules in [OpenID4IDA], as described in
 (#local-freshness-policy-and-user-directed-updates).
 
-This specification treats a signed Claim Set held by the OP as an artifact under the
-Subject's control. A CP's revocation of the OP's OAuth grant, including unilateral revocation,
-cannot thereby prevent the Subject from continuing to present previously issued Claim Sets
-until they expire, subject to the validation and acceptance requirements of this specification.
-The Subject controls further disclosure at the OP as described in
-(#authorization-withdrawal-and-grant-revocation). This protection is bounded by the `exp`
-chosen by the CP, which can issue Claim Sets with short lifetimes. Within this model,
-legitimate changes requiring prompt invalidation, such as revocation of a driver's license,
-are handled through short lifetimes or a separate authenticated status mechanism for the
-issued Claim Set. OAuth grant revocation alone does not provide that mechanism.
+The Subject controls a signed Claim Set held by the OP. CP grant or token revocation,
+including unilateral revocation, affects future collection. The Subject can continue to
+present previously issued Claim Sets until expiration, subject to this profile's validation and acceptance rules.
+(#authorization-withdrawal-and-grant-revocation) describes the Subject's control over
+further disclosure at the OP.
 
-OAuth token and grant revocation controls further access to the CP. It does not by itself
-invalidate signed Claim Sets already held by the OP or delivered to RPs, as described in
-(#authorization-withdrawal-and-grant-revocation). Offline verification establishes the
-properties of the signed artifact; it cannot establish that the underlying attributes have
-remained unchanged since issuance. Deployments requiring a current status check on an issued
-Claim Set need a separate authenticated status mechanism and acceptance policy. Such a check
-concerns the issued Claim Set's status, independently of the OAuth collection grant. Short
-JWT lifetimes and RP acceptance policies limit the age of artifacts accepted offline.
+A CP can choose a short lifetime when the underlying attributes can change quickly.
+An application that needs prompt status updates, such as for a revoked driver's license,
+can use a separate authenticated status mechanism and an acceptance policy for the issued
+Claim Set. Offline verification checks the signed artifact. It cannot establish that the
+attributes still reflect the current state. A current status check supplements that verification
+and concerns the artifact rather than the collection grant.
 
 # Privacy Considerations
 
@@ -1795,19 +1755,18 @@ of the Subject's interactions with RPs. Updating claims in response to an RP's r
 fresher information can trigger CP Claims Endpoint calls whose timing and frequency may be
 correlated with downstream activity.
 
-1. The OP SHOULD explain both the correlation risk of reusing a JWT and the CP
-   timing-visibility risk of obtaining updates when obtaining the Subject's authorization for
-   collection and disclosure.
+The following recommendations apply when the OP seeks the Subject's collection or disclosure authorization.
+
+1. The OP SHOULD explain that reusing a signed JWT can link presentations.
+2. The OP SHOULD explain that updates can reveal RP activity timing to the CP.
 
 The Subject can then choose whether to authorize reuse or request an update, subject to the
-RP's acceptance policy.
+RP's acceptance policy. (#collection-and-reuse) describes privacy policies and rate limits
+for user-directed updates.
 
-2. The OP MAY use privacy policies and rate limits when servicing user-directed updates.
-
-This avoids requiring a Claims Endpoint call for each presentation; it does not guarantee that
-the CP learns nothing about RP use. RP-CP information sharing and retrieval of metadata,
-verification keys, or status information can create other observation paths. Valid metadata
-and key caches tied to the issuer can reduce some such contact, subject to the requirements
+Reuse avoids a Claims Endpoint call for each presentation. The CP can still observe activity
+through information shared by RPs or retrieval of metadata, verification keys, or status.
+Valid metadata and key caches tied to the issuer can reduce some such contact, subject to the requirements
 in (#cp-metadata-and-verification-keys).
 
 An alternative design can pre-issue a batch of distinct credentials for one-time use,
