@@ -131,7 +131,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 capitals, as shown here.
 
 List item numbers are local to each section. Cite an item by its section number and
-item number, separated by a hyphen. For example, 5.4.3-8 refers to item 8 in Section 5.4.3.
+item number, separated by a hyphen. For example, 9.6-4 refers to item 4 in Section 9.6.
 
 {mainmatter}
 
@@ -317,97 +317,18 @@ performance of contract, consent, and other lawful basis.
 
 ## CP
 
-### CP Responsibilities
-
-An OpenID Provider that accepts the OP as a client can act as a CP.
-
-1. The CP MUST support the Claims Endpoint defined in (#claims-endpoint).
-1. The CP MUST support the signed Claim Set format in (#signed-claim-set-format).
-1. The CP MUST support OpenID Federation Automatic Registration as specified in
-   (#client-configuration-phase).
-1. The CP SHOULD give the authenticated Subject a user interface to review and revoke standing
-   grants to OPs, including the claims and operations they permit.
-
-### Claims Endpoint
-
-The Claims Endpoint is an OAuth 2.0 Protected Resource used by the OP to obtain
-CP-signed Claim Sets. It is distinct from the UserInfo Endpoint in Section 5.3 of [OIDC]
-and from the RP-facing endpoint for Distributed Claims in Section 5.6.2 of [OIDC]. Its
-request and response are defined in (#claims-endpoint-request) and
-(#claims-endpoint-response).
-
-### Signed Claim Set Format
-
-1. The CP MUST issue each Claim Set as a compact, asymmetrically signed JWS containing a JSON
-   object.
-1. The CP MUST set `typ` to `claims-aggregation+jwt` in the protected header.
-
-This is the `application/`-omitted form of the media type
-`application/claims-aggregation+jwt`, as specified in Section 4.1.9 of [JWS]. This type
-identifies the inner signed Claim Set, not the JSON acquisition envelope or the OP's
-enclosing ID Token or UserInfo response.
-
-3. The CP MUST include `iss`, `aud`, `iat`, and `exp` in the payload.
-1. The CP MUST set `iss` to its validated Issuer Identifier.
-1. The CP MUST set `aud` to the OP's Entity Identifier as a string or as an array containing
-   only that string. The OP uses this identifier as its `client_id` at the CP and its Issuer
-   Identifier under (#client-configuration-phase).
-1. The CP MUST use NumericDate values for `iat` and `exp` as defined in [JWT].
-1. The CP MUST set `exp` to a time later than `iat`.
-
-These timestamps describe the issuance and expiration of the JWT, not when the underlying
-attributes were verified.
-
-8. The CP MUST NOT include `sub` in the Claim Set.
-1. The CP MUST NOT include the OP-facing `account_ref` or an equivalent CP account identifier
-   under another claim name for account binding.
-
-This does not prohibit identifying attributes that the Subject authorizes for disclosure,
-such as a name or an explicitly requested identifier; their correlation risks still apply.
-
-10. Claims supplied to the RP MUST appear as top-level members that can be referenced using
-    `_claim_names` as specified in Section 5.6.2 of [OIDC].
-
-The format does not introduce a holder proof or require a per-presentation identifier or
-`jti`.
-
-11. The CP MUST implement `RS256` signing for Claim Sets.
-1. The OP and RP MUST implement `RS256` signature verification for Claim Sets.
-1. The OP MUST support selecting `RS256` in a Claims Endpoint request.
-1. Implementations MAY support additional asymmetric signing algorithms, subject to metadata
-   and policy validation in (#signature-validation).
-1. The CP MUST sign the JWT using the `signing_alg` accepted in the Claims Endpoint request.
-1. The CP MUST NOT use the same signing key with more than one signature algorithm.
-1. For each key the CP uses to sign Claim Sets, the CP MUST publish the intended algorithm in
-   the `alg` parameter of every JWK representation it advertises for that key.
-1. When rotating signing keys, the CP SHOULD keep each retired public key available through
-   its advertised verification-key sources until all Claim Sets signed with that key have
-   expired, including the clock-skew allowance used by the deployment.
-1. The CP MAY withdraw compromised keys earlier under the deployment's key revocation policy.
-
-The name Claims Endpoint and the metadata names `claims_endpoint` and
-`claims_signing_alg_values_supported` restore terminology used in an earlier draft of this
-specification. This does not restore that draft's wire format: this profile separates
-OP-facing account binding from the signed JWT disclosed to the RP.
-
-Registration requests for the two CP metadata names and the Claim Set media type are
-specified in (#iana-considerations).
-
-[[ Editor's note: The registration templates are defined below; formal registration has
-not yet been completed. Before submission, references must identify a stable, publicly
-available specification version. Previous use of a name in a draft is not a registration. ]]
+The Claims Provider (CP) is an OpenID Provider that accepts the aggregating OP as a client.
+The CP obtains the Subject's authorization for collection during Setup.
+It issues signed Claim Sets through its Claims Endpoint.
+The CP also supplies the account reference that the OP uses to associate each set with the Subject.
 
 ## OP
 
-The OP acts as an OpenID Provider to the RP and as an OpenID Connect client to CPs.
-
-1. The OP MUST support OpenID Connect Aggregated Claims as an OpenID Provider.
-1. The OP MUST act as an OpenID Connect relying party to collect claims from CPs at the
-   Subject's direction.
-1. The OP MAY store signed Claim Sets with the controls in (#token-and-claim-set-storage).
-1. The OP MUST provide the authenticated Subject with the storage and authorization controls
-   in (#subject-control-of-stored-claim-sets), including a view of stored claims.
-1. The OP MUST NOT provide claims to RPs without the Subject's permission.
+The aggregating OpenID Provider (OP) acts as an OpenID Connect client of the CP.
+It serves RPs as their OpenID Provider.
+At the Subject's direction, it collects Claim Sets and can store them for later use.
+It associates each Claim Set with the Subject's OP account.
+It returns the CP's signed Claim Sets as Aggregated Claims to RPs that the Subject authorizes.
 
 
 
@@ -508,6 +429,14 @@ The CP's UserInfo metadata does not select the Claim Set signing algorithm.
    advertise these capabilities and support for the authorization response `iss` parameter
    there as well.
 
+### Claims Endpoint
+
+1. The CP MUST expose a Claims Endpoint.
+
+The Claims Endpoint is an OAuth 2.0 protected resource where the OP obtains CP-signed Claim Sets.
+It differs from the UserInfo Endpoint and the RP-facing endpoint for Distributed Claims in [OIDC].
+See (#claims-endpoint-request) and (#claims-endpoint-response) for the wire protocol.
+
 ## Claim Set Profile
 
 This specification defines one signed Claim Set profile, identified by the explicit JWT
@@ -524,6 +453,12 @@ it does not impose that type on every JWT used for Aggregated Claims under [OIDC
 2. Within this profile, the OP and RP MUST apply (#claims-verification).
 1. If validation fails, the OP and RP MUST NOT silently fall back to an ID Token, UserInfo
    JWT, or another profile.
+1. The CP MUST implement `RS256` signing for Claim Sets.
+1. The OP MUST implement `RS256` signature verification for Claim Sets.
+1. The RP MUST implement `RS256` signature verification for Claim Sets.
+1. The OP MUST support selecting `RS256` in Claims Endpoint requests.
+1. Implementations MAY support other asymmetric algorithms subject to (#signature-validation).
+1. The CP MUST support the format in (#signed-claim-set-format).
 
 Existing stored JWTs with `sub` do not conform to this profile. Support for another profile
 requires separate validation rules and deployment arrangements outside this specification.
@@ -542,6 +477,7 @@ Sets to the OP has no requirement to advertise `aggregated` in that role.
    in [RFC7636].
 1. The OP MUST include `S256` in `code_challenge_methods_supported` in its `openid_provider`
    metadata and, if published, its [OpenID.Discovery] configuration document.
+1. The OP MUST support Aggregated Claims as an OpenID Provider under [OIDC].
 
 
 # Client Configuration Phase
@@ -577,66 +513,48 @@ does not need to declare a different Claim Set signing algorithm for each CP.
 ## OP Client Authentication
 
 1. The OP MUST act as a confidential client of the CP.
-1. The OP and CP MUST support `private_key_jwt` client authentication as specified in Section
-   9 of [OIDC].
-1. In the base profile, the OP MUST set `token_endpoint_auth_method` to `private_key_jwt` in
-   its `openid_relying_party` metadata and use that method for client authentication.
+1. The OP MUST support `private_key_jwt` client authentication.
+1. The CP MUST support `private_key_jwt` client authentication.
 
-The OP publishes one `openid_relying_party` metadata object in its Entity Configuration. Its
-declared authentication method is therefore common to all CPs using that configuration,
-rather than selected separately for each CP.
+The OP declares one `token_endpoint_auth_method` in its `openid_relying_party` metadata.
+The declaration applies to every CP that uses that Entity Configuration.
+[OIDC] defines `private_key_jwt`.
+[OpenID.Federation] governs client authentication during Automatic Registration, including PAR.
 
-4. A profile or trust framework MAY instead require `self_signed_tls_client_auth`, as defined
-   in Section 2.2 of [RFC8705], if it requires all participating OPs and CPs to support and
-   use that method.
-1. In that case, the OP MUST declare `self_signed_tls_client_auth` as its single
-   `token_endpoint_auth_method` and use it consistently. mTLS support remains OPTIONAL for
-   base-profile participants; an OP declaring it cannot assume interoperability with CPs that
-   only support the base method.
-1. The CP MUST advertise `private_key_jwt` and any supported mTLS alternative in
-   `token_endpoint_auth_methods_supported` in its `openid_provider` metadata and, if
-   published, its [OpenID.Discovery] configuration document.
-1. The OP MUST NOT select `none` or a shared-secret client authentication method for this
-   profile.
-1. Automatic Registration requests MUST prove possession of the OP's RP keys as required by
-   Section 12.1.1 of [OpenID.Federation], using a signed Request Object or authenticated PAR.
-1. The OP MUST also authenticate at the CP's Token Endpoint for both authorization code
-   exchange and refresh token use.
-1. For OP clients under this specification, the CP MUST reject unauthenticated Token Requests
-   and refresh tokens presented by a different client.
-1. Other CP endpoints requiring client authentication MUST use a mutually supported method
-   consistent with the resolved metadata.
-1. The OP MUST keep each authenticated request bound to the selected CP issuer and its
-   validated endpoint metadata, including requests to a revocation or PAR endpoint.
-1. For `private_key_jwt`, the OP and CP MUST apply the assertion creation and validation
-   rules in Section 9 of [OIDC], with the following audience restriction.
-1. The assertion's `aud` MUST contain exactly one value equal to the CP's validated Issuer
-   Identifier, expressed as a string or a single-element array.
-1. The OP MUST obtain that identifier through the issuer validation in (#discovery-phase),
-   not derive it from an endpoint URI.
-1. The CP MUST reject assertions that do not satisfy this audience restriction.
+4. The OP MUST declare `private_key_jwt` in the base profile.
+1. The OP MUST authenticate with its declared method at the CP's Token Endpoint.
+1. A profile or trust framework MAY require `self_signed_tls_client_auth` for all participating OPs and CPs.
+1. The OP MUST declare `self_signed_tls_client_auth` when its profile or trust framework requires it.
+1. The OP MUST NOT use `none` or shared-secret client authentication.
 
-This requirement applies at every CP endpoint where the OP uses `private_key_jwt`, including
-the Token, PAR, and revocation endpoints. It implements Section 2.1.2.1 of
-[OAuth.Security.Update] in place of the Token Endpoint audience recommendation in Section 9
-of [OIDC].
+mTLS support is optional in the base profile.
 
-17. The CP MUST validate the assertion signature using the OP's resolved
-    `openid_relying_party` keys and applicable algorithm restrictions.
-1. The CP MUST verify that `iss` and `sub` identify the OP's `client_id`.
-1. The CP MUST verify that the current time is earlier than `exp`.
-1. The OP MUST use a fresh `jti` for each assertion.
-1. Assertions SHOULD have short lifetimes, for example no more than a few minutes.
-1. The OP MUST follow any additional assertion lifetime limits specified by the applicable
-   profile or trust framework.
-1. The CP MUST reject assertion reuse and retain a replay record for each accepted
-   (`client_id`, `jti`) until the assertion's `exp`, including any clock-skew allowance under
-   which it could still be accepted.
-1. When `self_signed_tls_client_auth` is used at any endpoint, the CP MUST match the
-   presented certificate against the certificates published in the OP's resolved RP JWK Set
-   and perform the certificate and client binding checks in Section 2.2 of [RFC8705].
-1. PAR requests MUST also satisfy the requirements in Section 12.1.1.2 of
-   [OpenID.Federation].
+The CP advertises these methods in `token_endpoint_auth_methods_supported` in its `openid_provider` metadata.
+The following requirements also apply to any [OpenID.Discovery] configuration document the CP publishes.
+
+9. The CP MUST advertise `private_key_jwt`.
+1. The CP MUST advertise `self_signed_tls_client_auth` if it supports that method.
+1. At other authenticated CP endpoints, the OP MUST use a mutually supported method consistent with resolved metadata.
+1. The OP MUST send each authenticated request to the endpoint in the selected CP's validated metadata.
+
+The following requirements apply to `private_key_jwt` at each CP endpoint that uses it.
+Examples include the Token, PAR, and revocation endpoints.
+[OAuth.Security.Update] defines the audience restriction.
+
+13. The OP MUST set `aud` to the validated CP Issuer Identifier as a string or single-element array.
+1. The OP MUST obtain that identifier as specified in (#discovery-phase).
+1. The CP MUST reject an assertion if its `aud` fails these requirements.
+1. The CP MUST validate the assertion signature with the OP's resolved `openid_relying_party` keys.
+1. The OP SHOULD use short-lived assertions.
+1. The OP MUST follow any assertion lifetime limits from its profile or trust framework.
+1. The CP MUST reject assertion reuse.
+1. The CP MUST retain each accepted (`client_id`, `jti`) pair through `exp`, including any permitted clock skew.
+
+An assertion lifetime of a few minutes is one option.
+
+[RFC8705] governs certificate and client binding when the OP uses `self_signed_tls_client_auth`.
+
+21. The CP MUST match the presented certificate against the OP's resolved RP JWK Set at each such endpoint.
 
 
 # Setup Phase
@@ -668,6 +586,7 @@ collection.
    `scope`.
 1. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC], including
    `prompt=consent` unless other conditions permitting offline access are in place.
+1. The OP MUST collect claims as the CP's OpenID Connect client at the Subject's direction.
 
 ## CP Consent Dialogue
 
@@ -681,112 +600,103 @@ collection.
 1. The CP MUST explain that the Subject uses the OP's controls to stop disclosure as described
    in (#authorization-withdrawal-and-grant-revocation).
 
+### CP Grant Management
+
+1. The CP SHOULD let the authenticated Subject review standing grants to OPs through a user interface.
+1. The CP SHOULD let the authenticated Subject revoke standing grants through that interface.
+1. The CP SHOULD show the claims and operations each grant permits in that interface.
+
 ## CP Token Issuance and Use
 
-1. The CP SHOULD issue short-lived access tokens, choosing lifetimes according to the exposure
-   and sensitivity of the authorized claims.
-1. The CP SHOULD restrict each access token to its Claims Endpoint and the claims and
-   operations authorized by the Subject.
-1. The CP MUST verify that the presented token is intended for its Claims Endpoint.
-1. The CP MUST verify that the presented token permits the requested access.
+1. The CP SHOULD issue short-lived access tokens.
+1. The CP SHOULD set access token lifetimes according to claim sensitivity and exposure.
+1. The CP SHOULD restrict each access token to its Claims Endpoint.
+1. The CP SHOULD restrict each access token to the claims and operations that the Subject authorizes.
 
-These restrictions do not require access tokens to use a JWT format.
+These restrictions apply regardless of the token format. The CP checks resource and access
+permissions as specified in (#claims-endpoint-request).
 
-5. The OP and CP SHOULD use sender-constrained access tokens, using certificate binding as
-   specified in Section 3 of [RFC8705] or DPoP as specified in [RFC9449].
-1. When the CP issues a sender-constrained access token, the OP MUST present the applicable
-   proof at the Claims Endpoint.
-1. The CP MUST verify the token's binding to that proof before returning claims.
+5. The CP SHOULD issue sender-constrained access tokens.
+1. The OP SHOULD use sender-constrained access tokens.
 
-Client authentication, token sender-constraining, and PKCE serve distinct purposes. Each
-applicable check still applies. mTLS client authentication alone does not imply
-certificate-bound access tokens.
+The OP and CP can use certificate binding [RFC8705] or DPoP [RFC9449].
+The Claims Endpoint applies the relevant proof requirements in (#claims-endpoint-request).
+mTLS client authentication alone does not imply certificate-bound access tokens.
 
-8. The CP MUST assess the risk before issuing a refresh token.
-1. If the CP issues a refresh token, the CP MUST bind it to the OP client and the
-   Subject-authorized scope and resources as specified in Section 4.14.2 of [RFC9700].
-1. The CP MUST validate this binding on every refresh.
-1. The CP MUST authenticate the OP on every refresh.
-
-This profile uses confidential clients. It does not require the separate refresh-token key
-binding specified for public clients in [RFC9449].
-
-12. The CP MAY rotate refresh tokens to help detect replay, as described in Section 4.14.2 of
-    [RFC9700].
-1. When the CP returns a replacement refresh token, the OP MUST replace the old token as
-   specified in Section 6 of [RFC6749] and preserve the account binding in (#trust-model).
+7. The CP MUST follow [RFC9700] when it decides whether to issue refresh tokens.
+1. The CP MUST apply the refresh token scope and resource binding requirements in [RFC9700].
+1. The OP MUST preserve the account binding when it replaces a refresh token.
 1. The CP SHOULD support token revocation as specified in [RFC7009].
 
-Token expiration, rotation, and revocation govern further collection; their effect on stored
-signed Claim Sets is specified in (#authorization-withdrawal-and-grant-revocation).
+[RFC6749] governs refresh token authentication and replacement.
+The CP can rotate refresh tokens to detect replay.
+Token expiration, rotation, and revocation govern further collection.
+(#authorization-withdrawal-and-grant-revocation) describes their effect on stored Claim Sets.
 
 ## Authorization Request and Transaction Binding
 
-1. Before starting Setup, the OP MUST authenticate the Subject.
-1. The OP MUST create an authorization transaction bound to that OP account and the initiating
-   user-agent session.
-1. The OP MUST record the selected CP issuer, its resolved metadata, its client registration
-   at that CP, and the request's `redirect_uri` in the transaction.
-1. If the OP supports multiple connection configurations or tenants for a CP, the OP MUST bind
-   the selected configuration and tenant to the transaction.
-1. The OP MUST use PKCE with `code_challenge_method=S256` for every Setup request, including
-   when it acts as a confidential client.
-1. Before sending the request, the OP MUST check that the validated CP metadata advertises
-   `S256` support.
-1. If the metadata does not advertise `S256` support, the OP MUST abort Setup.
-1. The OP MUST generate a new, unpredictable `code_verifier` for each transaction as specified
-   in [RFC7636].
-1. The OP MUST bind that `code_verifier` to the transaction.
-1. The CP identifies clients registered for Claims Aggregation under
-   (#client-configuration-phase) by `client_id`. For these clients, the CP MUST reject
-   authorization requests without an `S256` challenge.
-1. The CP MUST validate the corresponding `code_verifier` before issuing tokens, including
-   the downgrade protection in Section 4.8.2 of [RFC9700].
-1. The OP MUST send an unpredictable, transaction-specific `state` value securely bound to
-   the transaction and initiating user-agent session.
-1. The OP MUST give each transaction a limited lifetime.
+1. The OP MUST authenticate the Subject before starting Setup.
+1. The OP MUST create an authorization transaction for Setup.
+1. The OP MUST bind the transaction to the authenticated OP account.
+1. The OP MUST bind the transaction to the initiating user-agent session.
+1. The OP MUST record the selected CP's resolved metadata in the transaction.
+1. The OP MUST record its client registration at that CP in the transaction.
+1. The OP MUST record the request's `redirect_uri` in the transaction.
+1. The OP MUST bind any selected CP connection configuration to the transaction.
+1. The OP MUST bind any selected tenant to the transaction.
+
+(#authorization-response-issuer-validation) specifies how the OP binds the selected CP issuer.
+The CP identifies Claims Aggregation clients by their `client_id` under (#client-configuration-phase).
+
+10. The OP MUST use [RFC7636] PKCE with an explicit `S256` method for every Setup request.
+1. The OP MUST check the validated CP metadata for `S256` support before sending the request.
+1. The OP MUST abort Setup if that metadata does not advertise `S256` support.
+1. The OP MUST bind the PKCE verifier to the transaction.
+1. The CP MUST reject authorization requests from Claims Aggregation clients without an `S256` challenge.
+1. The CP MUST apply the authorization server requirements for PKCE in [RFC9700].
+1. The OP MUST send an unpredictable, transaction-specific `state` value.
+1. The OP MUST securely bind `state` to the transaction and initiating user-agent session.
+1. The OP MUST limit the lifetime of each transaction.
 1. The OP MUST accept each transaction at most once.
 1. The OP MUST reject expired transactions.
-1. If the OP sends a `nonce`, the OP MUST bind it to the transaction.
-1. If the OP sends a `nonce`, the OP MUST validate the returned ID Token's `nonce` according
-   to [OIDC].
+1. If the OP sends a `nonce`, it MUST bind that value to the transaction.
+
+[OIDC] governs validation of the ID Token's `nonce`.
 
 ## Authorization Response Session Validation
 
-1. Before sending an authorization code to a Token Endpoint, the OP MUST validate the returned
-   `state` against the pending transaction and verify that the user-agent session completing
-   Setup is bound to the authenticated OP account that initiated it.
-1. The OP MUST abort Setup if `state` is missing or mismatched, the transaction is expired or
-   already used, or the session binding cannot be verified.
-1. A `state` value or an authorization-session identifier carried in a URL MUST NOT by itself
-   establish the authenticated OP account or its user-agent session.
-1. If the initiating session is not available at the redirection endpoint, the OP MUST use one
-   of the following procedures before exchanging the code.
+The OP applies the response checks after either recovery procedure and before it sends the code.
 
-- **One-time handle.** The OP stores the received authorization response with its
-  pending transaction. It returns the user agent to the initiating origin or application
-  with an unpredictable, short-lived, one-time handle for that response and transaction.
-- **Reauthentication.** The OP reauthenticates the Subject. Before completing Setup, the
-  OP checks that the authenticated OP account matches the account that initiated the
-  pending transaction and validates the returned `state` against that transaction.
+1. The OP MUST match the returned `state` to the pending transaction before sending the authorization code.
+1. The OP MUST verify the completion session's binding to the initiating OP account before sending the code.
+1. The OP MUST abort Setup if `state` is missing or either check fails.
+1. The OP MUST abort Setup for expired or previously used transactions.
+1. The OP MUST NOT establish the OP account from a URL-carried `state` or session identifier alone.
+1. The OP MUST NOT establish the user-agent session from a URL-carried `state` or session identifier alone.
+1. The OP MUST use one procedure below if the initiating session is unavailable at the redirection endpoint.
 
-The following provisions apply to the one-time handle procedure.
+**One-time handle.** The following requirements apply when the OP uses a handle.
 
-5. The OP MUST require the original session cookie or an equivalent session credential held by
-   the initiating application.
+8. The OP MUST store the authorization response with its pending transaction.
+1. The OP MUST generate an unpredictable, short-lived handle for the stored response and transaction.
+1. The OP MUST return the user agent to the initiating origin or application with that handle.
+1. The OP MUST require the original session cookie or an equivalent session credential from the initiating application.
 1. The OP MUST verify that credential's binding to the initiating OP account and transaction.
 1. The OP MUST consume the handle at most once.
 1. The OP MUST NOT complete Setup based on the handle alone.
 1. The OP MUST set the handle to expire no later than the pending transaction.
-1. If the OP knows the CP's authorization code expiration time from CP policy or deployment
-   configuration, the OP MUST set the handle to expire no later than the code.
+1. The OP MUST limit the handle's lifetime to the CP code's remaining lifetime if known.
 1. If the CP rejects the code as expired, the OP MUST invalidate the handle.
 1. If the CP rejects the code as expired, the OP MUST require a new Setup transaction.
 
+**Reauthentication.** The following requirements apply when the OP uses reauthentication.
+
+19. The OP MUST reauthenticate the Subject before sending the authorization code.
+1. The OP MUST match the reauthenticated account to the initiating account before sending the authorization code.
+
 The following requirement applies to both procedures.
 
-13. If either procedure uses a further redirection, the OP MUST use a destination that the
-    OP controls and that an attacker cannot override.
+21. The OP MUST limit further redirection to destinations it controls and attackers cannot override.
 
 ## Authorization Response Issuer Validation
 
@@ -962,6 +872,7 @@ Renewing an access token alone does not update a stored Claim Set.
 1. The OP SHOULD encrypt sensitive stored material at rest and protect encryption keys
    separately from the data.
 1. Key isolation and access controls SHOULD limit the impact of a compromised component.
+1. The OP MAY store signed Claim Sets under the controls in this section.
 
 The storage architecture, including the use of Subject-controlled encryption keys, is an
 implementation choice. These safeguards do not impose a retention deadline on Claim Sets or
@@ -1323,6 +1234,47 @@ Reusing a stored Claim Set does not require a new CP operation nonce or CP conta
 41. The OP MUST NOT disclose the acquisition envelope, `account_ref`, or operation `nonce` to
     the RP as part of the Aggregated Claims response.
 
+#### Signed Claim Set Format
+
+1. The CP MUST issue each Claim Set as a compact, asymmetrically signed JWS containing a JSON object.
+1. The CP MUST set the protected header's `typ` to `claims-aggregation+jwt`.
+
+[JWS] permits omission of the media type's `application/` prefix in `typ`.
+This type identifies the inner Claim Set within the acquisition envelope or the OP's response.
+
+3. The CP MUST include `iss`, `aud`, `iat`, and `exp` in the payload.
+1. The CP MUST set `iss` to its validated Issuer Identifier.
+1. The CP MUST set `aud` to the OP's Entity Identifier as a string or single-element array.
+1. The CP MUST use [JWT] NumericDate values for `iat` and `exp`.
+1. The CP MUST set `exp` to a time later than `iat`.
+
+The OP uses its Entity Identifier as described in (#client-configuration-phase).
+These timestamps describe JWT issuance and expiration. Attribute verification can occur at a different time.
+
+8. The CP MUST omit `sub` from the Claim Set.
+1. The CP MUST omit `account_ref` from the Claim Set.
+1. The CP MUST omit equivalent CP account identifiers that it uses for account binding.
+
+The Subject can authorize disclosure of identifying attributes.
+(#correlation-and-transferable-signed-data) describes their correlation risks.
+
+11. The CP MUST place claims for the RP in top-level JWT members.
+1. The CP MUST sign the JWT with the `signing_alg` it accepts in the Claims Endpoint request.
+
+The OP can reference those claims in `_claim_names` as specified in [OIDC].
+The format uses no holder proof or per-presentation identifier.
+It does not require a `jti` claim.
+
+The name Claims Endpoint and the metadata names `claims_endpoint` and
+`claims_signing_alg_values_supported` restore terminology from an earlier draft.
+This profile separates the OP-facing account reference from the signed JWT that the RP receives.
+
+See (#iana-considerations) for the CP metadata and Claim Set media type registration requests.
+
+[[ Editor's note: The registration templates are defined below; formal registration has
+not yet been completed. Before submission, references must identify a stable, publicly
+available specification version. Previous use of a name in a draft is not a registration. ]]
+
 ### JSON Member Handling Examples
 
 Some JSON parsers silently keep a single value for a repeated member name. Implementers
@@ -1472,6 +1424,11 @@ front-channel response handling, as discussed in
    verifier MUST NOT accept the Claim Set on the basis of an earlier successful validation.
 1. The OP MUST obtain a replacement Claim Set from the CP or omit the affected Claim Set, as
    specified in (#claims-collection) and (#claims-delivery).
+1. The CP MUST use each Claim Set signing key with one algorithm as specified in [RFC8725].
+1. The CP MUST publish each Claim Set signing key's algorithm in every advertised JWK's `alg`.
+1. The CP SHOULD keep retired public keys available through its advertised key sources until their signed Claim Sets expire.
+1. The CP SHOULD include its clock-skew allowance in that key retention period.
+1. The CP MAY withdraw compromised keys earlier under its deployment's key revocation policy.
 
 ### Signature Validation
 
