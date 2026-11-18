@@ -986,55 +986,52 @@ otherwise acceptable stored Claim Set.
 
 ### Claims Endpoint Request
 
-1. The OP MUST send an HTTPS POST request to the CP's validated `claims_endpoint`, with
-   `Content-Type: application/json` and an access token authorized for that resource.
-1. For a bearer token, it MUST follow [RFC6750].
-1. For a DPoP-bound token, it MUST use the authorization scheme and proof in Section 7 of
-   [RFC9449].
-1. For a certificate-bound token, it MUST present the certificate as specified in [RFC8705].
-1. The CP MUST validate token validity, resource, permissions, and any sender binding before
-   issuing a Claim Set.
-1. The OP MUST send a JSON object as the request body.
-1. The CP MUST reject unrecognized top-level members and duplicate member names in the
-   request object or its `claims` object as `invalid_request`, subject to the token and scope
-   error rules below.
+The Claims Endpoint follows the protected resource rules in [RFC6749].
+[RFC6750] governs bearer token presentation and errors.
+[RFC9449] governs DPoP presentation and errors.
+[RFC8705] governs certificate binding.
 
-Member names are compared as exact, case-sensitive strings after JSON decoding. A request
-extension can add members by defining their semantics and how support is established before
-use. Rejecting an unrecognized request member prevents the CP from processing a request
-without applying a constraint the OP intended. The requested attribute names inside `claims`
-follow the claim omission rules below.
+1. The OP MUST send an HTTPS POST to the CP's validated `claims_endpoint`.
+2. The OP MUST use `application/json` as the request media type.
+3. The OP MUST use an access token authorized for the Claims Endpoint.
+4. The OP MUST send a JSON object as the request body.
+5. The CP MUST reject unrecognized members at the top level of the request.
+6. The CP MUST reject duplicate names at the request's top level or within its `claims` object.
+
+The CP compares decoded member names using exact, case-sensitive equality.
+An extension can define new request members and how the OP learns that the CP supports them.
+The requested claim names inside `claims` follow the attribute omission rules below.
 
 The base request carries `nonce`, `claims`, and `signing_alg`.
 
-8. The OP MUST include a non-empty, unpredictable, operation-specific `nonce` string.
-1. Before sending the request, the OP MUST bind the `nonce` to the pending collection
-   operation, the OP account, and the CP issuer and Subject Identifier from Setup.
-1. The OP MUST NOT reuse the RP's authentication nonce.
-1. The OP MUST NOT use the `nonce` as evidence of Subject identity.
-1. The OP MUST limit each operation's lifetime.
-1. The OP MUST reject responses for expired or completed operations.
-1. The OP MUST generate a fresh nonce for each new collection operation using a
-   cryptographically secure random number generator.
-1. The OP SHOULD use at least 128 bits of random input. For example, it can encode 16 random
-   octets as base64url without padding.
+7. The OP MUST include a non-empty `nonce` string.
+8. The CP MUST reject a request without a non-empty `nonce` string.
+9. The OP MUST generate a fresh nonce for each collection operation using a cryptographically secure random number generator.
+10. The OP SHOULD use at least 128 bits of random input for the nonce.
+11. The OP MUST NOT reuse the RP's authentication nonce.
+12. The OP MUST NOT use the nonce as evidence of Subject identity.
+13. The OP MUST limit each collection operation's lifetime.
 
-The CP treats the nonce as an opaque string. It checks that the nonce is a non-empty
-string and echoes it unchanged. The CP need not check the nonce encoding or length
-beyond the non-empty string check.
+The OP establishes the following bindings before sending the request.
 
-16. The OP MUST include `claims` as a non-empty JSON object whose member names identify the
-    requested top-level claims.
-1. The OP MUST set each requested claim's value to `null` in the base profile.
-1. The OP MUST NOT request `iss`, `sub`, `aud`, `iat`, `exp`, `nbf`, or `jti` as attributes.
+14. The OP MUST bind the nonce to the pending collection operation.
+15. The OP MUST bind the nonce to the OP account.
+16. The OP MUST bind the nonce to the CP issuer and Subject Identifier from Setup.
+17. The OP MUST bind the selected `signing_alg` to the pending operation.
+
+The following requirements apply to the request's claim and algorithm selection.
+
+18. The OP MUST include a non-empty JSON object named `claims`.
+19. The OP MUST use member names in `claims` to identify requested top-level claims.
+20. The OP MUST set each requested claim's value to `null` in the base profile.
+21. The OP MUST NOT request `iss`, `sub`, `aud`, `iat`, `exp`, `nbf`, or `jti` as attributes.
+22. The OP MUST include a single asymmetric JWS algorithm in `signing_alg`.
+23. The OP MUST select `signing_alg` from the CP's validated `claims_signing_alg_values_supported`.
+24. The OP MUST select a `signing_alg` that its policy permits.
+25. The CP MUST reject an unsupported `signing_alg`.
 
 Claim-specific query syntax requires an extension. The `claims` member does not expand
 the grant's permissions.
-
-19. The OP MUST include `signing_alg` as a single asymmetric JWS algorithm from the CP's
-    validated `claims_signing_alg_values_supported` that the OP's policy permits.
-1. The OP MUST bind that selection to the pending operation.
-1. The CP MUST reject a selection it does not support.
 
 For example (the access token and nonce are illustrative):
 
@@ -1061,59 +1058,57 @@ CP signature. All disclosed contents remain subject to (#subject-granting) and
 (#claims-delivery); the OP obtains a suitable Claim Set or omits it when those requirements
 cannot be met.
 
-22. The CP MUST limit returned attributes to those requested and authorized by the grant and
-    Subject.
-1. The CP MAY omit requested attributes, including for privacy reasons.
-1. Omission is not an error and MUST NOT imply a particular reason such as absence, lack of
-   verification, or withholding by the Subject.
-1. The CP MUST NOT reject an otherwise valid request solely because it contains an unknown
-   requested attribute name.
-1. If no requested attributes are supplied, the CP MUST return the empty result defined in
-   (#claims-endpoint-response), rather than issue a JWT containing only protocol claims.
-1. Malformed or unsupported requests, such as invalid request structure or an unsupported
-   `signing_alg`, MUST receive HTTP 400 with `Content-Type: application/json` and a JSON
-   object containing `"error": "invalid_request"`.
-1. This JSON error object MAY include `error_description` as a human-readable string.
-1. Error responses MUST NOT disclose the account reference, claim values, or sensitive
-   reasons for withholding particular attributes.
-1. Token and scope errors MUST use the applicable status and `WWW-Authenticate` response from
-   Section 3 of [RFC6750] or the applicable error rules of [RFC9449]; the endpoint's JSON
-   request errors do not replace those authentication challenges.
+26. The CP MUST limit returned attributes to those that the OP requests and the grant and Subject authorize.
+27. The CP MAY omit requested attributes, including for privacy reasons.
+28. The CP MUST NOT treat omission of an attribute as an error.
+29. The CP MUST NOT imply a reason for omitting an attribute.
+30. The CP MUST NOT reject an otherwise valid request solely for an unknown requested attribute name.
+
+For example, omission can reflect attribute absence, missing verification, or a Subject's choice to withhold the attribute.
+(#claims-endpoint-response) defines the empty result.
+
+Token and scope errors follow the applicable rules in [RFC6750] and [RFC9449].
+
+31. The CP MUST give token and scope errors precedence over JSON request errors.
+
+The following requirements apply to malformed or unsupported requests, including invalid
+request structure and unsupported `signing_alg` values.
+An unrecognized top-level member or a duplicate name in either object makes the request malformed.
+
+32. The CP MUST return HTTP 400.
+33. The CP MUST use `application/json` as the error response media type.
+34. The CP MUST send a JSON object as the error response body.
+35. The CP MUST set `error` to `invalid_request` in that object.
+36. The CP MAY include a human-readable `error_description` string in that object.
+
+The following privacy requirement applies to all error responses.
+
+37. The CP MUST NOT disclose the account reference, claim values, or sensitive reasons for withholding attributes in errors.
 
 The OP repeats collection for each CP as necessary.
 
 ### Claims Endpoint Response
 
-1. For a successful response, the CP MUST use HTTP 200, `Content-Type: application/json`, and
-   `Cache-Control: no-store`.
-1. The CP MUST send a JSON object as the body of a successful response.
-1. The OP MUST reject duplicate top-level member names, using the name comparison in
-   (#claims-endpoint-request).
-1. Except for `error`, which precludes a successful result as specified below, the OP MUST
-   ignore unrecognized top-level response members.
-1. Ignoring a member does not satisfy or modify any validation requirement, and the OP MUST
-   NOT forward ignored members to the RP.
+The following requirements apply to a successful response.
 
-An extension that requires the OP to process a response member needs a way to establish OP
-support before the CP relies on that member.
+1. The CP MUST return HTTP 200.
+2. The CP MUST use `application/json` as the response media type.
+3. The CP MUST send `Cache-Control: no-store`.
+4. The CP MUST use a JSON object as the response body.
+5. The CP MUST echo the associated request's `nonce` unchanged.
 
-The base response carries `nonce` and, when it supplies attributes, `account_ref` and
-`claim_set`.
+The base response also carries `account_ref` and `claim_set` when it supplies attributes.
 
-6. The CP MUST include the exact `nonce` from the associated request.
-1. When the CP includes `claim_set`, it MUST include `account_ref` as a non-empty string
-   containing the CP Subject Identifier for the account authorized by the access token. This
-   is the same identifier as in the CP ID Token issued to this OP during Setup.
-1. When the CP omits `claim_set`, it MUST omit `account_ref`.
-1. The CP MUST derive `account_ref` from the access token's authorized account.
-1. The CP MUST NOT echo a caller-supplied account reference.
-1. When the CP supplies one or more requested attributes, it MUST include `claim_set` as a
-   non-empty string containing the CP-signed JWT defined in (#signed-claim-set-format).
-1. When the CP supplies no requested attributes, it MUST omit `claim_set`.
-1. The CP MUST ensure that the Claim Set's attributes concern the account identified by
-   `account_ref`.
-1. The CP MUST NOT represent an empty result with `null`, an empty string, or a JWT
-   containing only protocol claims.
+6. The CP MUST include `claim_set` when it supplies requested attributes.
+7. The CP MUST encode `claim_set` as a non-empty string containing the JWT defined in (#signed-claim-set-format).
+8. The CP MUST include a non-empty `account_ref` string when it includes `claim_set`.
+9. The CP MUST derive `account_ref` from the account that the access token authorizes.
+10. The CP MUST set `account_ref` to the Setup ID Token's `sub` for that account and OP.
+11. The CP MUST NOT echo a caller-supplied account reference.
+12. The CP MUST ensure that the Claim Set's attributes concern the account identified by `account_ref`.
+13. The CP MUST omit `claim_set` when it supplies no requested attributes.
+14. The CP MUST omit `account_ref` when it omits `claim_set`.
+15. The CP MUST NOT represent an empty result with `null`, an empty string, or a protocol-only JWT.
 
 The following successful response carries the Claim Set decoded below.
 The account reference and nonce are illustrative, and the compact JWS is abbreviated.
@@ -1135,8 +1130,7 @@ type and cache directive. In the base response, the only member is the operation
 }
 ```
 
-This empty result reports only that this collection supplied no attributes. It does not
-assert that the attributes do not exist or explain why they were not supplied.
+This empty result reports only that this collection supplied no attributes.
 
 The decoded protected header and payload of that `claim_set` are:
 
@@ -1161,59 +1155,73 @@ test keys and instructions for verifying both at 2030-01-01T00:00:00Z.
 The response's cache directive prevents HTTP caching; it does not prohibit
 Subject-authorized storage under (#claims-collection).
 
-15. The OP MUST reject a purported successful response unless it has the required status,
-    media type, and JSON members with the types specified above.
-1. The OP MUST NOT interpret an error response, including a body containing `error`, as a
-   successful result or an empty result.
+The OP applies the following checks to a purported successful response.
 
-The OP checks the response as follows before accepting it.
+16. The OP MUST reject a response with a status other than HTTP 200.
+17. The OP MUST reject a response without the required media type.
+18. The OP MUST reject a response whose body fails the specified JSON requirements.
+19. The OP MUST NOT treat a response containing `error` as a successful or empty result.
+20. The OP MUST reject duplicate top-level member names using the comparison in (#claims-endpoint-request).
+21. The OP MUST ignore unrecognized top-level response members other than `error`.
+22. The OP MUST NOT forward ignored members to the RP.
+23. The OP MUST match the decoded response nonce to the pending operation's nonce using exact, case-sensitive equality.
+24. The OP MUST reject responses for expired or completed operations.
+25. The OP MUST accept at most one response per operation.
+26. The OP MUST NOT rebind a completed operation to a new account or operation.
 
-17. The OP MUST compare the decoded `nonce` with the pending operation's nonce using exact,
-    case-sensitive equality.
-1. The OP MUST accept a response for the pending operation at most once.
-1. The OP MUST NOT bind a completed operation to a new account or operation on a retry or
-   delayed response.
-1. If the response lacks `claim_set`, the OP MUST require that it also lacks `account_ref`.
-1. If the response lacks both members, the OP MUST treat it as an empty result. Further Claim
-   Set validation and storage checks do not apply.
-1. The OP MUST NOT create or change an account binding from an empty result.
-1. The OP MUST NOT store or disclose an empty result as a Claim Set.
-1. The OP MUST NOT infer attribute absence, grant revocation, or Subject withdrawal from an
-   empty result.
-1. The OP MUST NOT invalidate or suspend a previously stored Claim Set solely because of an
-   empty result, if the stored Claim Set still meets all validation and authorization
-   requirements.
+Ignoring a member leaves the other validation requirements in effect.
+An extension establishes OP support before the CP relies on the OP to process an extension member.
+The CP does not need a global database of used nonces.
 
-The OP performs the following checks when the response contains `claim_set`.
+The following requirements apply when the response lacks `claim_set`.
 
-26. The OP MUST match `account_ref` exactly to the CP `sub` from the validated Setup ID Token
-    stored for the operation's OP account and CP issuer.
-1. The OP MUST NOT derive or replace that expected `sub` from the new response or access
-   token.
-1. The OP MUST fail collection if `account_ref` does not match. The account relinking
-   procedure is in (#token-request-and-account-binding).
-1. The OP MUST validate `claim_set` under (#claims-verification).
-1. The OP MUST match the JWT's `iss` to the operation's CP issuer.
-1. The OP MUST match the JWT's `alg` to the selected `signing_alg`.
-1. The OP MUST verify that the JWT contains at least one requested attribute.
-1. The OP MUST verify that the request and authorization cover every returned attribute.
-1. The OP MUST process the authenticated response, account reference, and actual JWT as one
-   validation unit.
-1. The OP MUST NOT recombine those inputs through an unprotected queue or cache.
+27. The OP MUST reject the response if it contains `account_ref`.
+28. The OP MUST treat a valid response without `account_ref` or `claim_set` as an empty result.
+29. The OP MUST NOT establish an account binding from an empty result.
+30. The OP MUST NOT change an account binding based on an empty result.
+31. The OP MUST NOT store an empty result as a Claim Set.
+32. The OP MUST NOT disclose an empty result as a Claim Set.
+33. The OP MUST NOT infer attribute absence from an empty result.
+34. The OP MUST NOT infer grant revocation from an empty result.
+35. The OP MUST NOT infer Subject withdrawal from an empty result.
+36. The OP MUST NOT invalidate an otherwise acceptable stored Claim Set solely because collection returns an empty result.
+37. The OP MUST NOT suspend disclosure of an otherwise acceptable stored Claim Set solely because collection returns an empty result.
 
-The CP echoes the nonce. It need not maintain a global database of used nonces.
+Claim Set validation and storage checks apply only when the response contains a Claim Set.
 
-36. If any response check fails, the OP MUST reject the entire response.
-1. The OP MUST NOT store or disclose a Claim Set from a rejected response.
+The OP applies the following checks when the response contains `claim_set`.
 
-Omitting a claim from `_claim_names` cannot hide it from an RP receiving the JWT. For these
-checks, attributes exclude the JWT protocol claims `iss`, `aud`, `iat`, `exp`, `nbf`, and
-`jti`, whose validation is governed by (#claims-verification).
+38. The OP MUST match `account_ref` exactly to the validated Setup `sub` for the operation's OP account and CP issuer.
+39. The OP MUST NOT derive the expected `sub` from the response or access token.
+40. The OP MUST NOT replace the expected `sub` with a value from the response or access token.
+41. The OP MUST validate `claim_set` under (#claims-verification).
+42. The OP MUST match the JWT's `iss` to the operation's CP issuer.
+43. The OP MUST verify that the JWT contains at least one requested attribute.
+44. The OP MUST verify that it requested every returned attribute.
+45. The OP MUST verify that its authorization covers every returned attribute.
+46. The OP MUST process the authenticated response, account reference, and exact JWT as one validation unit.
+47. The OP MUST NOT recombine those inputs through an unprotected queue or cache.
 
-38. For a response containing a valid Claim Set, the OP MUST preserve a protected record
-    binding the actual JWT to the OP account, CP issuer, CP Subject Identifier, and the
-    acquisition validation result and time.
-1. Protection MUST cover both record integrity and association with the correct JWT.
+(#signature-validation) specifies the check against the selected `signing_alg`.
+(#token-request-and-account-binding) specifies account relinking.
+
+48. If any response check fails, the OP MUST reject the entire response.
+49. The OP MUST NOT store a Claim Set from a rejected response.
+50. The OP MUST NOT disclose a Claim Set from a rejected response.
+
+Omitting a claim from `_claim_names` cannot hide it from an RP receiving the JWT.
+For these checks, attributes exclude `iss`, `aud`, `iat`, `exp`, `nbf`, and `jti`.
+(#claims-verification) governs those protocol claims.
+
+The OP preserves the validated association in a protected acquisition record.
+
+51. The OP MUST retain a protected acquisition record for each successfully collected Claim Set.
+52. The OP MUST record the OP account in the acquisition record.
+53. The OP MUST record the CP issuer and Subject Identifier in the acquisition record.
+54. The OP MUST record the acquisition validation result in the acquisition record.
+55. The OP MUST record the acquisition validation time in the acquisition record.
+56. The OP MUST protect the integrity of the acquisition record.
+57. The OP MUST protect the record's association with the exact JWT.
 
 A hash stored alongside unprotected data does not by itself provide that protection. A
 deployment crossing an untrusted processing or storage boundary needs integrity protection
@@ -1224,15 +1232,20 @@ defined by a profile where independent evidence of acquisition is needed. The de
 cases and limits of that additional evidence are discussed in
 (#acquisition-response-integrity).
 
-40. Before redisclosure, the OP MUST validate that protected binding record, the Claim Set
-    under (#claims-verification), and the current authorization, deletion, and withdrawal
-    state.
+The OP applies the following checks before redisclosing a stored Claim Set.
 
+58. The OP MUST validate the protected acquisition record.
+59. The OP MUST verify that the current authorization permits disclosure.
+60. The OP MUST verify that the Subject has not deleted the Claim Set.
+61. The OP MUST verify that the Subject has not withdrawn authorization for this disclosure.
+
+(#verification-responsibilities) requires validation of the stored Claim Set before disclosure.
 A successful acquisition does not waive later key, trust, expiration, or freshness checks.
 Reusing a stored Claim Set does not require a new CP operation nonce or CP contact.
 
-41. The OP MUST NOT disclose the acquisition envelope, `account_ref`, or operation `nonce` to
-    the RP as part of the Aggregated Claims response.
+62. The OP MUST omit the acquisition envelope from the Aggregated Claims response.
+63. The OP MUST omit `account_ref` from the Aggregated Claims response.
+64. The OP MUST omit the operation nonce from the Aggregated Claims response.
 
 #### Signed Claim Set Format
 
