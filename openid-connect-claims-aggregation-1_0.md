@@ -1026,7 +1026,8 @@ The base response defines these members:
   `null`, an empty string, or a JWT containing only protocol claims MUST NOT represent an
   empty result.
 
-For example (the compact JWS is abbreviated):
+The following successful response carries the Claim Set decoded below.
+The account reference and nonce are illustrative, and the compact JWS is abbreviated.
 
 ```json
 {
@@ -1048,25 +1049,28 @@ type and cache directive. In the base response, the only member is the operation
 This empty result reports only that this collection supplied no attributes. It does not
 assert that the attributes do not exist or explain why they were not supplied.
 
-An illustrative decoded protected header and payload of a returned `claim_set` are:
+The decoded protected header and payload of that `claim_set` are:
 
 ```json
-{"typ":"claims-aggregation+jwt","alg":"RS256","kid":"cp-app-key-1"}
+{"typ":"claims-aggregation+jwt","alg":"RS256"}
 ```
 
 ```json
 {
   "iss": "https://cp.example",
   "aud": "https://op.example",
-  "iat": 1794960000,
-  "exp": 1795046400,
+  "iat": 1893455940,
+  "exp": 1893456240,
   "birthdate": "1990-01-01"
 }
 ```
 
 The example uses the common mandatory-to-implement algorithm `RS256`.
-The timestamps start at 2026-11-18T00:00:00Z. The response's cache directive prevents HTTP
-caching; it does not prohibit Subject-authorized storage under (#claims-collection).
+The `valid` test vector in [ClaimsAggregation.TestVectors] provides the complete signed
+CP JWT and the signed OP presentation shown in (#claims-delivery), along with the
+test keys and instructions for verifying both at 2030-01-01T00:00:00Z.
+The response's cache directive prevents HTTP caching; it does not prohibit
+Subject-authorized storage under (#claims-collection).
 
 The OP MUST reject a purported successful response unless it has the required status,
 media type, and JSON members with the types specified above. It MUST NOT interpret an
@@ -1150,16 +1154,18 @@ in `_claim_names`. The OP MUST ensure that every claim it discloses in the embed
 authorized for disclosure to that RP. If a Claim Set includes claims the OP cannot disclose,
 the OP MUST obtain a suitable Claim Set from the CP or omit that JWT from the response.
 
-For example, the payload of an OP ID Token can contain the following (the inner JWS is
-abbreviated, and normal ID Token requirements still apply):
+The decoded OP presentation below embeds the same CP-signed JWT received in
+`claim_set` in (#claims-endpoint-response), without changing its compact JWS
+serialization. The inner JWS is abbreviated here. When the OP returns the
+Aggregated Claims in an ID Token, the normal ID Token requirements still apply.
 
 ```json
 {
   "iss": "https://op.example",
-  "sub": "op-pairwise-sub-for-this-rp",
-  "aud": "rp-client-id",
-  "iat": 1794960000,
-  "exp": 1794960300,
+  "sub": "op-vector-subject",
+  "aud": "rp-client",
+  "iat": 1893455999,
+  "exp": 1893456060,
   "_claim_names": {"birthdate": "cp1"},
   "_claim_sources": {"cp1": {"JWT": "<CP-signed-JWT>"}}
 }
@@ -1810,6 +1816,9 @@ OAuth error value is registered by this specification.
 
 [OAuth.Security.Update] - Updates to OAuth 2.0 Security Best Current Practice, draft-ietf-oauth-security-topics-update-03, Work in Progress
 [OAuth.Security.Update]: https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-update-03.html
+
+[ClaimsAggregation.TestVectors] - Claims Endpoint prototype and reproducible RS256 test vectors
+[ClaimsAggregation.TestVectors]: https://github.com/sakimura/claims-endpoint-prototype/tree/f5f6be8e5e7e3853711a02952f754a93ec4c3963
 
 # Notices
 
