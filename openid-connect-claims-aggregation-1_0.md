@@ -87,10 +87,11 @@ OP-to-CP collection interface defined here.
 The Claims Endpoint separates OP-facing account-binding information from the CP-signed Claim
 Set disclosed to the RP. This permits a Claim Set without a `sub` claim: the OP verifies the CP
 account association when collecting it and preserves that association when storing and
-disclosing it. The RP relies on the OP for Subject binding under the L1 trust model. Omitting
-`sub` does not prevent correlation through reuse of the same JWT or through identifying
-attributes. The Subject can authorize reuse of stored Claim Sets or request new issuance, with
-the corresponding privacy and availability tradeoffs described in the Privacy Considerations.
+disclosing it. The RP relies on the OP for Subject binding under the L1 trust model
+described in (#trust-model). Omitting `sub` does not prevent correlation through reuse
+of the same JWT or through identifying attributes. The Subject can authorize reuse of
+stored Claim Sets or request new issuance. Privacy Considerations describes the
+tradeoffs for privacy and availability.
 
 Another feature that this document provides is the way to avoid multiple consent screen 
 per RP authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
@@ -219,6 +220,10 @@ representation defined in Section 5.6.2 of [OIDC]
 
 **Claim Set** – a CP-signed JWT containing claims issued through the CP's Claims Endpoint
 
+**L1 trust model** – trust model in which the RP relies on the OP to associate a
+CP-signed Claim Set with the Subject authenticated by the OP. The RP validates the
+OP's response and separately verifies the CP-signed Claim Set. The RP applies its
+own trust policy to decide whether to use the CP's claims. See (#trust-model).
 
 # Symbols and abbreviated terms
 
@@ -2178,7 +2183,7 @@ OAuth error value is registered by this specification.
 
 # Notices
 
-Copyright (c) 2025 The OpenID Foundation.
+Copyright (c) 2026 The OpenID Foundation.
 
 The OpenID Foundation (OIDF) grants to any Contributor, developer,
 implementer, or other interested party a non-exclusive, royalty free,
