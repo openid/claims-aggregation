@@ -335,149 +335,120 @@ It returns the CP's signed Claim Sets as Aggregated Claims to RPs that the Subje
 # Trust Model
 
 The RP relies on the OP to link each CP-signed Claim Set to the authenticated Subject.
-The RP verifies each CP-signed Claim Set separately from its validation of the OP's response.
-The OP asserts that each included Claim Set concerns the Subject in the response's `sub` claim.
+The RP validates the enclosing ID Token or UserInfo response under [OIDC].
+The RP verifies the CP-signed Claim Set separately under (#claims-verification).
+The OP asserts that each included Claim Set concerns the Subject in the enclosing response's `sub` claim.
 
-1. The OP MUST bind the CP's Issuer Identifier and Subject Identifier (`iss`, `sub`), obtained
-   from the validated CP ID Token during Setup, to the authenticated OP account that initiated
-   Setup.
-1. The OP MUST bind the corresponding authorization grant and its access and refresh tokens to
-   the same OP account.
-1. Token refresh and downscoping MUST preserve this binding.
-1. When collecting a Claim Set, the OP MUST validate the CP response according to
-   (#claims-endpoint-response) and the signed JWT according to (#claims-verification),
-   including matching the response `account_ref` against the stored CP Subject Identifier and
-   the JWT `iss` against the stored CP Issuer Identifier.
-1. The OP MUST use those tokens and any Claim Sets obtained with them only for the bound OP
-   account.
+1. The OP MUST obtain the CP's `iss` and `sub` from the validated Setup ID Token.
+2. The OP MUST bind those identifiers to the authenticated OP account that initiated Setup.
+3. The OP MUST bind the corresponding CP grant to the same OP account.
+4. The OP MUST bind the grant's access and refresh tokens to the same OP account.
+5. The OP MUST preserve that binding when refreshing tokens.
+6. The OP MUST preserve that binding when downscoping tokens.
+7. The OP MUST use CP tokens only for their bound OP account.
+8. The OP MUST use Claim Sets obtained with those tokens only for that account.
 
-This requirement also applies to stored Claim Sets.
+The OP checks the binding at collection as specified in (#claims-endpoint-response).
+The binding also applies to stored Claim Sets.
 
-The OP and the CP establish trust for client registration through [OpenID.Federation]. The CP's
-grant authorizes the OP to collect claims. Disclosure to a particular RP requires the Subject's
-separate authorization at the OP as described in (#subject-granting).
+The OP and CP establish trust for client registration through [OpenID.Federation].
+The CP grant authorizes collection. The Subject authorizes disclosure to each RP under (#subject-granting).
 
-6. The RP MUST validate the OP's ID Token or UserInfo response according to [OIDC].
-1. The RP MUST apply its trust policy to decide whether it trusts the OP to associate claims
-   with the Subject and whether it trusts each CP as a source for the claims it uses.
-1. The RP MAY use Federation to establish trust in either party.
+9. The RP MUST apply its trust policy to decide whether to trust the OP's Subject binding.
+10. The RP MUST apply its trust policy to decide whether to trust each CP for the claims it uses.
+11. The RP MAY use [OpenID.Federation] to establish trust in either party.
 
-A deployment can use Federation Trust Marks to indicate conformance with its trust
-framework. The bare CP-signed JWT contains no CP Subject Identifier and does not
-independently prove which Subject it concerns. The RP relies on the OP's enclosing response
-and the protected acquisition and storage binding.
+A deployment can use Federation Trust Marks to indicate conformance with its trust framework.
+The CP-signed JWT contains no CP Subject Identifier.
+The RP relies on the enclosing response and the OP's protected binding to establish which Subject the claims concern.
 
-9. A bare JWT imported from another source MUST NOT by itself establish an account binding.
-1. Restoration of a stored Claim Set MUST also restore and validate its protected
-   account-binding record.
+12. The OP MUST NOT establish an account binding solely from a JWT it imports from another source.
+13. The OP MUST restore the protected binding record when it restores a stored Claim Set.
+14. The OP MUST validate the protected binding record when it restores a stored Claim Set.
 
-Export does not make the JWT usable with a different OP audience. Profiles can define
-additional subject binding or presentation-time authentication requirements.
+An exported Claim Set retains its OP audience.
+Profiles can define additional Subject binding or presentation-time authentication requirements.
 
 # Discovery Phase
 
 ## CP Discovery and Metadata
 
-Before making an OpenID Connect Authentication Request to a CP, the OP needs to obtain
-configuration information from the CP, 
-including its Authorization Endpoint, Token Endpoint, and Claims Endpoint locations.
+The OP obtains the CP's endpoints before it sends the Setup authorization request.
+[OpenID.Discovery] and [OpenID.Federation] govern issuer validation for their metadata mechanisms.
 
-This information is obtained via Discovery, as described in OpenID Connect Discovery 1.0 [OpenID.Discovery], or may be obtained via other mechanisms.
+1. The OP MUST use validated metadata for the selected CP Issuer Identifier in each Setup transaction.
+2. The OP MUST require an equivalent validated issuer binding from any other metadata source.
+3. The OP MUST obtain the Authorization, Token, and Claims Endpoints only from metadata bound to the validated issuer.
+4. The OP MUST keep each resolved endpoint bound to the selected CP issuer throughout Setup.
+5. The OP MAY reuse cached metadata for that issuer while the applicable validity conditions hold.
+6. The OP MUST obtain fresh, validated metadata before continuing Setup once those conditions no longer hold.
+7. The OP MUST successfully reevaluate CP trust before continuing Setup if the applicable trust rules require it.
 
-1. For each Setup transaction, the OP MUST identify the CP by its Issuer Identifier and use
-   metadata resolved for that issuer.
-1. The OP MUST validate the issuer as required by Section 4.3 of [OpenID.Discovery] or Section
-   5.1.3 of [OpenID.Federation].
-1. Other metadata acquisition mechanisms MUST provide the same validated issuer binding.
-1. The OP MAY reuse metadata cached for that issuer while it remains valid under the
-   applicable caching rules and, when using Federation, the Trust Chain validity requirements
-   in Section 12.3 of [OpenID.Federation].
-1. Once those validity conditions cease to hold, the OP MUST successfully refresh and validate
-   the metadata and, when applicable, reevaluate trust before continuing the transaction.
-1. The OP MUST retain the association between the issuer and the resolved endpoints throughout
-   the transaction.
-1. The OP MUST NOT treat the Authorization Endpoint, Token Endpoint, or Claims Endpoint as
-   independently configurable values detached from the CP's Issuer Identifier.
-1. The CP MUST publish the following metadata in its `openid_provider` metadata and, if it
-   also publishes an [OpenID.Discovery] configuration document, in that document with the same
-   values.
+The metadata mechanism governs cache validity. [OpenID.Federation] also governs Trust Chain validity.
 
-These parameters extend the metadata in [OpenID.Discovery].
+The following parameters apply to the CP's `openid_provider` metadata.
 
-9. The CP MUST include `claims_endpoint` as the HTTPS URL of its Claims Endpoint.
-1. The CP MUST omit the fragment component from that URL.
-1. The CP MUST include `claims_signing_alg_values_supported` as a non-empty JSON array of
-   asymmetric JWS algorithms for Claim Sets.
-1. The CP MUST exclude `none` and symmetric MAC algorithms from this array.
-1. The CP MUST support each advertised algorithm when the OP selects it in the Claims
-   Endpoint request.
-1. The CP MUST include `RS256` in this array.
-1. The OP MUST find an advertised algorithm that its local policy permits or abort
-   collection.
-1. The CP and OP MAY advertise and select, respectively, additional asymmetric algorithms.
-1. The endpoint and its signing algorithms MUST remain bound to the validated CP issuer.
+8. The CP MUST publish the HTTPS Claims Endpoint URL in `claims_endpoint`.
+9. The CP MUST omit URL fragments from `claims_endpoint`.
+10. The CP MUST list its Claim Set signing algorithms in a non-empty JSON array named `claims_signing_alg_values_supported`.
+11. The CP MUST advertise only asymmetric JWS signing algorithms in that array.
+12. The CP MUST include `RS256` in that array.
+13. The CP MUST support each advertised algorithm when the OP selects it in a Claims Endpoint request.
+14. The CP MUST set `authorization_response_iss_parameter_supported` to `true`.
+15. The CP MUST include `code` in `response_types_supported`.
+16. The CP MUST include `S256` in `code_challenge_methods_supported`.
+17. The CP MUST include the same values for these parameters in any [OpenID.Discovery] configuration document it publishes.
 
-The CP's UserInfo metadata does not select the Claim Set signing algorithm.
+[RFC9207] defines the authorization response issuer capability.
+(#setup-phase) specifies Authorization Code Flow and PKCE for Setup.
+The CP advertises Claim Set signing algorithms separately from UserInfo algorithms.
 
-18. The CP MUST set `authorization_response_iss_parameter_supported` to `true` in its
-    `openid_provider` metadata as specified in [RFC9207].
-1. The CP MUST support the Authorization Code Flow and PKCE with the `S256` code challenge
-   method as specified in [RFC7636].
-1. Its `openid_provider` metadata MUST include `code` in `response_types_supported` and
-   `S256` in `code_challenge_methods_supported`.
-1. If the CP also publishes a configuration document using [OpenID.Discovery], it MUST
-   advertise these capabilities and support for the authorization response `iss` parameter
-   there as well.
+18. The OP MUST keep the Claims Endpoint bound to the validated CP issuer.
+19. The OP MUST keep the advertised Claim Set signing algorithms bound to that issuer.
+20. The OP MUST abort collection if its local policy permits none of the CP's advertised Claim Set signing algorithms.
 
 ### Claims Endpoint
 
 1. The CP MUST expose a Claims Endpoint.
 
 The Claims Endpoint is an OAuth 2.0 protected resource where the OP obtains CP-signed Claim Sets.
-It differs from the UserInfo Endpoint and the RP-facing endpoint for Distributed Claims in [OIDC].
+The Claims Endpoint differs from the UserInfo and Distributed Claims endpoints in [OIDC].
 See (#claims-endpoint-request) and (#claims-endpoint-response) for the wire protocol.
 
 ## Claim Set Profile
 
-This specification defines one signed Claim Set profile, identified by the explicit JWT
-`typ` in (#signed-claim-set-format). It does not define a new RP capability metadata member
-or an Authentication Request parameter to negotiate that type. The OP advertises support for
-Aggregated Claims as described below.
+This profile applies to Claim Sets from the Claims Endpoint.
+It uses the JWT `typ` in (#signed-claim-set-format).
+The profile defines no new metadata or Authentication Request parameter for negotiating the type.
+(#claims-verification) specifies the validation rules.
 
-1. Deployments MAY establish OP/RP profile support through configuration, registration
-   arrangements, or a trust framework, consistently with Section 5.6.2 of [OIDC].
+1. Deployments MAY establish OP and RP profile support through configuration, registration arrangements, or a trust framework.
+2. The CP MUST support the format in (#signed-claim-set-format).
+3. The CP MUST implement `RS256` signing for Claim Sets.
+4. The OP MUST implement `RS256` signature verification for Claim Sets.
+5. The RP MUST implement `RS256` signature verification for Claim Sets.
+6. The OP MUST support selecting `RS256` in Claims Endpoint requests.
+7. Implementations MAY support other asymmetric algorithms subject to (#signature-validation).
 
-The type requirement applies to Claim Sets issued by this specification's Claims Endpoint;
-it does not impose that type on every JWT used for Aggregated Claims under [OIDC].
+The following rules apply if Claim Set validation fails.
 
-2. Within this profile, the OP and RP MUST apply (#claims-verification).
-1. If validation fails, the OP and RP MUST NOT silently fall back to an ID Token, UserInfo
-   JWT, or another profile.
-1. The CP MUST implement `RS256` signing for Claim Sets.
-1. The OP MUST implement `RS256` signature verification for Claim Sets.
-1. The RP MUST implement `RS256` signature verification for Claim Sets.
-1. The OP MUST support selecting `RS256` in Claims Endpoint requests.
-1. Implementations MAY support other asymmetric algorithms subject to (#signature-validation).
-1. The CP MUST support the format in (#signed-claim-set-format).
+8. The OP MUST NOT silently fall back to an ID Token, UserInfo JWT, or another profile.
+9. The RP MUST NOT silently fall back to an ID Token, UserInfo JWT, or another profile.
 
-Existing stored JWTs with `sub` do not conform to this profile. Support for another profile
-requires separate validation rules and deployment arrangements outside this specification.
+Stored JWTs with `sub` require a separate profile and deployment arrangement.
 
 ## Aggregating OP Metadata
 
-1. The OP MUST include `aggregated` in `claim_types_supported` and set
-   `claims_parameter_supported` to `true` in its `openid_provider` metadata.
-1. If the OP also publishes a configuration document using [OpenID.Discovery], it MUST
-   advertise the same capabilities there.
+The following parameters apply to the aggregating OP's `openid_provider` metadata.
 
-These parameters describe the OP's capabilities for serving RPs. A CP that only serves Claim
-Sets to the OP has no requirement to advertise `aggregated` in that role.
+1. The OP MUST include `aggregated` in `claim_types_supported`.
+2. The OP MUST set `claims_parameter_supported` to `true`.
+3. The OP MUST include `S256` in `code_challenge_methods_supported`.
+4. The OP MUST advertise these capabilities in any [OpenID.Discovery] configuration document it publishes.
+5. The OP MUST support Aggregated Claims as an OpenID Provider under [OIDC].
 
-3. For authorization code responses to RPs, the OP MUST support PKCE with `S256` as specified
-   in [RFC7636].
-1. The OP MUST include `S256` in `code_challenge_methods_supported` in its `openid_provider`
-   metadata and, if published, its [OpenID.Discovery] configuration document.
-1. The OP MUST support Aggregated Claims as an OpenID Provider under [OIDC].
+(#rp-authentication-and-the-request-verification) governs PKCE for RPs.
+A CP that only issues Claim Sets to OPs has no obligation to advertise `aggregated`.
 
 
 # Client Configuration Phase
