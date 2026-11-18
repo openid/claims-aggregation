@@ -453,6 +453,7 @@ it does not impose that type on every JWT used for Aggregated Claims under [OIDC
 2. Within this profile, the OP and RP MUST apply (#claims-verification).
 1. If validation fails, the OP and RP MUST NOT silently fall back to an ID Token, UserInfo
    JWT, or another profile.
+1. The CP MUST implement `RS256` signing for Claim Sets.
 1. The OP MUST implement `RS256` signature verification for Claim Sets.
 1. The RP MUST implement `RS256` signature verification for Claim Sets.
 1. The OP MUST support selecting `RS256` in Claims Endpoint requests.
