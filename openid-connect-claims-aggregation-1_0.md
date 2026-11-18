@@ -541,9 +541,7 @@ The following requirements apply to `private_key_jwt` at each CP endpoint that u
 Examples include the Token, PAR, and revocation endpoints.
 [OAuth.Security.Update] defines the audience restriction.
 
-13. The OP MUST create client assertions as specified in [OIDC].
-1. The CP MUST validate client assertions as specified in [OIDC].
-1. The OP MUST set `aud` to the validated CP Issuer Identifier as a string or single-element array.
+13. The OP MUST set `aud` to the validated CP Issuer Identifier as a string or single-element array.
 1. The OP MUST obtain that identifier as specified in (#discovery-phase).
 1. The CP MUST reject an assertion if its `aud` fails these requirements.
 1. The CP MUST validate the assertion signature with the OP's resolved `openid_relying_party` keys.
@@ -556,7 +554,7 @@ An assertion lifetime of a few minutes is one option.
 
 [RFC8705] governs certificate and client binding when the OP uses `self_signed_tls_client_auth`.
 
-23. The CP MUST match the presented certificate against the OP's resolved RP JWK Set at each such endpoint.
+21. The CP MUST match the presented certificate against the OP's resolved RP JWK Set at each such endpoint.
 
 
 # Setup Phase
