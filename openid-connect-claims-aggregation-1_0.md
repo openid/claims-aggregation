@@ -1148,11 +1148,52 @@ otherwise valid message unless indicated.
 
 ## Claims Delivery
 
-The OP creates the Aggregated Claims response as described in Section 5.6.2 of [OIDC]. The RP
-receives the entire signed JWT embedded in `_claim_sources`, including claims that are not listed
-in `_claim_names`. The OP MUST ensure that every claim it discloses in the embedded JWT is
-authorized for disclosure to that RP. If a Claim Set includes claims the OP cannot disclose,
-the OP MUST obtain a suitable Claim Set from the CP or omit that JWT from the response.
+The OP creates the Aggregated Claims response as described in Section 5.6.2 of [OIDC].
+
+The OP MUST determine the destinations for claims requested through `scope` according to
+Section 5.4 of [OIDC] and add the individual requests for `id_token` and `userinfo` as
+specified in Section 5.5 of [OIDC]. An individual request does not cancel a scope-based
+request for the same claim at another destination. The OP MUST apply the applicable
+request constraints, disclosure authorization, and availability checks to each response.
+
+If the OP cannot supply a requested aggregated claim in an authorized, valid Claim Set,
+it MUST omit the claim from `_claim_names` in that response. The RP receives the entire
+signed JWT embedded in `_claim_sources`, including any claims that lack a mapping in
+`_claim_names`. The OP MUST ensure that every claim in the embedded JWT is authorized
+for disclosure to that RP. If a Claim Set includes claims the OP cannot disclose, the OP
+MUST obtain a suitable Claim Set from the CP or omit the entire JWT from that response.
+
+The OP MUST preserve mappings and their referenced sources for any other claims it
+returns in that response, including Distributed Claims. The OP MUST omit any
+`_claim_sources` entry that no remaining `_claim_names` entry references. If
+`_claim_names` has no remaining entries, the OP MUST omit both members.
+
+See (#authorization-withdrawal-and-grant-revocation) for the conditions under which the
+OP can use a previously collected Claim Set.
+
+The OP MUST apply the omission and error rules in Section 5.5.1 of [OIDC], including
+claim-specific requirements. The `essential` flag alone does not make an omitted claim
+an authentication error. This specification defines no RP-facing error or reason code
+for an omitted aggregated claim. The OP MUST NOT forward CP error details to explain
+an omission. The RP MUST enforce its application's required-claim policy before
+completing the requested operation, including when a claim is absent from an otherwise
+valid response.
+
+For example, the RP requests `birthdate` and `address` in the ID Token:
+
+```json
+{
+  "id_token": {
+    "birthdate": null,
+    "address": {"essential": true}
+  }
+}
+```
+
+The CP supplies only `birthdate`. The OP returns the following presentation.
+Only `birthdate` has a `_claim_names` mapping, and the response contains only
+the source referenced by that mapping. If the RP requires `address` for its
+operation, it does not complete that operation.
 
 The decoded OP presentation below embeds the same CP-signed JWT received in
 `claim_set` in (#claims-endpoint-response), without changing its compact JWS
