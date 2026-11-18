@@ -346,7 +346,7 @@ The OP asserts that each included Claim Set concerns the Subject in the enclosin
 5. The OP MUST preserve that binding when refreshing tokens.
 6. The OP MUST preserve that binding when downscoping tokens.
 7. The OP MUST use CP tokens only for their bound OP account.
-8. The OP MUST use Claim Sets obtained with those tokens only for that account.
+8. The OP MUST use Claim Sets it obtains with those tokens only for that account.
 
 The OP checks the binding at collection as specified in (#claims-endpoint-response).
 The binding also applies to stored Claim Sets.
@@ -612,7 +612,7 @@ The CP identifies Claims Aggregation clients by their `client_id` under (#client
 1. The OP MUST limit the lifetime of each transaction.
 1. The OP MUST accept each transaction at most once.
 1. The OP MUST reject expired transactions.
-1. If the OP sends a `nonce`, it MUST bind that value to the transaction.
+1. The OP MUST bind any `nonce` it sends to the transaction.
 
 [OIDC] governs validation of the ID Token's `nonce`.
 
@@ -1024,7 +1024,7 @@ The base response also carries `account_ref` and `claim_set` when it supplies at
 9. The CP MUST derive `account_ref` from the account that the access token authorizes.
 10. The CP MUST set `account_ref` to the Setup ID Token's `sub` for that account and OP.
 11. The CP MUST NOT echo a caller-supplied account reference.
-12. The CP MUST ensure that the Claim Set's attributes concern the account identified by `account_ref`.
+12. The CP MUST ensure that all Claim Set attributes concern the account that `account_ref` identifies.
 13. The CP MUST omit `claim_set` when it supplies no requested attributes.
 14. The CP MUST omit `account_ref` when it omits `claim_set`.
 15. The CP MUST NOT represent an empty result with `null`, an empty string, or a protocol-only JWT.
@@ -1113,20 +1113,22 @@ The OP applies the following checks when the response contains `claim_set`.
 38. The OP MUST match `account_ref` exactly to the validated Setup `sub` for the operation's OP account and CP issuer.
 39. The OP MUST NOT derive the expected `sub` from the response or access token.
 40. The OP MUST NOT replace the expected `sub` with a value from the response or access token.
-41. The OP MUST validate `claim_set` under (#claims-verification).
-42. The OP MUST match the JWT's `iss` to the operation's CP issuer.
-43. The OP MUST verify that the JWT contains at least one requested attribute.
-44. The OP MUST verify that it requested every returned attribute.
-45. The OP MUST verify that its authorization covers every returned attribute.
-46. The OP MUST process the authenticated response, account reference, and exact JWT as one validation unit.
-47. The OP MUST NOT recombine those inputs through an unprotected queue or cache.
+
+The OP validates `claim_set` as required by (#verification-responsibilities).
+
+41. The OP MUST match the JWT's `iss` to the operation's CP issuer.
+42. The OP MUST verify that the JWT contains at least one requested attribute.
+43. The OP MUST verify that it requested every returned attribute.
+44. The OP MUST verify that its authorization covers every returned attribute.
+45. The OP MUST process the authenticated response, account reference, and exact JWT as one validation unit.
+46. The OP MUST NOT recombine those inputs through an unprotected queue or cache.
 
 (#signature-validation) specifies the check against the selected `signing_alg`.
 (#token-request-and-account-binding) specifies account relinking.
 
-48. If any response check fails, the OP MUST reject the entire response.
-49. The OP MUST NOT store a Claim Set from a rejected response.
-50. The OP MUST NOT disclose a Claim Set from a rejected response.
+47. If any response check fails, the OP MUST reject the entire response.
+48. The OP MUST NOT store a Claim Set from a rejected response.
+49. The OP MUST NOT disclose a Claim Set from a rejected response.
 
 Omitting a claim from `_claim_names` cannot hide it from an RP receiving the JWT.
 For these checks, attributes exclude `iss`, `aud`, `iat`, `exp`, `nbf`, and `jti`.
@@ -1134,13 +1136,13 @@ For these checks, attributes exclude `iss`, `aud`, `iat`, `exp`, `nbf`, and `jti
 
 The OP preserves the validated association in a protected acquisition record.
 
-51. The OP MUST retain a protected acquisition record for each successfully collected Claim Set.
-52. The OP MUST record the OP account in the acquisition record.
-53. The OP MUST record the CP issuer and Subject Identifier in the acquisition record.
-54. The OP MUST record the acquisition validation result in the acquisition record.
-55. The OP MUST record the acquisition validation time in the acquisition record.
-56. The OP MUST protect the integrity of the acquisition record.
-57. The OP MUST protect the record's association with the exact JWT.
+50. The OP MUST retain a protected acquisition record for each successfully collected Claim Set.
+51. The OP MUST record the OP account in the acquisition record.
+52. The OP MUST record the CP issuer and Subject Identifier in the acquisition record.
+53. The OP MUST record the acquisition validation result in the acquisition record.
+54. The OP MUST record the acquisition validation time in the acquisition record.
+55. The OP MUST protect the integrity of the acquisition record.
+56. The OP MUST protect the record's association with the exact JWT.
 
 A hash stored alongside unprotected data does not by itself provide that protection. A
 deployment crossing an untrusted processing or storage boundary needs integrity protection
@@ -1153,18 +1155,18 @@ cases and limits of that additional evidence are discussed in
 
 The OP applies the following checks before redisclosing a stored Claim Set.
 
-58. The OP MUST validate the protected acquisition record.
-59. The OP MUST verify that the current authorization permits disclosure.
-60. The OP MUST verify that the Subject has not deleted the Claim Set.
-61. The OP MUST verify that the Subject has not withdrawn authorization for this disclosure.
+57. The OP MUST validate the protected acquisition record.
+58. The OP MUST verify that the current authorization permits disclosure.
+59. The OP MUST verify that the Subject has not deleted the Claim Set.
+60. The OP MUST verify that the Subject has not withdrawn authorization for this disclosure.
 
 (#verification-responsibilities) requires validation of the stored Claim Set before disclosure.
 A successful acquisition does not waive later key, trust, expiration, or freshness checks.
 Reusing a stored Claim Set does not require a new CP operation nonce or CP contact.
 
-62. The OP MUST omit the acquisition envelope from the Aggregated Claims response.
-63. The OP MUST omit `account_ref` from the Aggregated Claims response.
-64. The OP MUST omit the operation nonce from the Aggregated Claims response.
+61. The OP MUST omit the acquisition envelope from the Aggregated Claims response.
+62. The OP MUST omit `account_ref` from the Aggregated Claims response.
+63. The OP MUST omit the operation nonce from the Aggregated Claims response.
 
 #### Signed Claim Set Format
 
@@ -1349,34 +1351,34 @@ The verifier checks claims after validating the signature.
 3. The verifier MUST require `iss`, `aud`, `iat`, and `exp`.
 4. The verifier MUST require a non-empty string for `iss`.
 5. The OP MUST validate the acquisition or stored binding under (#claims-endpoint-response).
-6. The RP MUST apply its trust policy to decide whether it trusts the CP for these claims.
-7. The verifier MUST require exactly one `aud` value as a string or single-element array.
-8. The OP MUST match `aud` exactly to its `client_id` at the CP.
-9. The RP MUST match `aud` exactly to the OP issuer it validated through OpenID Connect.
-10. The verifier MUST compare issuer and audience identifiers without normalization.
-11. The verifier MUST require `exp` to be later than `iat`.
-12. The verifier MUST reject a JWT with an `iat` in the future.
-13. The verifier MAY allow a small clock skew when comparing times to its clock.
-14. The verifier MUST apply any clock-skew allowance consistently to `iat`, `exp`, and `nbf`.
+6. The verifier MUST require exactly one `aud` value as a string or single-element array.
+7. The OP MUST match `aud` exactly to its `client_id` at the CP.
+8. The RP MUST match `aud` exactly to the OP issuer it validated through OpenID Connect.
+9. The verifier MUST compare issuer and audience identifiers without normalization.
+10. The verifier MUST require `exp` to be later than `iat`.
+11. The verifier MUST reject a JWT with an `iat` in the future.
+12. The verifier MAY allow a small clock skew when comparing times to its clock.
+13. The verifier MUST apply any clock-skew allowance consistently to `iat`, `exp`, and `nbf`.
 
 The following requirements apply when the RP receives Aggregated Claims through UserInfo.
 
-15. The RP MUST use the validated OP issuer from the transaction that issued the access token.
-16. The RP MUST NOT infer a new issuer from the CP JWT or an unsigned UserInfo response.
-17. The RP MUST preserve the OP issuer's association with that access token.
+14. The RP MUST use the validated OP issuer from the transaction that issued the access token.
+15. The RP MUST NOT infer a new issuer from the CP JWT or an unsigned UserInfo response.
+16. The RP MUST preserve the OP issuer's association with that access token.
 
-The RP relies on the OP for the Subject binding described in (#trust-model).
+The RP relies on the OP for Subject binding as described in (#trust-model).
+The RP follows the same clause when deciding whether to trust the CP.
 
-18. The RP MUST validate the Aggregated Claims structure according to [OIDC].
-19. The RP MUST check that each mapped claim appears in its referenced JWT.
-20. The RP MUST apply the validation rules for each claim it uses.
-21. The OP MUST reject a Claim Set that fails any required check.
-22. The OP MUST NOT store an invalid Claim Set.
-23. The OP MUST NOT disclose an invalid Claim Set.
-24. The RP MUST NOT use claims from an invalid Claim Set.
-25. The RP MUST treat claims mapped to an invalid Claim Set as unavailable.
-26. The RP MAY reject the entire enclosing response.
-27. Profiles MAY require rejection of the entire enclosing response.
+17. The RP MUST validate the Aggregated Claims structure according to [OIDC].
+18. The RP MUST check that each mapped claim appears in its referenced JWT.
+19. The RP MUST apply the validation rules for each claim it uses.
+20. The OP MUST reject a Claim Set that fails any required check.
+21. The OP MUST NOT store an invalid Claim Set.
+22. The OP MUST NOT disclose an invalid Claim Set.
+23. The RP MUST NOT use claims from an invalid Claim Set.
+24. The RP MUST treat claims mapped to an invalid Claim Set as unavailable.
+25. The RP MAY reject the entire enclosing response.
+26. Profiles MAY require rejection of the entire enclosing response.
 
 The verification rules in (#verification-responsibilities) apply to every Claim Set the RP uses.
 (#claims-delivery) specifies when the RP can complete the requested operation.
