@@ -593,20 +593,23 @@ The declaration applies to every CP that uses that Entity Configuration.
 
 mTLS support is optional in the base profile.
 
-The following advertisement requirements apply to `token_endpoint_auth_methods_supported` in
-the CP's `openid_provider` metadata and any [OpenID.Discovery] configuration document it publishes.
+The CP advertises these methods in `token_endpoint_auth_methods_supported` in its `openid_provider` metadata.
+The following requirements also apply to any [OpenID.Discovery] configuration document the CP publishes.
 
 9. The CP MUST advertise `private_key_jwt`.
 1. The CP MUST advertise `self_signed_tls_client_auth` if it supports that method.
 1. At other authenticated CP endpoints, the OP MUST use a mutually supported method consistent with resolved metadata.
 1. The OP MUST send each authenticated request to the endpoint in the selected CP's validated metadata.
 
-The following requirements apply at every CP endpoint that uses `private_key_jwt`, including
-the Token, PAR, and revocation endpoints. The audience follows [OAuth.Security.Update].
+The following requirements apply to `private_key_jwt` at each CP endpoint that uses it.
+Examples include the Token, PAR, and revocation endpoints.
+[OAuth.Security.Update] defines the audience restriction.
 
-13. The OP MUST set `aud` to the validated CP Issuer Identifier as a string or single-element array.
+13. The OP MUST create client assertions as specified in [OIDC].
+1. The CP MUST validate client assertions as specified in [OIDC].
+1. The OP MUST set `aud` to the validated CP Issuer Identifier as a string or single-element array.
 1. The OP MUST obtain that identifier as specified in (#discovery-phase).
-1. The CP MUST reject an assertion with any other audience.
+1. The CP MUST reject an assertion if its `aud` fails these requirements.
 1. The CP MUST validate the assertion signature with the OP's resolved `openid_relying_party` keys.
 1. The OP SHOULD use short-lived assertions.
 1. The OP MUST follow any assertion lifetime limits from its profile or trust framework.
@@ -617,7 +620,7 @@ An assertion lifetime of a few minutes is one option.
 
 [RFC8705] governs certificate and client binding when the OP uses `self_signed_tls_client_auth`.
 
-21. The CP MUST match the presented certificate against the OP's resolved RP JWK Set at each such endpoint.
+23. The CP MUST match the presented certificate against the OP's resolved RP JWK Set at each such endpoint.
 
 
 # Setup Phase
@@ -679,7 +682,8 @@ The OP and CP can use certificate binding [RFC8705] or DPoP [RFC9449].
 The Claims Endpoint applies the relevant proof requirements in (#claims-endpoint-request).
 mTLS client authentication alone does not imply certificate-bound access tokens.
 
-7. The CP MUST apply the refresh token issuance and binding requirements in [RFC9700].
+7. The CP MUST follow [RFC9700] when it decides whether to issue refresh tokens.
+1. The CP MUST apply the refresh token scope and resource binding requirements in [RFC9700].
 1. The OP MUST preserve the account binding when it replaces a refresh token.
 1. The CP SHOULD support token revocation as specified in [RFC7009].
 
@@ -719,6 +723,8 @@ The CP identifies Claims Aggregation clients by their `client_id` under (#client
 [OIDC] governs validation of the ID Token's `nonce`.
 
 ## Authorization Response Session Validation
+
+The OP applies the response checks after either recovery procedure and before it sends the code.
 
 1. The OP MUST match the returned `state` to the pending transaction before sending the authorization code.
 1. The OP MUST verify the completion session's binding to the initiating OP account before sending the code.
