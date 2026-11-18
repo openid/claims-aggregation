@@ -10,6 +10,31 @@ Providers and returns them to a Relying Party as aggregated claims.
 - [Published draft](https://openid.net/specs/openid-connect-claims-aggregation-1_0.html)
 - [Editor's draft source](openid-connect-claims-aggregation-1_0.md)
 
+### Build the Editor's Draft locally
+
+Install [Mmark 2.2.48](https://github.com/mmarkdown/mmark/releases/tag/v2.2.48)
+for your platform and put `mmark` on PATH. From the repository root, install
+`xml2rfc` in a virtual environment and run the same build script as CI.
+GitHub Actions uses Python 3.12.
+
+```sh
+preview_dir=$(mktemp -d)
+python3 -m venv "$preview_dir/venv"
+. "$preview_dir/venv/bin/activate"
+python -m pip install xml2rfc==3.31.0
+bash scripts/build-editor-draft.sh "$preview_dir/site"
+```
+
+Open `$preview_dir/site/index.html` for the review landing page, the generated
+HTML and XML, and the source commit link. The script builds the committed
+Markdown at `HEAD` by default. Pass a commit or branch name as the second
+argument to reproduce a particular revision, such as `origin/master`.
+
+The Editor's Draft preview workflow builds on pull requests and on pushes
+to `master`. To publish the preview from `master`, select **GitHub Actions**
+as the source in the repository's **Settings → Pages**. The published WG Draft
+follows the [OpenID Foundation publication process](https://openid.net/wg/resources/publishing-specifications/).
+
 ## Contributing
 
 See the [contribution guidelines](CONTRIBUTING.md) before submitting an

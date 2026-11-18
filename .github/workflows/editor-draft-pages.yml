@@ -1,0 +1,58 @@
+name: Editor's Draft preview
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: editor-draft-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install rendering tools
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$RUNNER_TEMP/mmark.tgz" \
+            https://github.com/mmarkdown/mmark/releases/download/v2.2.48/mmark_2.2.48_linux_amd64.tgz
+          echo "70ca506427aa95250d30bec073c7f39e36f3f7718c96fc764906ea70d0cc58d5  $RUNNER_TEMP/mmark.tgz" \
+            | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/mmark.tgz" -C "$RUNNER_TEMP" mmark
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          python -m pip install xml2rfc==3.31.0
+      - name: Build Editor's Draft
+        run: bash scripts/build-editor-draft.sh "$RUNNER_TEMP/editor-draft"
+      - name: Upload Pages artifact
+        if: github.repository == 'openid/claims-aggregation' && github.ref == 'refs/heads/master'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/editor-draft
+
+  deploy:
+    if: github.repository == 'openid/claims-aggregation' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy WG review preview
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
