@@ -1012,9 +1012,6 @@ The base request carries `nonce`, `claims`, and `signing_alg`.
 12. The OP MUST NOT use the nonce as evidence of Subject identity.
 13. The OP MUST limit each collection operation's lifetime.
 
-For example, the OP can encode 16 random octets as base64url without padding.
-The CP treats the nonce as an opaque string.
-
 The OP establishes the following bindings before sending the request.
 
 14. The OP MUST bind the nonce to the pending collection operation.
