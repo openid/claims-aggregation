@@ -1086,7 +1086,8 @@ untrusted processing or storage boundary needs integrity protection across that 
 For example, an authenticated storage service can enforce this association, or a MAC or
 signature can protect a record covering both the JWT and binding fields when the storage
 itself is not trusted. An additional CP-signed receipt can be defined by a profile where
-independent evidence of acquisition is needed.
+independent evidence of acquisition is needed. The deployment cases and limits of that
+additional evidence are discussed in (#acquisition-response-integrity).
 
 Before redisclosure, the OP MUST validate that protected binding record, the Claim Set
 under (#claims-verification), and the current authorization, deletion, and withdrawal state.
@@ -1377,6 +1378,101 @@ and checks the returned JWT against it. A request or response that traverses an 
 internal processing boundary needs integrity protection across that boundary as described
 in (#claims-endpoint-response); token sender-constraining alone does not authenticate
 arbitrary JSON request or response bodies across such a boundary.
+
+### Trusted Collection and Protected Handoffs
+
+For acquisition, the trusted collection boundary comprises the components relied on to preserve
+the authenticated CP response and the independently selected operation context until validation
+and protection of the resulting binding record. A deployment identifies these components and the
+compromises it intends to withstand. Common ownership, an OP-managed label, or the number of TLS
+connections does not by itself establish that boundary. Access controls, account and tenant
+separation, and authenticated internal handoffs support its enforcement.
+
+When a trusted OP collector receives the CP response over authenticated TLS, performs the checks
+in (#claims-endpoint-response), and protects the complete account/artifact association, the base
+protections are sufficient. The account check compares `account_ref` with the CP `sub` from the
+validated Setup ID Token; it is not an independent Subject check inside the CP-signed JWT. A
+TLS-terminating gateway can be part of that trusted collector when its preservation of the
+response and context is an accepted deployment assumption. A deployment seeking protection
+against compromise of that gateway instead treats it as outside the trusted acquisition
+boundary.
+
+A queue, cache, or object store outside that boundary does not alone require another CP
+signature. A trusted collector can validate the response and protect the complete binding record
+before handing it off, with verification at the trusted consumer. An OP MAC, signature, or
+suitably bound authenticated encryption can protect the actual JWT together with its OP account,
+CP identifiers, and acquisition context. Protecting only the JWT while leaving its account
+association editable does not meet the binding requirement. Backup restoration also needs the
+current deletion and withdrawal decisions in (#subject-control-of-stored-claim-sets); an
+authentic old record alone does not establish that it is the latest authorized state.
+
+### Additional CP-Origin Evidence
+
+An additional CP signature can be useful when an intermediary outside the trusted collection
+boundary terminates TLS and can alter plaintext before an honest OP component validates it. For
+example, such an intermediary could obtain a valid Claim Set for CP account B addressed to the
+same OP, containing the requested attributes and using the selected signing algorithm, then
+construct an envelope with `account_ref` for account A, A's pending operation nonce, and B's
+JWT. Matching `account_ref` to the expected A and checking the JWT's issuer, audience,
+signature, and lifetime would not detect that substitution: the signed JWT contains no CP
+Subject Identifier. Leaving `account_ref` as B would instead fail the account comparison. An OP
+MAC added after the intermediary has changed the combination protects that changed combination,
+not its CP origin.
+
+Such a path needs CP-origin integrity through to the trusted validator to satisfy the existing
+acquisition binding requirements. A CP-signed envelope or receipt can provide that integrity. An
+authenticated connection that avoids trusting the intermediary with plaintext is another
+approach. This does not make an extra receipt necessary for every TLS terminator or every stored
+Claim Set.
+
+Another use case is an independently authorized auditor that needs CP-origin evidence of the
+account/artifact association rather than an OP's assertion of it. If the audit policy accepts
+OP-authored records, an OP signature can suffice. If the question concerns only which attributes
+the CP signed, the existing Claim Set signature already supplies that evidence. A CP-signed
+receipt is useful for the additional association only when evidence from the CP is required.
+This audit use is separate from normal RP disclosure; access to stable CP account references and
+acquisition records requires its own authorized purpose, minimization, and retention controls.
+It does not change the L1 trust model.
+
+### Receipt Scope and Reuse Limits
+
+A separate receipt profile would need to bind a distinct receipt purpose, the CP issuer, the
+recipient OP, the CP-derived account reference, and the acquisition operation nonce to the exact
+signed Claim Set or a collision-resistant commitment with a precisely defined algorithm and byte
+representation. The OP recipient is one identifier: its Entity Identifier, Issuer Identifier,
+and CP-facing `client_id` are equal in this profile. A commitment to the exact compact JWS
+avoids relying on reserialization of decoded claims. Omitting either the account reference or
+the artifact commitment would not protect their pairing. Receipt validation would also need
+trusted key and algorithm selection, pending-operation checks, and explicit handling of a
+missing or stripped proof when that proof is required. The treatment of empty results would need
+to be specified by that profile. This specification defines no new receipt format, parameter, or
+mandatory additional CP signature.
+
+A verified receipt establishes a statement under the accepted CP signing key and policy. It does
+not prove that the CP transmitted an HTTP response, that the OP received or validated it, that
+the CP's account association is truthful, or that the Subject consented to a later RP
+disclosure. An issuance timestamp is not proof of delivery or of a new identity-verification
+process. The protected OP account binding remains necessary; a receipt cannot by itself
+reconstruct a lost association with an authenticated OP account. It also does not prevent a
+malicious OP from violating the L1 trust assumptions, misuse of stolen tokens, suppression of
+responses, or rollback of authorization state.
+
+A signature provides integrity and origin evidence, not confidentiality. Public-key encryption
+to the OP alone does not establish CP origin, since another party can encrypt to that public
+key. Deployments needing both secrecy and CP-origin integrity across an additional boundary need
+an appropriate authenticated-origin and confidentiality design. Neither encrypted storage alone
+nor a receipt authorizes disclosure. Acquisition receipts remain OP-facing rather than being
+included in the Aggregated Claims delivered to RPs. Their storage, audit access, and backup
+handling remain sensitive-data processing.
+
+If a receipt profile defines an initial acceptance deadline, a receipt first presented after
+that deadline cannot establish a new acquisition binding. Once acquisition has been validated in
+time and preserved in a protected record, expiry of that deadline alone does not require CP
+contact or suspend an otherwise acceptable stored Claim Set. Conversely, a receipt still within
+its acceptance window does not extend the inner JWT's `exp` or waive current key, signature,
+audience, trust, freshness, or Subject authorization checks. These are acquisition and storage
+considerations, not a new presentation-time CP status check or a change to the grant-revocation
+rules in (#authorization-withdrawal-and-grant-revocation).
 
 ## CP Credential Exposure and Claim Set Replay
 
@@ -1722,6 +1818,7 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Explained acquisition trust boundaries, optional CP-origin evidence, and receipt limitations
 * Clarified compound-claim selection and the boundaries of identity assurance schema, queries, and assertions
 * Added registration templates for two CP metadata parameters and the signed Claim Set media type
 * Removed dedicated OP/RP type-support metadata while retaining explicit JWT typing
