@@ -1744,19 +1744,23 @@ encryption alone.
 
 ## Correlation and Transferable Signed Data
 
-The CP's stable Subject Identifier is used for OP-facing account binding and is not
-included in this profile's RP-facing JWT. Pairwise identifiers at the CP would otherwise
+The OP uses the CP's stable Subject Identifier for account binding. The RP-facing
+Claim Set omits that identifier. Pairwise identifiers at the CP would otherwise
 be scoped to the OP's Sector Identifier rather than to each downstream RP, as specified
 in Section 8.1 of [OIDC]. Omitting the CP `sub` removes that direct downstream identifier;
 it does not guarantee unlinkability. Authorized identifying attributes can still correlate
 Subjects, and a CP can recognize information it issued when an RP shares it.
 The OP's pairwise identifiers in enclosing responses do not hide the inner JWT's contents.
 
-Reusing the same CP-signed JWT across presentations allows recipients that compare their
-received JWTs to correlate those presentations, including across colluding RPs. The JWT
-itself, including its signature, provides a common value for comparison even when identifiers
-used elsewhere are ephemeral or pairwise. Obtaining a newly issued JWT does not necessarily
-prevent correlation if it contains stable identifiers or identifying combinations of claims.
+When the OP reuses a Claim Set, it sends the same CP-signed JWT.
+An RP can compare the JWTs it receives in different presentations.
+RPs that share the JWTs they receive can also compare them across services.
+A matching JWT, including its signature, lets these recipients correlate the presentations.
+Different enclosing OP responses leave a reused inner JWT intact.
+Correlation by JWT comparison can therefore occur even when other identifiers are ephemeral or pairwise.
+
+Recipients can also correlate newly issued JWTs through stable identifiers, identifying
+combinations of claims, or distinctive timestamps.
 
 An RP can also pass a CP-signed JWT to a third party that can independently verify the CP's
 signature and the signed contents. This makes disclosure of signed personal data more
@@ -1774,10 +1778,12 @@ audience, consent, and verification rules.
 
 ## Pre-Collection, Batch Issuance, and On-Demand Issuance
 
-Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into the timing
-of the Subject's interactions with RPs. Updating claims in response to an RP's request for
-fresher information can trigger CP Claims Endpoint calls whose timing and frequency may be
-correlated with downstream activity.
+Pre-collection and reuse of stored Claim Sets can reduce the CP's visibility into when
+the Subject uses an RP. If an RP asks the Subject for fresher claims, the Subject can
+request an update. The OP can then request a new Claim Set from the CP.
+
+The CP can observe when Claims Endpoint requests arrive and how often they arrive.
+If those requests follow RP activity, the CP can use that pattern to infer when the Subject uses an RP.
 
 The following recommendations apply when the OP seeks the Subject's collection or disclosure authorization.
 
@@ -1803,9 +1809,8 @@ With this profile, the Subject can instead request a newly issued Claim Set for 
 without a CP `sub` in the presented JWT. This avoids maintaining a stock of unused
 credentials, but requires CP availability and continued willingness to issue, and exposes
 issuance timing to the CP. It does not require revealing the RP's identity to the CP.
-Stable attributes, identifying combinations of values, and distinctive timestamps can still
-link separately issued JWTs. Wrapping the same inner JWT in different OP responses does not
-hide its common contents or signature from recipients who compare them.
+The correlation risks for newly issued Claim Sets are described in
+(#correlation-and-transferable-signed-data).
 
 The stable account-binding identifier remains in the OP-facing acquisition envelope. The
 OP validates it against the Setup ID Token, then discloses only the inner JWT. The new
