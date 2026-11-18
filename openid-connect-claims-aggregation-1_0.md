@@ -788,8 +788,11 @@ The following provisions apply to the one-time handle procedure.
    configuration, the OP MUST set the handle to expire no later than the code.
 1. If the CP rejects the code as expired, the OP MUST invalidate the handle.
 1. If the CP rejects the code as expired, the OP MUST require a new Setup transaction.
-1. Any further redirection used for this purpose MUST use an OP-controlled destination that
-   an attacker cannot override.
+
+The following requirement applies to both procedures.
+
+13. If either procedure uses a further redirection, the OP MUST use a destination that the
+    OP controls and that an attacker cannot override.
 
 ## Authorization Response Issuer Validation
 
