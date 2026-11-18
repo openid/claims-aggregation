@@ -803,9 +803,10 @@ The dialogue uses the client metadata that the OP registered or resolved for the
 A verified `organization_name` or a Trust Mark that attests to the RP's identity can supply display information.
 Signed metadata or a valid Trust Mark alone does not verify every displayed name.
 [OpenID.Registration] governs language tags and the use of untagged values.
+The OP omits `account_ref` from Aggregated Claims as specified in (#claims-endpoint-response).
 
 15. The OP MAY remember a consent decision for the authenticated Subject and requesting RP.
-16. The OP MUST limit remembered consent to the same Subject and RP `client_id`.
+16. The OP MAY use remembered consent instead of a dialogue only for the same authenticated Subject and RP `client_id`.
 17. The OP MUST limit remembered consent to the claims that the Subject authorizes.
 18. The OP MUST limit remembered consent to authorized CP sources, identified by their validated Issuer Identifiers.
 19. The OP MUST NOT use remembered consent after the Subject withdraws it.
@@ -898,7 +899,7 @@ Backups remain subject to (#token-and-claim-set-storage).
 A disclosure history identifies the RP recipients, the disclosed Claim Sets, their CP sources, and the disclosure times.
 
 19. The OP SHOULD let the authenticated Subject review their disclosure history.
-20. The OP MUST protect retained history according to (#token-and-claim-set-storage).
+20. The OP MUST protect all retained history, including legally retained records, under (#token-and-claim-set-storage).
 21. The OP SHOULD minimize the information it retains for disclosure history.
 
 For example, the OP can identify disclosed Claim Sets without retaining their complete signed JWTs.
