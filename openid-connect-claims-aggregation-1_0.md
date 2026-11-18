@@ -1563,22 +1563,24 @@ envelope for account A. B's JWT can have the expected OP audience, requested att
 and selected signing algorithm. The envelope can carry A's `account_ref` and pending
 operation nonce. The checks of the account reference and the JWT's issuer, audience,
 signature, and lifetime can all pass because the JWT has no CP Subject Identifier.
-If the gateway kept B's `account_ref`, the account comparison would fail. An OP MAC
-that the OP adds after substitution protects the substituted pairing and cannot
-establish its CP origin.
+If the gateway kept B's `account_ref`, the account comparison would fail.
+A MAC that the OP adds after substitution protects the pairing it received.
+It cannot establish that the CP supplied that pairing.
 
-This path needs CP-origin integrity through to the trusted validator to meet the
-acquisition binding requirements. A CP-signed envelope or receipt can provide that
-integrity. An authenticated connection that keeps the plaintext from the intermediary
-can also provide it. The need for extra evidence depends on the trust boundary.
+The trusted validator needs to verify that the CP supplied the association between the
+account and the exact Claim Set. A CP-signed envelope or receipt can provide that
+evidence. An authenticated connection from the CP to the trusted
+validator can also protect it if the connection keeps the plaintext from the intermediary.
+The need for extra evidence depends on which components the deployment trusts.
 
 An independently authorized auditor can also need evidence that the CP associated an
 account with a particular JWT. The relevant evidence depends on the audit question and
 policy:
 
-- An OP signature can suffice if the policy accepts OP-authored records.
+- An OP signature can provide the evidence if the audit policy accepts records that the OP creates.
 - The existing Claim Set signature shows which attributes the CP signed.
-- A CP-signed receipt can show the CP's account-to-JWT association when the auditor needs evidence from the CP.
+- A CP-signed receipt can show which account the CP associated with the Claim Set.
+  This is useful when the auditor needs evidence from the CP.
 
 This audit use requires a separately authorized purpose for access to stable CP account
 references and acquisition records. That access also requires minimization and retention
@@ -1653,34 +1655,36 @@ different CPs can provide additional isolation only when each CP's accepted key 
 also restricted accordingly. Publishing several keys in a common RP key set does not by
 itself establish that isolation.
 
-The single Entity Configuration also limits how client authentication represents device
-instances. In this profile, the client authentication keys are managed by the OP Entity,
-and an on-device application acts as that Entity's user interface or agent. The CP resolves
-one client identity and one RP metadata object for the OP's Entity Identifier; this
-specification does not define a separate enrollment or authentication binding for each
-device instance. Distributing the same authentication private key to all devices expands
-the risk of key extraction. Listing every device key in the common RP JWK Set can cause
-unbounded growth and expose device population and churn, without establishing separate
-client identities at the CP.
+The OP Entity manages the client authentication keys in this profile. An app on a
+device acts as the Entity's user interface or agent. The CP resolves one client identity
+and one RP metadata object for the OP's Entity Identifier. This profile does not define
+separate enrollment or authentication bindings for each device instance.
 
-Confidential-client status does not require server-side execution. Device-generated keys
-and instance-specific registration can support secure client authentication, but combining
-them with this profile's common Entity Identifier, OP issuer, and RP metadata requires a
-separate profile. Such a profile could define per-instance Explicit Registration or Dynamic
-Client Registration, or an Entity-backed client-attestation mechanism for instance keys
-while retaining the Entity Identifier as `client_id`. It would need to define the binding
-between each instance, its credentials, `client_id`, and the OP issuer, and the
-authentication-method selection rules. Giving an instance a different `client_id` while
-retaining a common OP issuer would change the identity relationship required by this base
-profile. These instance profiles are outside the scope of this specification.
+Sharing one authentication private key across devices increases the risk of key extraction.
+Listing all device keys in the common RP JWK Set can make that set grow without bound.
+It can reveal how many devices the OP uses and how often devices are added or removed.
+The CP still resolves the same client identity for those keys.
+
+A confidential client can run on a device. Device-generated keys and registration for
+each instance can support secure client authentication. Combining these with the common
+Entity Identifier, OP issuer, and RP metadata requires a separate profile.
+
+Such a profile could use Explicit Registration or Dynamic Client Registration for each
+instance. It could also let the OP Entity attest to each instance's key while it keeps the
+Entity Identifier as `client_id`. The profile would need to define the binding between
+each instance, its credentials, `client_id`, and the OP issuer. It would also need rules
+for selecting the authentication method. Giving an instance a different `client_id` while
+keeping a common OP issuer would change the identity relationship in this base profile.
+These instance profiles are outside the scope of this specification.
 
 Client authentication and sender-constrained CP access tokens protect collection, not the
 subsequent presentation of a signed Claim Set. A Claim Set's audience identifies the OP,
 not an individual RP or presentation. An RP or another holder can copy that JWT and send
-it elsewhere. Acceptance depends on the recipient's enclosing-response validation,
-account-binding trust, and Claim Set verification rules in (#claims-verification); possession
-of the embedded JWT alone does not authenticate the Subject. Short Claim Set lifetimes
-limit the exposure period but do not prevent copying or reuse before expiration.
+it elsewhere. To accept the Claim Set, the recipient validates the enclosing response and the Claim Set under
+(#claims-verification). The recipient also relies on the account binding described in
+(#trust-model). Possession of the embedded JWT alone does not authenticate the Subject.
+A short Claim Set lifetime limits the exposure period.
+A holder can still copy or reuse the Claim Set before expiration.
 
 Under the trust model in (#trust-model), the RP relies on the OP's account binding and disclosure
 controls. These protections neither require per-presentation CP contact nor cause CP grant
@@ -1707,9 +1711,9 @@ further disclosure at the OP.
 A CP can choose a short lifetime when the underlying attributes can change quickly.
 An application that needs prompt status updates, such as for a revoked driver's license,
 can use a separate authenticated status mechanism and an acceptance policy for the issued
-Claim Set. Offline verification checks the signed artifact. It cannot establish that the
+Claim Set. Offline verification checks the signed Claim Set. It cannot establish that the
 attributes still reflect the current state. A current status check supplements that verification
-and concerns the artifact rather than the collection grant.
+and concerns the issued Claim Set rather than the collection grant.
 
 # Privacy Considerations
 
