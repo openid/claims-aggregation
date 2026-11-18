@@ -131,7 +131,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 capitals, as shown here.
 
 List item numbers are local to each section. Cite an item by its section number and
-item number, separated by a hyphen. For example, 5.4.3-8 refers to item 8 in Section 5.4.3.
+item number, separated by a hyphen. For example, 9.6-4 refers to item 4 in Section 9.6.
 
 {mainmatter}
 
