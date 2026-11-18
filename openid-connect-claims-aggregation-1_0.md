@@ -93,14 +93,13 @@ through identifying attributes. The Subject can authorize reuse of
 stored Claim Sets or request new issuance. Privacy Considerations describes the
 tradeoffs for privacy and availability.
 
-Another feature that this document provides is the way to avoid multiple consent screen 
-per RP authorization request. If OpenID Connect Core spec is used to build Aggregated Claims Model 
-naively, it may result in many consent screens per RP request. 
-For example, if four CPs and one OP is involved in the request, then, there may be five consent screens. 
-This is too onerous. This document defines a mechanism to consolidate it into one consent screen. 
-This is done through one "OP User Setup Phase" per CP that the OP obtains the consent 
-from the subject to obtain claims from the CP for the purpose of creating aggregated 
-claims response for future RP requests in which OP will collect a new consent from the subject. 
+During Setup, the Subject authorizes the OP to collect claims from a specific CP.
+The Subject can authorize collection before choosing an RP.
+
+The Subject separately authorizes the OP to disclose claims to each RP.
+(#subject-granting) describes how the OP obtains and reuses RP-specific authorization.
+When prior CP authorizations still cover collection, the OP can avoid new CP consent
+screens during an RP request.
 
 The OP obtains an access token and, if needed and granted, a refresh token. The CP's Claims
 Endpoint returns signed Claim Sets separately from OP-facing account-binding information.
@@ -228,7 +227,7 @@ representation defined in Section 5.6.2 of [OIDC]
 
 **CP** – Claims Provider
 
-**HTTP** - Hyper Text Transfer Protocol
+**HTTP** - Hypertext Transfer Protocol
 
 **TLS** - Transport Layer Security
 
