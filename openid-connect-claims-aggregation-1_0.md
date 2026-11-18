@@ -1398,12 +1398,11 @@ The following sources supply CP metadata and its verification keys.
 10. The verifier MUST NOT rely on prior validation if the signing key becomes unavailable or untrusted.
 11. In that case, the OP MUST obtain a replacement Claim Set from the CP or omit the affected set.
 
-The CP and verifier follow the algorithm verification rules in [RFC8725].
-
-12. The CP MUST publish each Claim Set signing key's algorithm in every advertised JWK's `alg`.
-13. The CP SHOULD keep retired public keys available through its advertised key sources until their signed Claim Sets expire.
-14. The CP SHOULD include its clock-skew allowance in that key retention period.
-15. The CP MAY withdraw compromised keys earlier under its deployment's key revocation policy.
+12. The CP MUST apply the key-to-algorithm binding rules in [RFC8725] when signing Claim Sets.
+13. The CP MUST publish each Claim Set signing key's algorithm in every advertised JWK's `alg`.
+14. The CP SHOULD keep retired public keys available through its advertised key sources until their signed Claim Sets expire.
+15. The CP SHOULD include its clock-skew allowance in that key retention period.
+16. The CP MAY withdraw compromised keys earlier under its deployment's key revocation policy.
 
 ### Signature Validation
 
@@ -1435,43 +1434,47 @@ The verifier checks claims after validating the signature.
 7. The verifier MUST require exactly one `aud` value as a string or single-element array.
 8. The OP MUST match `aud` exactly to its `client_id` at the CP.
 9. The RP MUST match `aud` exactly to the OP issuer it validated through OpenID Connect.
-10. The verifier MUST require `exp` to be later than `iat`.
-11. The verifier MUST reject a JWT with an `iat` in the future.
-12. The verifier MAY allow a small clock skew when comparing times to its clock.
-13. The verifier MUST apply any clock-skew allowance consistently to `iat`, `exp`, and `nbf`.
+10. The verifier MUST compare issuer and audience identifiers without normalization.
+11. The verifier MUST require `exp` to be later than `iat`.
+12. The verifier MUST reject a JWT with an `iat` in the future.
+13. The verifier MAY allow a small clock skew when comparing times to its clock.
+14. The verifier MUST apply any clock-skew allowance consistently to `iat`, `exp`, and `nbf`.
 
 The following requirements apply when the RP receives Aggregated Claims through UserInfo.
 
-14. The RP MUST use the validated OP issuer from the transaction that issued the access token.
-15. The RP MUST NOT infer a new issuer from the CP JWT or an unsigned UserInfo response.
-16. The RP MUST preserve the OP issuer's association with that access token.
+15. The RP MUST use the validated OP issuer from the transaction that issued the access token.
+16. The RP MUST NOT infer a new issuer from the CP JWT or an unsigned UserInfo response.
+17. The RP MUST preserve the OP issuer's association with that access token.
 
 The RP relies on the OP for the Subject binding described in (#trust-model).
 
-17. The RP MUST validate the Aggregated Claims structure according to [OIDC].
-18. The RP MUST apply the validation rules for each claim it uses.
-19. The OP MUST reject a Claim Set that fails any required check.
-20. The OP MUST NOT store an invalid Claim Set.
-21. The OP MUST NOT disclose an invalid Claim Set.
-22. The RP MUST NOT use claims from an invalid Claim Set.
-23. The RP MUST treat claims mapped to an invalid Claim Set as unavailable.
-24. The RP MAY reject the entire enclosing response.
-25. Profiles MAY require rejection of the entire enclosing response.
+18. The RP MUST validate the Aggregated Claims structure according to [OIDC].
+19. The RP MUST check that each mapped claim appears in its referenced JWT.
+20. The RP MUST apply the validation rules for each claim it uses.
+21. The OP MUST reject a Claim Set that fails any required check.
+22. The OP MUST NOT store an invalid Claim Set.
+23. The OP MUST NOT disclose an invalid Claim Set.
+24. The RP MUST NOT use claims from an invalid Claim Set.
+25. The RP MUST treat claims mapped to an invalid Claim Set as unavailable.
+26. The RP MAY reject the entire enclosing response.
+27. Profiles MAY require rejection of the entire enclosing response.
 
 The verification rules in (#verification-responsibilities) apply to every Claim Set the RP uses.
 (#claims-delivery) specifies when the RP can complete the requested operation.
 
 ### Local Freshness Policy and User-Directed Updates
 
+The RP's acceptance checks include Claim Set validation and its freshness policy.
+
 1. The RP MUST apply its application's freshness requirements before using claims.
-2. The RP MAY enforce a maximum JWT age based on the CP-signed `iat`.
-3. If a Claim Set is too old, the RP MUST treat its claims as unavailable for that use.
-4. The RP SHOULD explain to the Subject when updated information is necessary.
-5. The RP MAY direct the Subject to the OP's claim-management interface to request an update.
+2. The RP MUST apply its acceptance checks to Claim Sets it uses after OP selection or a user-directed update.
+3. The RP MAY enforce a maximum JWT age based on the CP-signed `iat`.
+4. If a Claim Set is too old, the RP MUST treat its claims as unavailable for that use.
+5. The RP SHOULD explain to the Subject when updated information is necessary.
+6. The RP MAY direct the Subject to the OP's claim-management interface to request an update.
 
 The Subject can retry the OpenID Connect interaction after an update.
 Retrying authentication alone does not require the OP to recollect claims.
-The RP applies the same verification and freshness rules to updated Claim Sets.
 
 [IDA.Schema] defines the `verified_claims` structure.
 Using it does not by itself implement the [OpenID4IDA] query protocol or external assertion format.
@@ -1479,21 +1482,20 @@ Using it does not by itself implement the [OpenID4IDA] query protocol or externa
 Implementations that support [OpenID4IDA] can use its existing request and validation mechanisms.
 For example, `max_age` constrains `verification.time` or another requested date or timestamp.
 
-6. The RP MUST evaluate assurance timestamps separately from the JWT's `iat` when it uses [OpenID4IDA] freshness constraints.
-7. The OP MAY use supported constraints to select stored Claim Sets.
+7. The RP MUST evaluate assurance timestamps separately from the JWT's `iat` when it uses [OpenID4IDA] freshness constraints.
+8. The OP MAY use supported constraints to select stored Claim Sets.
 
 A new JWT does not show when the CP last verified the claims.
 Meeting a verification-age requirement can require renewed verification at the CP.
 Mapping constraints into a Claims Endpoint request requires a separate extension or profile.
 The base `claims` object accepts only `null` values.
 The OP can support [OpenID4IDA] without forwarding constraints or using them to select stored Claim Sets under this specification.
-The RP applies its acceptance checks even if the OP selects a Claim Set using those constraints.
 [OpenID4IDA] still governs its implementers' query, filtering, and omission behavior.
 
 The [OpenID4IDA] external assertion format uses `typ=provided-claims+jwt` and requires `sub`.
 That format prohibits `aud` and `exp`.
 
-8. The OP MUST NOT rewrite an existing signed assertion to convert it to this profile.
+9. The OP MUST NOT rewrite an existing signed assertion to convert it to this profile.
 
 Interoperability with that external assertion format requires a separate profile.
 
