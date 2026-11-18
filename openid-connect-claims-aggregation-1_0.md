@@ -413,11 +413,9 @@ The OP acts as an OpenID Provider to the RP and as an OpenID Connect client to C
 
 # Trust Model
 
-The RP relies on the OP to associate each CP-signed Claim Set with the Subject authenticated
-by the OP. The RP validates the OP's response and separately verifies each CP-signed Claim Set
-it uses. By including a Claim Set as a source of Aggregated Claims in an ID Token or UserInfo
-response, the OP asserts that the Claim Set is about the Subject identified by the `sub` in
-that response.
+The RP relies on the OP to link each CP-signed Claim Set to the authenticated Subject.
+The RP verifies each CP-signed Claim Set separately from its validation of the OP's response.
+The OP asserts that each included Claim Set concerns the Subject in the response's `sub` claim.
 
 1. The OP MUST bind the CP's Issuer Identifier and Subject Identifier (`iss`, `sub`), obtained
    from the validated CP ID Token during Setup, to the authenticated OP account that initiated
@@ -792,14 +790,9 @@ The following requirement applies to both procedures.
 
 ## Authorization Response Issuer Validation
 
-1. The CP MUST use the `iss` response parameter defined in Section 2 of [RFC9207] in Setup
-   authorization responses.
-1. For each Setup authorization request, the OP MUST store the expected CP Issuer Identifier from
-   the validated CP metadata and bind it to the authorization transaction and the user-agent
-   session.
-1. The OP MUST validate the Setup authorization response according to Section 2.4 of [RFC9207],
-   using the Issuer Identifier bound to the transaction, before sending the authorization code
-   to the Token Endpoint associated with the original request.
+1. The CP MUST include the [RFC9207] `iss` parameter in every Setup authorization response.
+1. The OP MUST bind the expected issuer from validated CP metadata to the Setup transaction and user-agent session.
+1. The OP MUST validate the response `iss` against the bound issuer per [RFC9207] before code exchange.
 1. The OP MUST reject any Setup authorization response that omits `iss`.
 
 ## Token Request and Account Binding
@@ -864,33 +857,16 @@ requires an extension. The RP applies its own freshness policy as described in
 
 ## RP authentication and the request verification
 
-1. The OP MUST validate the Authentication Request and handle errors using the client
-   metadata registered or resolved for the RP, in accordance with the rules for the flow
-   used in Section 3 of [OIDC] and the redirect URI matching rules in Section 4.1.3 of
-   [RFC9700]. This includes the applicable error rules in Sections 4.1.2.1 and 4.2.2.1 of
-   [RFC6749] for a missing or invalid client identifier or redirect URI.
-1. When the RP uses a Request Object, the OP MUST also apply Section 6.3 of [OIDC].
-1. For authorization code issuance and redemption, the OP MUST apply Sections 4.1.2 and
-   4.1.3 of [RFC6749] and the Token Request validation rules in Section 3.1.3.2 of [OIDC].
-1. A confidential RP MUST authenticate to the OP's Token Endpoint using its registered method
-   as specified in Sections 3.1.3.1 and 9 of [OIDC].
-1. The OP MUST apply Sections 4.4 and 4.6 of [RFC7636] and Section 4.8.2 of [RFC9700] for
-   PKCE binding, verification, and downgrade protection.
-1. The RP MUST apply the client requirements for preventing CSRF and authorization code
-   injection in Section 2.1 of [RFC9700] for the flow it uses, including the PKCE
-   requirements in Section 2.1.1 when the flow issues an authorization code.
-1. A confidential RP using the OIDC `nonce` instead of PKCE MUST apply the additional
-   requirements in Section 4.5.3.2 of [RFC9700].
+1. The OP MUST apply the redirect URI matching rules in [RFC9700].
+1. The OP MUST apply the authorization server requirements for PKCE in [RFC9700].
+1. The RP MUST apply the protections against CSRF and authorization code injection in [RFC9700].
 
-This profile also requires the following PKCE checks.
+This profile adds the following PKCE requirements.
 
-8. When using PKCE, the RP MUST use `S256` with a transaction-specific verifier securely bound
-   to the initiating client and user agent.
-1. The OP MUST reject a public RP's authorization request that would issue a code without an
-   `S256` challenge.
-1. For any RP, the OP MUST reject an authorization request containing `code_challenge` unless
-   `code_challenge_method` is explicitly `S256`, including when the method is omitted and
-   would default to `plain` under Section 4.3 of [RFC7636].
+4. The RP MUST use `S256` whenever it uses PKCE.
+1. The RP MUST securely bind its transaction-specific PKCE verifier to the initiating client and user agent.
+1. The OP MUST reject a public RP's request for an authorization code without an `S256` challenge.
+1. The OP MUST reject requests with `code_challenge` unless `code_challenge_method` is explicitly `S256`.
 
 ## Subject Granting
 
@@ -1680,10 +1656,7 @@ assumptions in (#trust-model) continue to apply.
 
 ## RP Request Integrity and Broker-Side Consent
 
-The requirements in (#rp-authentication-and-the-request-verification) apply to signed and
-unsigned requests. Request signatures do not replace redirect URI validation, authorization
-code binding, or the applicable Token Endpoint authentication and PKCE checks. PKCE proves
-possession of a transaction-specific verifier; it is not client authentication.
+The checks in (#rp-authentication-and-the-request-verification) apply to signed and unsigned requests.
 
 The OP acts as the broker between downstream RPs and upstream CPs in the topology described
 in Section 2.4 of [OAuth.Security.Update]. This specification uses the broker-side consent
