@@ -39,7 +39,7 @@ organization="Illumila"
 An OpenID Provider (OP) can disclose claims about an End-User, such as a name
 or date of birth, to a Relying Party (RP) with the End-User's consent. This
 document profiles the Aggregated Claims model defined in Section 5.6.2 of
-OpenID Connect Core 1.0 [OIDC]. In this model, the OP returns claims asserted
+OpenID Connect Core 1.0 [OpenID.Core]. In this model, the OP returns claims asserted
 by one or more Claims Providers (CPs).
 
 This document specifies the following interactions.
@@ -81,7 +81,7 @@ used in that representation. In particular, it does not require the JWT to be a 
 response. This specification provides implementation guidance for that interaction and defines
 an OAuth-protected Claims Endpoint, together with discovery, authorization, account binding,
 storage, disclosure, and verification requirements. Its scope is Aggregated Claims; the endpoint
-used by an RP to retrieve Distributed Claims in Section 5.6.2 of [OIDC] is distinct from the
+used by an RP to retrieve Distributed Claims in Section 5.6.2 of [OpenID.Core] is distinct from the
 OP-to-CP collection interface defined here.
 
 The Claims Endpoint separates OP-facing account-binding information from the CP-signed Claim
@@ -163,6 +163,15 @@ The following referenced documents are indispensable for the application of this
 [RFC7009] - OAuth 2.0 Token Revocation
 [RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
 
+[RFC7515] - JSON Web Signature (JWS)
+[RFC7515]: https://www.rfc-editor.org/rfc/rfc7515.html
+
+[RFC7518] - JSON Web Algorithms (JWA)
+[RFC7518]: https://www.rfc-editor.org/rfc/rfc7518.html
+
+[RFC7519] - JSON Web Token (JWT)
+[RFC7519]: https://www.rfc-editor.org/rfc/rfc7519.html
+
 [RFC7636] - Proof Key for Code Exchange by OAuth Public Clients
 [RFC7636]: https://www.rfc-editor.org/rfc/rfc7636.html
 
@@ -187,8 +196,8 @@ The following referenced documents are indispensable for the application of this
 [RFC9700] - Best Current Practice for OAuth 2.0 Security
 [RFC9700]: https://www.rfc-editor.org/rfc/rfc9700.html
 
-[OIDC] - OpenID Connect Core 1.0 incorporating errata set 2
-[OIDC]: https://openid.net/specs/openid-connect-core-1_0.html
+[OpenID.Core] - OpenID Connect Core 1.0 incorporating errata set 2
+[OpenID.Core]: https://openid.net/specs/openid-connect-core-1_0.html
 
 [OpenID.Discovery] - OpenID Connect Discovery 1.0
 [OpenID.Discovery]: https://openid.net/specs/openid-connect-discovery-1_0.html
@@ -202,20 +211,11 @@ The following referenced documents are indispensable for the application of this
 [OpenID4IDA] - OpenID Connect for Identity Assurance 1.0 incorporating errata set 1
 [OpenID4IDA]: https://openid.net/specs/openid-connect-4-identity-assurance-1_0-errata1.html
 
-[JWT] - JSON Web Token
-[JWT]: https://www.rfc-editor.org/rfc/rfc7519.html
-
-[JWS] - JSON Web Signature
-[JWS]: https://www.rfc-editor.org/rfc/rfc7515.html
-
-[JWA] - JSON Web Algorithms
-[JWA]: https://www.rfc-editor.org/rfc/rfc7518.html
-
 # Terms and definitions
-For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] and the following apply.
+For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID.Core], and the following apply.
 
 **Aggregated Claims** – claims asserted by a CP and returned by an OP using the
-representation defined in Section 5.6.2 of [OIDC]
+representation defined in Section 5.6.2 of [OpenID.Core]
 
 **Claim Set** – a CP-signed JWT containing claims issued through the CP's Claims Endpoint
 
@@ -230,6 +230,12 @@ representation defined in Section 5.6.2 of [OIDC]
 **HTTP** - Hypertext Transfer Protocol
 
 **TLS** - Transport Layer Security
+
+**JWT** – JSON Web Token
+
+**JWS** – JSON Web Signature
+
+**JWA** – JSON Web Algorithms
 
 # Actors
 
@@ -330,7 +336,7 @@ It returns the CP's signed Claim Sets as Aggregated Claims to RPs that the Subje
 # Trust Model
 
 The RP relies on the OP to link each CP-signed Claim Set to the authenticated Subject.
-The RP validates the enclosing ID Token or UserInfo response under [OIDC].
+The RP validates the enclosing ID Token or UserInfo response under [OpenID.Core].
 The RP verifies the CP-signed Claim Set separately under (#claims-verification).
 The OP asserts that each included Claim Set concerns the Subject in the enclosing response's `sub` claim.
 
@@ -407,7 +413,7 @@ The CP advertises Claim Set signing algorithms separately from UserInfo algorith
 1. The CP MUST expose a Claims Endpoint.
 
 The Claims Endpoint is an OAuth 2.0 protected resource where the OP obtains CP-signed Claim Sets.
-The Claims Endpoint differs from the UserInfo and Distributed Claims endpoints in [OIDC].
+The Claims Endpoint differs from the UserInfo and Distributed Claims endpoints in [OpenID.Core].
 See (#claims-endpoint-request) and (#claims-endpoint-response) for the wire protocol.
 
 ## Claim Set Profile
@@ -416,6 +422,7 @@ This profile applies to Claim Sets from the Claims Endpoint.
 It uses the JWT `typ` in (#signed-claim-set-format).
 The profile defines no new metadata or Authentication Request parameter for negotiating the type.
 (#claims-verification) specifies the validation rules.
+[RFC7518] defines the signing algorithm `RS256`.
 
 1. Deployments MAY establish OP and RP profile support through configuration, registration arrangements, or a trust framework.
 2. The CP MUST support the format in (#signed-claim-set-format).
@@ -440,7 +447,7 @@ The following parameters apply to the aggregating OP's `openid_provider` metadat
 2. The OP MUST set `claims_parameter_supported` to `true`.
 3. The OP MUST include `S256` in `code_challenge_methods_supported`.
 4. The OP MUST advertise these capabilities in any [OpenID.Discovery] configuration document it publishes.
-5. The OP MUST support Aggregated Claims as an OpenID Provider under [OIDC].
+5. The OP MUST support Aggregated Claims as an OpenID Provider under [OpenID.Core].
 
 (#rp-authentication-and-the-request-verification) governs PKCE for RPs.
 A CP that only issues Claim Sets to OPs has no obligation to advertise `aggregated`.
@@ -479,7 +486,7 @@ UserInfo signing and encryption metadata apply to UserInfo responses.
 
 The OP declares one `token_endpoint_auth_method` in its `openid_relying_party` metadata.
 The declaration applies to every CP that uses that Entity Configuration.
-[OIDC] defines `private_key_jwt`.
+[OpenID.Core] defines `private_key_jwt`.
 [OpenID.Federation] governs client authentication during Automatic Registration, including PAR.
 
 4. The OP MUST declare `private_key_jwt` in the base profile.
@@ -523,19 +530,19 @@ An assertion lifetime of a few minutes is one option.
 ## OP Collection Authorization
 
 1. The OP MUST collect claims as the CP's OpenID Connect client at the Subject's direction.
-2. The OP MUST request the collection grant with `response_type=code` under [OIDC].
+2. The OP MUST request the collection grant with `response_type=code` under [OpenID.Core].
 3. The OP SHOULD use scopes the CP supports to request claims and collection permissions.
 4. The OP SHOULD request only the claims and operations necessary for the Subject's authorized collection purposes.
 5. The OP MUST obtain a grant that authorizes Claims Endpoint access for the claims it will request.
 
 The CP or its applicable profile or trust framework maps claim permissions to scopes.
-`claims.userinfo` and `claims.id_token` retain their [OIDC] meanings.
+`claims.userinfo` and `claims.id_token` retain their [OpenID.Core] meanings.
 A UserInfo-only token does not authorize Claims Endpoint access.
 (#trust-model) governs the binding of the grant and tokens to the OP account.
 
 6. When requesting a refresh token for offline collection, the OP MUST include `offline_access` in `scope`.
-7. The OP MUST follow the [OIDC] consent rules when requesting offline collection.
-8. The CP MUST follow the [OIDC] consent rules when authorizing offline collection.
+7. The OP MUST follow the [OpenID.Core] consent rules when requesting offline collection.
+8. The CP MUST follow the [OpenID.Core] consent rules when authorizing offline collection.
 
 ## CP Consent Dialogue
 
@@ -609,7 +616,7 @@ The CP identifies Claims Aggregation clients by their `client_id` under (#client
 1. The OP MUST reject expired transactions.
 1. The OP MUST bind any `nonce` it sends to the transaction.
 
-[OIDC] governs validation of the ID Token's `nonce`.
+[OpenID.Core] governs validation of the ID Token's `nonce`.
 
 ## Authorization Response Session Validation
 
@@ -662,7 +669,7 @@ The following provisions apply to the code exchange.
 3. The OP MUST use the PKCE verifier bound to the validated transaction.
 4. The OP MUST NOT use the response to switch the CP, connection configuration, tenant, or Token Endpoint.
 
-The OP validates the CP's ID Token under [OIDC] before establishing the binding in (#trust-model).
+The OP validates the CP's ID Token under [OpenID.Core] before establishing the binding in (#trust-model).
 
 5. The OP MUST establish the account binding before storing the resulting tokens or Claim Sets.
 6. The OP MUST establish the account binding before using the resulting tokens or Claim Sets.
@@ -710,14 +717,14 @@ The Delivery Phase typically includes the following steps.
 
 ## Claims Request by RP to OP
 
-1. The RP MUST request claims in an [OIDC] Authentication Request.
+1. The RP MUST request claims in an Authentication Request under [OpenID.Core].
 2. To request individual claims, the RP MUST use `userinfo`, `id_token`, or both in `claims`.
 3. The OP MUST support the `claims` parameter.
 4. The RP MUST include `policy_uri` in its client metadata.
 5. The OP MUST return claims from the selected CPs as Aggregated Claims.
 
 The OP selects CPs associated with the Subject's account.
-[OIDC] defines `claims` and `scope`. Selecting a specific CP requires an extension.
+[OpenID.Core] defines `claims` and `scope`. Selecting a specific CP requires an extension.
 [OpenID.Registration] defines `policy_uri`. The OP uses it in (#subject-granting).
 (#claims-verification) specifies how the RP evaluates the CP and the age of its Claim Set.
 
@@ -737,7 +744,7 @@ This profile adds the following PKCE requirements.
 
 ## Subject Granting
 
-[OIDC] governs authentication and `prompt`. The OP validates the request before seeking consent.
+[OpenID.Core] governs authentication and `prompt`. The OP validates the request before seeking consent.
 
 1. The OP MUST obtain the Subject's RP-specific authorization before requesting CP authorization on that RP's behalf.
 2. The OP MUST obtain the Subject's RP-specific authorization before disclosing any claims to that RP.
@@ -772,7 +779,7 @@ The OP omits `account_ref` from Aggregated Claims as specified in (#claims-endpo
 22. For `prompt=none`, the OP MUST return `consent_required` if it lacks valid consent for the disclosure.
 
 (#authorization-withdrawal-and-grant-revocation) governs withdrawal.
-[OIDC] governs other authentication or interaction errors.
+[OpenID.Core] governs other authentication or interaction errors.
 
 ## Claims Collection
 
@@ -790,7 +797,7 @@ The relevant policies include the OP's collection and storage policies.
 Access token renewal alone leaves the stored Claim Set unchanged.
 
 The downscoping recommendation applies when the OP has a refresh token and a suitable narrower scope.
-[OIDC] and [RFC6749] govern refresh and downscoping.
+[OpenID.Core] and [RFC6749] govern refresh and downscoping.
 
 8. The OP SHOULD request a downscoped access token when its current token grants more access than collection needs.
 9. The OP MUST reestablish trust in the CP before sending requests after the Trust Chain expires.
@@ -1168,13 +1175,13 @@ Reusing a stored Claim Set does not require a new CP operation nonce or CP conta
 1. The CP MUST issue each Claim Set as a compact, asymmetrically signed JWS containing a JSON object.
 1. The CP MUST set the protected header's `typ` to `claims-aggregation+jwt`.
 
-[JWS] permits omission of the media type's `application/` prefix in `typ`.
+[RFC7515] permits omission of the media type's `application/` prefix in `typ`.
 This type identifies the inner Claim Set within the acquisition envelope or the OP's response.
 
 3. The CP MUST include `iss`, `aud`, `iat`, and `exp` in the payload.
 1. The CP MUST set `iss` to its validated Issuer Identifier.
 1. The CP MUST set `aud` to the OP's Entity Identifier as a string or single-element array.
-1. The CP MUST use [JWT] NumericDate values for `iat` and `exp`.
+1. The CP MUST encode `iat` and `exp` as NumericDate values defined in [RFC7519].
 1. The CP MUST set `exp` to a time later than `iat`.
 
 The OP uses its Entity Identifier as described in (#client-configuration-phase).
@@ -1190,7 +1197,7 @@ The Subject can authorize disclosure of identifying attributes.
 11. The CP MUST place claims for the RP in top-level JWT members.
 1. The CP MUST sign the JWT with the `signing_alg` it accepts in the Claims Endpoint request.
 
-The OP can reference those claims in `_claim_names` as specified in [OIDC].
+The OP can reference those claims in `_claim_names` as specified in [OpenID.Core].
 The format uses no holder proof or per-presentation identifier.
 It does not require a `jti` claim.
 
@@ -1227,7 +1234,7 @@ otherwise valid message unless indicated.
 
 ## Claims Delivery
 
-[OIDC] governs claim destinations, omission rules, and the Aggregated Claims representation.
+[OpenID.Core] governs claim destinations, omission rules, and the Aggregated Claims representation.
 
 1. The OP MUST apply the applicable request constraints to each response.
 2. The OP MUST omit `_claim_names` entries for claims it cannot supply in an authorized, valid Claim Set.
@@ -1242,7 +1249,7 @@ otherwise valid message unless indicated.
 
 The RP receives all claims in the embedded JWT, including claims without a mapping in `_claim_names`.
 (#authorization-withdrawal-and-grant-revocation) specifies when the OP can use previously collected Claim Sets.
-The `essential` flag alone does not make an omission an authentication error under [OIDC].
+The `essential` flag alone does not make an omission an authentication error under [OpenID.Core].
 
 For example, the RP requests `birthdate` and `address` in the ID Token:
 
@@ -1322,7 +1329,7 @@ The following sources supply CP metadata and its verification keys.
 
 ### Signature Validation
 
-[JWS] governs signature verification.
+[RFC7515] governs signature verification.
 
 1. The verifier MUST require an asymmetrically signed JWS.
 2. The verifier MUST determine its allowed algorithms before verifying the signature.
@@ -1339,7 +1346,7 @@ The following sources supply CP metadata and its verification keys.
 ### Claim Validation
 
 The verifier checks claims after validating the signature.
-[JWT] governs time claim types, expiration, and not-before processing.
+[RFC7519] governs time claim types, expiration, and not-before processing.
 
 1. The verifier MUST require `claims-aggregation+jwt` in the protected header's `typ`.
 2. The verifier MUST reject a Claim Set whose payload contains `sub`.
@@ -1364,7 +1371,7 @@ The following requirements apply when the RP receives Aggregated Claims through 
 The RP relies on the OP for Subject binding as described in (#trust-model).
 The RP follows the same clause when deciding whether to trust the CP.
 
-17. The RP MUST validate the Aggregated Claims structure according to [OIDC].
+17. The RP MUST validate the Aggregated Claims structure according to [OpenID.Core].
 18. The RP MUST check that each mapped claim appears in its referenced JWT.
 19. The RP MUST apply the validation rules for each claim it uses.
 20. The OP MUST reject a Claim Set that fails any required check.
@@ -1420,7 +1427,7 @@ Interoperability with that external assertion format requires a separate profile
 
 ## General Security Considerations
 
-The security considerations of [OIDC], [OpenID.Federation], and [RFC8725] apply.
+The security considerations of [OpenID.Core], [OpenID.Federation], and [RFC8725] apply.
 
 Before verifying the signature, the verifier constrains algorithms and keys under
 (#signature-validation) and (#cp-metadata-and-verification-keys). This prevents a JWT
@@ -1747,7 +1754,7 @@ encryption alone.
 The OP uses the CP's stable Subject Identifier for account binding. The RP-facing
 Claim Set omits that identifier. Pairwise identifiers at the CP would otherwise
 be scoped to the OP's Sector Identifier rather than to each downstream RP, as specified
-in Section 8.1 of [OIDC]. Omitting the CP `sub` removes that direct downstream identifier;
+in Section 8.1 of [OpenID.Core]. Omitting the CP `sub` removes that direct downstream identifier;
 it does not guarantee unlinkability. Authorized identifying attributes can still correlate
 Subjects, and a CP can recognize information it issued when an RP shares it.
 The OP's pairwise identifiers in enclosing responses do not hide the inner JWT's contents.
@@ -1815,7 +1822,7 @@ The correlation risks for newly issued Claim Sets are described in
 The stable account-binding identifier remains in the OP-facing acquisition envelope. The
 OP validates it against the Setup ID Token, then discloses only the inner JWT. The new
 endpoint avoids changing UserInfo's requirement that its `sub` match the ID Token `sub`.
-Using a refreshed ID Token itself would not provide that separation: Section 12.2 of [OIDC]
+Using a refreshed ID Token itself would not provide that separation: Section 12.2 of [OpenID.Core]
 requires its issuer, subject, and audience to remain those of the original ID Token.
 
 This specification introduces no batch issuance protocol and does not require a newly
@@ -1887,7 +1894,7 @@ using the template in Section 5.6 of [RFC6838].
 - Subtype name: `claims-aggregation+jwt`
 - Required parameters: None.
 - Optional parameters: None.
-- Encoding considerations: binary; a compact JWS as defined in [JWS].
+- Encoding considerations: binary; a compact JWS as defined in [RFC7515].
 - Security considerations: See (#security-considerations) and (#privacy-considerations).
 - Interoperability considerations: See (#signed-claim-set-format), (#claim-set-profile),
   and (#claims-verification).
