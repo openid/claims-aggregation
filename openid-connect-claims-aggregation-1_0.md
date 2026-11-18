@@ -456,15 +456,13 @@ A CP that only issues Claim Sets to OPs has no obligation to advertise `aggregat
 ## Automatic Registration
 
 The OP acts as an OpenID Connect client of the CP.
+[OpenID.Federation] governs Automatic Registration, including Trust Chain validation and metadata resolution.
 
-1. The OP and the CP MUST use Automatic Registration as specified in Section 12.1 of
-   [OpenID.Federation].
-1. The OP MUST publish `openid_provider` and `openid_relying_party` metadata in its Entity
-   Configuration under the same Entity Identifier.
-1. The OP MUST use this Entity Identifier as both its Issuer Identifier and its `client_id` at
-   the CP.
-1. The OP and the CP MUST perform Trust Chain and metadata resolution as required by
-   [OpenID.Federation].
+1. The OP MUST use Automatic Registration with the CP.
+2. The CP MUST use Automatic Registration for the OP.
+3. The OP MUST publish `openid_provider` metadata in its Entity Configuration.
+4. The OP MUST publish `openid_relying_party` metadata in the same Entity Configuration.
+5. The OP MUST use its Entity Identifier as both its Issuer Identifier and its `client_id` at the CP.
 
 For example, an OP with the Issuer Identifier `https://op.example` uses `https://op.example` as its
 `client_id` at the CP and publishes its Entity Configuration at
@@ -472,14 +470,11 @@ For example, an OP with the Issuer Identifier `https://op.example` uses `https:/
 
 ## Client Metadata
 
-1. The OP MUST include `policy_uri`, defined in [OpenID.Registration], in its
-   `openid_relying_party` metadata so the CP can show its privacy policy during Setup.
+1. The OP MUST include `policy_uri` in its `openid_relying_party` metadata.
 
-Claim Set signing algorithms are selected per collection request from the CP's validated
-`claims_signing_alg_values_supported`, subject to OP policy. They are not selected using
-`userinfo_signed_response_alg`. UserInfo response signing and encryption metadata do not
-control the Claims Endpoint. The OP's single Federation RP metadata object therefore
-does not need to declare a different Claim Set signing algorithm for each CP.
+[OpenID.Registration] defines `policy_uri`. The CP uses it in (#cp-consent-dialogue).
+(#claims-endpoint-request) governs Claim Set signing algorithm selection.
+UserInfo signing and encryption metadata apply to UserInfo responses.
 
 ## OP Client Authentication
 
@@ -532,44 +527,31 @@ An assertion lifetime of a few minutes is one option.
 
 ## OP Collection Authorization
 
-The OP obtains the Subject's authorization to collect claims from each CP it will use.
-
-1. The OP MUST use the OpenID Connect Authorization Code Flow with `response_type=code` to
-   obtain the grant.
-1. The OP SHOULD identify the requested claims and collection permissions using scopes
-   supported by the CP.
-1. The grant MUST authorize access to the Claims Endpoint for the requested claims.
-
-This specification does not assign new meaning to `claims.userinfo` or `claims.id_token` for
-that resource; mapping claim permissions to scopes is defined by the CP or an applicable
-profile or trust framework.
-
-4. The OP MUST NOT assume that a UserInfo-only token authorizes access to the Claims Endpoint.
-
-An existing grant without the required resource permission requires new authorization before
-collection.
-
-5. The OP SHOULD limit the requested grant to claims and operations needed for the collection
-   purposes authorized by the Subject, as described in Section 2.3 of [RFC9700].
-1. The OP MUST associate the grant and tokens with the authenticated OP account as specified
-   in (#trust-model).
-1. When requesting a refresh token for offline access, the OP MUST include `offline_access` in
-   `scope`.
-1. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC], including
-   `prompt=consent` unless other conditions permitting offline access are in place.
 1. The OP MUST collect claims as the CP's OpenID Connect client at the Subject's direction.
+2. The OP MUST request the collection grant with `response_type=code` under [OIDC].
+3. The OP SHOULD use scopes the CP supports to request claims and collection permissions.
+4. The OP SHOULD request only the claims and operations necessary for the Subject's authorized collection purposes.
+5. The OP MUST obtain a grant that authorizes Claims Endpoint access for the claims it will request.
+
+The CP or its applicable profile or trust framework maps claim permissions to scopes.
+`claims.userinfo` and `claims.id_token` retain their [OIDC] meanings.
+A UserInfo-only token does not authorize Claims Endpoint access.
+(#trust-model) governs the binding of the grant and tokens to the OP account.
+
+6. When requesting a refresh token for offline collection, the OP MUST include `offline_access` in `scope`.
+
+[OIDC] governs consent for this use of offline access.
 
 ## CP Consent Dialogue
 
-1. The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim
-   Sets to provide claims to RPs at the Subject's direction.
-1. The CP MUST include in the dialogue a link to the `policy_uri` in the OP's client metadata.
-1. The CP MUST require active interaction from the Subject before granting access.
-1. The CP MUST explain that the OP can continue to use or disclose collected Claim Sets until
-   they expire, even after the CP revokes the grant.
-1. The CP MUST explain that the Subject controls further disclosure at the OP.
-1. The CP MUST explain that the Subject uses the OP's controls to stop disclosure as described
-   in (#authorization-withdrawal-and-grant-revocation).
+1. The CP MUST show the Subject a consent dialogue.
+2. The CP MUST explain that the OP collects signed Claim Sets for RPs at the Subject's direction.
+3. The CP MUST link to the OP's `policy_uri` from its client metadata.
+4. The CP MUST require active interaction from the Subject before granting access.
+5. The CP MUST explain that the OP can use or disclose collected Claim Sets until expiration, despite grant revocation.
+6. The CP MUST explain how the Subject controls further disclosure, including how to stop it at the OP.
+
+(#authorization-withdrawal-and-grant-revocation) describes those controls.
 
 ### CP Grant Management
 
@@ -678,26 +660,42 @@ The following requirement applies to both procedures.
 
 ## Token Request and Account Binding
 
-1. The OP MUST use the client registration, `redirect_uri`, and PKCE verifier bound to the
-   validated transaction for the code exchange.
-1. The OP MUST NOT select a different CP, connection configuration, tenant, or Token Endpoint
-   based on the received response.
-1. After validating the CP's ID Token according to [OIDC], the OP MUST establish the account
-   binding in (#trust-model) before using or storing the resulting tokens or Claim Sets for
-   that account.
-1. If the OP has a stored CP subject binding for the OP account and the same CP issuer, it
-   MUST compare the new CP `sub` with the stored value.
-1. If it detects a different CP `sub`, the OP MUST treat it as account relinking and obtain
-   explicit confirmation from the authenticated Subject before replacing the binding.
-1. Before establishing a new binding, the OP SHOULD check whether the validated CP (`iss`,
-   `sub`) is already bound to another OP account within the applicable account namespace,
-   including the tenant where accounts are tenant-scoped.
-1. If such a binding exists, the OP MUST either reject the new binding or require additional
-   verification under the deployment's account-linking policy before making the CP's tokens or
-   Claim Sets available to the new OP account.
-1. The OP MUST NOT automatically transfer or remove the existing binding.
-1. Deployments that permit a CP account to be linked to multiple OP accounts MUST define the
-   conditions for doing so in that policy.
+The following provisions apply to the code exchange.
+
+1. The OP MUST use the client registration bound to the validated transaction.
+2. The OP MUST use the `redirect_uri` bound to the validated transaction.
+3. The OP MUST use the PKCE verifier bound to the validated transaction.
+4. The OP MUST NOT use the response to switch the CP, connection configuration, tenant, or Token Endpoint.
+
+The OP validates the CP's ID Token under [OIDC] before establishing the binding in (#trust-model).
+
+5. The OP MUST establish the account binding before storing the resulting tokens or Claim Sets.
+6. The OP MUST establish the account binding before using the resulting tokens or Claim Sets.
+
+The following provisions apply to an existing OP account binding for the same CP issuer.
+
+7. The OP MUST compare the new CP `sub` with the stored value.
+8. The OP MUST treat a changed CP `sub` as account relinking.
+9. For relinking, the OP MUST obtain explicit confirmation from the authenticated Subject before replacing the binding.
+
+The CP identity here is the validated (`iss`, `sub`) pair.
+The OP checks the applicable account namespace. For tenant-scoped accounts, that namespace is the tenant.
+
+10. Before creating a binding, the OP SHOULD check whether another OP account already links to the validated CP identity.
+
+If the OP finds such a binding, the following provisions apply.
+
+11. The OP MUST reject the new binding or require additional verification under its account-linking policy.
+12. The OP MUST NOT automatically transfer the existing binding.
+13. The OP MUST NOT automatically remove the existing binding.
+
+When the OP chooses verification, the following restriction applies.
+
+14. The OP MUST complete that verification before making CP tokens or Claim Sets available to the new OP account.
+
+Deployments can permit a CP account to link to multiple OP accounts.
+
+15. Such deployments MUST define the conditions for multiple bindings in their account-linking policy.
 
 # Delivery Phase (RP Phase)
 
