@@ -317,97 +317,18 @@ performance of contract, consent, and other lawful basis.
 
 ## CP
 
-### CP Responsibilities
-
-An OpenID Provider that accepts the OP as a client can act as a CP.
-
-1. The CP MUST support the Claims Endpoint defined in (#claims-endpoint).
-1. The CP MUST support the signed Claim Set format in (#signed-claim-set-format).
-1. The CP MUST support OpenID Federation Automatic Registration as specified in
-   (#client-configuration-phase).
-1. The CP SHOULD give the authenticated Subject a user interface to review and revoke standing
-   grants to OPs, including the claims and operations they permit.
-
-### Claims Endpoint
-
-The Claims Endpoint is an OAuth 2.0 Protected Resource used by the OP to obtain
-CP-signed Claim Sets. It is distinct from the UserInfo Endpoint in Section 5.3 of [OIDC]
-and from the RP-facing endpoint for Distributed Claims in Section 5.6.2 of [OIDC]. Its
-request and response are defined in (#claims-endpoint-request) and
-(#claims-endpoint-response).
-
-### Signed Claim Set Format
-
-1. The CP MUST issue each Claim Set as a compact, asymmetrically signed JWS containing a JSON
-   object.
-1. The CP MUST set `typ` to `claims-aggregation+jwt` in the protected header.
-
-This is the `application/`-omitted form of the media type
-`application/claims-aggregation+jwt`, as specified in Section 4.1.9 of [JWS]. This type
-identifies the inner signed Claim Set, not the JSON acquisition envelope or the OP's
-enclosing ID Token or UserInfo response.
-
-3. The CP MUST include `iss`, `aud`, `iat`, and `exp` in the payload.
-1. The CP MUST set `iss` to its validated Issuer Identifier.
-1. The CP MUST set `aud` to the OP's Entity Identifier as a string or as an array containing
-   only that string. The OP uses this identifier as its `client_id` at the CP and its Issuer
-   Identifier under (#client-configuration-phase).
-1. The CP MUST use NumericDate values for `iat` and `exp` as defined in [JWT].
-1. The CP MUST set `exp` to a time later than `iat`.
-
-These timestamps describe the issuance and expiration of the JWT, not when the underlying
-attributes were verified.
-
-8. The CP MUST NOT include `sub` in the Claim Set.
-1. The CP MUST NOT include the OP-facing `account_ref` or an equivalent CP account identifier
-   under another claim name for account binding.
-
-This does not prohibit identifying attributes that the Subject authorizes for disclosure,
-such as a name or an explicitly requested identifier; their correlation risks still apply.
-
-10. Claims supplied to the RP MUST appear as top-level members that can be referenced using
-    `_claim_names` as specified in Section 5.6.2 of [OIDC].
-
-The format does not introduce a holder proof or require a per-presentation identifier or
-`jti`.
-
-11. The CP MUST implement `RS256` signing for Claim Sets.
-1. The OP and RP MUST implement `RS256` signature verification for Claim Sets.
-1. The OP MUST support selecting `RS256` in a Claims Endpoint request.
-1. Implementations MAY support additional asymmetric signing algorithms, subject to metadata
-   and policy validation in (#signature-validation).
-1. The CP MUST sign the JWT using the `signing_alg` accepted in the Claims Endpoint request.
-1. The CP MUST NOT use the same signing key with more than one signature algorithm.
-1. For each key the CP uses to sign Claim Sets, the CP MUST publish the intended algorithm in
-   the `alg` parameter of every JWK representation it advertises for that key.
-1. When rotating signing keys, the CP SHOULD keep each retired public key available through
-   its advertised verification-key sources until all Claim Sets signed with that key have
-   expired, including the clock-skew allowance used by the deployment.
-1. The CP MAY withdraw compromised keys earlier under the deployment's key revocation policy.
-
-The name Claims Endpoint and the metadata names `claims_endpoint` and
-`claims_signing_alg_values_supported` restore terminology used in an earlier draft of this
-specification. This does not restore that draft's wire format: this profile separates
-OP-facing account binding from the signed JWT disclosed to the RP.
-
-Registration requests for the two CP metadata names and the Claim Set media type are
-specified in (#iana-considerations).
-
-[[ Editor's note: The registration templates are defined below; formal registration has
-not yet been completed. Before submission, references must identify a stable, publicly
-available specification version. Previous use of a name in a draft is not a registration. ]]
+The Claims Provider (CP) is an OpenID Provider that accepts the aggregating OP as a client.
+The CP obtains the Subject's authorization for collection during Setup.
+It issues signed Claim Sets through its Claims Endpoint.
+The CP also supplies the account reference that the OP uses to associate each set with the Subject.
 
 ## OP
 
-The OP acts as an OpenID Provider to the RP and as an OpenID Connect client to CPs.
-
-1. The OP MUST support OpenID Connect Aggregated Claims as an OpenID Provider.
-1. The OP MUST act as an OpenID Connect relying party to collect claims from CPs at the
-   Subject's direction.
-1. The OP MAY store signed Claim Sets with the controls in (#token-and-claim-set-storage).
-1. The OP MUST provide the authenticated Subject with the storage and authorization controls
-   in (#subject-control-of-stored-claim-sets), including a view of stored claims.
-1. The OP MUST NOT provide claims to RPs without the Subject's permission.
+The aggregating OpenID Provider (OP) acts as an OpenID Connect client of the CP.
+It serves RPs as their OpenID Provider.
+At the Subject's direction, it collects Claim Sets and can store them for later use.
+It associates each Claim Set with the Subject's OP account.
+It returns the CP's signed Claim Sets as Aggregated Claims to RPs that the Subject authorizes.
 
 
 
@@ -508,6 +429,14 @@ The CP's UserInfo metadata does not select the Claim Set signing algorithm.
    advertise these capabilities and support for the authorization response `iss` parameter
    there as well.
 
+### Claims Endpoint
+
+1. The CP MUST expose a Claims Endpoint.
+
+The Claims Endpoint is an OAuth 2.0 protected resource where the OP obtains CP-signed Claim Sets.
+It differs from the UserInfo Endpoint and the RP-facing endpoint for Distributed Claims in [OIDC].
+See (#claims-endpoint-request) and (#claims-endpoint-response) for the wire protocol.
+
 ## Claim Set Profile
 
 This specification defines one signed Claim Set profile, identified by the explicit JWT
@@ -524,6 +453,11 @@ it does not impose that type on every JWT used for Aggregated Claims under [OIDC
 2. Within this profile, the OP and RP MUST apply (#claims-verification).
 1. If validation fails, the OP and RP MUST NOT silently fall back to an ID Token, UserInfo
    JWT, or another profile.
+1. The OP MUST implement `RS256` signature verification for Claim Sets.
+1. The RP MUST implement `RS256` signature verification for Claim Sets.
+1. The OP MUST support selecting `RS256` in Claims Endpoint requests.
+1. Implementations MAY support other asymmetric algorithms subject to (#signature-validation).
+1. The CP MUST support the format in (#signed-claim-set-format).
 
 Existing stored JWTs with `sub` do not conform to this profile. Support for another profile
 requires separate validation rules and deployment arrangements outside this specification.
@@ -542,6 +476,7 @@ Sets to the OP has no requirement to advertise `aggregated` in that role.
    in [RFC7636].
 1. The OP MUST include `S256` in `code_challenge_methods_supported` in its `openid_provider`
    metadata and, if published, its [OpenID.Discovery] configuration document.
+1. The OP MUST support Aggregated Claims as an OpenID Provider under [OIDC].
 
 
 # Client Configuration Phase
@@ -652,6 +587,7 @@ collection.
    `scope`.
 1. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC], including
    `prompt=consent` unless other conditions permitting offline access are in place.
+1. The OP MUST collect claims as the CP's OpenID Connect client at the Subject's direction.
 
 ## CP Consent Dialogue
 
@@ -664,6 +600,12 @@ collection.
 1. The CP MUST explain that the Subject controls further disclosure at the OP.
 1. The CP MUST explain that the Subject uses the OP's controls to stop disclosure as described
    in (#authorization-withdrawal-and-grant-revocation).
+
+### CP Grant Management
+
+1. The CP SHOULD let the authenticated Subject review standing grants to OPs through a user interface.
+1. The CP SHOULD let the authenticated Subject revoke standing grants through that interface.
+1. The CP SHOULD show the claims and operations each grant permits in that interface.
 
 ## CP Token Issuance and Use
 
@@ -931,6 +873,7 @@ Renewing an access token alone does not update a stored Claim Set.
 1. The OP SHOULD encrypt sensitive stored material at rest and protect encryption keys
    separately from the data.
 1. Key isolation and access controls SHOULD limit the impact of a compromised component.
+1. The OP MAY store signed Claim Sets under the controls in this section.
 
 The storage architecture, including the use of Subject-controlled encryption keys, is an
 implementation choice. These safeguards do not impose a retention deadline on Claim Sets or
@@ -1292,6 +1235,47 @@ Reusing a stored Claim Set does not require a new CP operation nonce or CP conta
 41. The OP MUST NOT disclose the acquisition envelope, `account_ref`, or operation `nonce` to
     the RP as part of the Aggregated Claims response.
 
+#### Signed Claim Set Format
+
+1. The CP MUST issue each Claim Set as a compact, asymmetrically signed JWS containing a JSON object.
+1. The CP MUST set the protected header's `typ` to `claims-aggregation+jwt`.
+
+[JWS] permits omission of the media type's `application/` prefix in `typ`.
+This type identifies the inner Claim Set within the acquisition envelope or the OP's response.
+
+3. The CP MUST include `iss`, `aud`, `iat`, and `exp` in the payload.
+1. The CP MUST set `iss` to its validated Issuer Identifier.
+1. The CP MUST set `aud` to the OP's Entity Identifier as a string or single-element array.
+1. The CP MUST use [JWT] NumericDate values for `iat` and `exp`.
+1. The CP MUST set `exp` to a time later than `iat`.
+
+The OP uses its Entity Identifier as described in (#client-configuration-phase).
+These timestamps describe JWT issuance and expiration. Attribute verification can occur at a different time.
+
+8. The CP MUST omit `sub` from the Claim Set.
+1. The CP MUST omit `account_ref` from the Claim Set.
+1. The CP MUST omit equivalent CP account identifiers that it uses for account binding.
+
+The Subject can authorize disclosure of identifying attributes.
+(#correlation-and-transferable-signed-data) describes their correlation risks.
+
+11. The CP MUST place claims for the RP in top-level JWT members.
+1. The CP MUST sign the JWT with the `signing_alg` it accepts in the Claims Endpoint request.
+
+The OP can reference those claims in `_claim_names` as specified in [OIDC].
+The format uses no holder proof or per-presentation identifier.
+It does not require a `jti` claim.
+
+The name Claims Endpoint and the metadata names `claims_endpoint` and
+`claims_signing_alg_values_supported` restore terminology from an earlier draft.
+This profile separates the OP-facing account reference from the signed JWT that the RP receives.
+
+See (#iana-considerations) for the CP metadata and Claim Set media type registration requests.
+
+[[ Editor's note: The registration templates are defined below; formal registration has
+not yet been completed. Before submission, references must identify a stable, publicly
+available specification version. Previous use of a name in a draft is not a registration. ]]
+
 ### JSON Member Handling Examples
 
 Some JSON parsers silently keep a single value for a repeated member name. Implementers
@@ -1441,6 +1425,11 @@ front-channel response handling, as discussed in
    verifier MUST NOT accept the Claim Set on the basis of an earlier successful validation.
 1. The OP MUST obtain a replacement Claim Set from the CP or omit the affected Claim Set, as
    specified in (#claims-collection) and (#claims-delivery).
+1. The CP MUST use each Claim Set signing key with one algorithm as specified in [RFC8725].
+1. The CP MUST publish each Claim Set signing key's algorithm in every advertised JWK's `alg`.
+1. The CP SHOULD keep retired public keys available through its advertised key sources until their signed Claim Sets expire.
+1. The CP SHOULD include its clock-skew allowance in that key retention period.
+1. The CP MAY withdraw compromised keys earlier under its deployment's key revocation policy.
 
 ### Signature Validation
 
