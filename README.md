@@ -30,10 +30,15 @@ HTML and XML, and the source commit link. The script builds the committed
 Markdown at `HEAD` by default. Pass a commit or branch name as the second
 argument to reproduce a particular revision, such as `origin/master`.
 
-The Editor's Draft preview workflow builds on pull requests and on pushes
-to `master`. To publish the preview from `master`, select **GitHub Actions**
-as the source in the repository's **Settings → Pages**. The published WG Draft
-follows the [OpenID Foundation publication process](https://openid.net/wg/resources/publishing-specifications/).
+### Publish the WG review preview
+
+Select **GitHub Actions** as the source in **Settings → Pages**. When a
+revision is ready for WG review, open **Actions → Editor's Draft preview**,
+select **Run workflow**, and choose `master`. The preview displays the
+`master` commit used for that run.
+
+The published WG Draft follows the
+[OpenID Foundation publication process](https://openid.net/wg/resources/publishing-specifications/).
 
 ## Contributing
 
