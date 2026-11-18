@@ -1588,34 +1588,20 @@ Discovery document as specified in (#discovery-phase).
 
 ## Media Type Registration
 
-The following registration is requested in the Media Types registry [IANA.MediaTypes]
-using the template in Section 5.6 of [RFC6838]. It identifies the inner compact JWS in
-(#signed-claim-set-format). The Claims Endpoint's HTTP request and acquisition response
-continue to use `application/json`; this registration does not define a direct-JWT HTTP
-response mode.
+The following registration is requested in the Media Types registry [IANA.MediaTypes],
+using the template in Section 5.6 of [RFC6838].
 
 - Type name: `application`
 - Subtype name: `claims-aggregation+jwt`
 - Required parameters: None.
 - Optional parameters: None.
-- Encoding considerations: binary; a compact JWS consisting of three base64url-encoded components
-  separated by period characters, as defined in [JWS].
-- Security considerations: The object contains signed personal data. A signature alone does not
-  establish issuer trust, Subject association, authorization to disclose, or current attribute
-  status. The type, issuer, audience, algorithm, key, time, and disclosure checks in
-  (#claims-verification) apply. The signature provides no confidentiality; copies and reuse can
-  enable correlation and onward transfer. See (#security-considerations),
-  (#privacy-considerations), and the JWT/JWS security considerations they incorporate.
-- Interoperability considerations: This type identifies this specification's signed Claim Set
-  profile. It is distinct from a CP ID Token, UserInfo JWT, or the `provided-claims+jwt` external
-  assertion format. RS256 signing and verification support is mandatory; additional asymmetric
-  algorithms are subject to validated metadata and policy. The audience identifies the OP, and
-  Subject binding relies on the OP under the L1 model. Absence of `sub` does not establish
-  unlinkability. See (#claim-set-profile) and (#claims-verification).
+- Encoding considerations: binary; a compact JWS as defined in [JWS].
+- Security considerations: See (#security-considerations) and (#privacy-considerations).
+- Interoperability considerations: See (#signed-claim-set-format), (#claim-set-profile),
+  and (#claims-verification).
 - Published specification: This specification, (#signed-claim-set-format) and
   (#claims-verification).
-- Applications that use this media type: Claims Providers, aggregating OpenID Providers, and
-  Relying Parties implementing OpenID Connect Claims Aggregation.
+- Applications that use this media type: Implementations of this specification.
 - Fragment identifier considerations: No fragment identifier syntax is defined for this media
   type. The existing `+jwt` fragment identifier rules apply.
 - Additional information:
