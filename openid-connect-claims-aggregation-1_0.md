@@ -865,10 +865,10 @@ requires an extension. The RP applies its own freshness policy as described in
 ## RP authentication and the request verification
 
 1. The OP MUST validate the Authentication Request and handle errors using the client
-   metadata registered or resolved for the RP, in accordance with Section 3 of [OIDC],
-   Section 4.1.3 of [RFC9700] for redirect URI matching, and Sections 4.1.2.1 and 4.2.2.1 of
-   [RFC6749] for errors involving a missing or invalid client identifier or redirect URI.
-   The requirements apply according to the flow used.
+   metadata registered or resolved for the RP, in accordance with the rules for the flow
+   used in Section 3 of [OIDC] and the redirect URI matching rules in Section 4.1.3 of
+   [RFC9700]. This includes the applicable error rules in Sections 4.1.2.1 and 4.2.2.1 of
+   [RFC6749] for a missing or invalid client identifier or redirect URI.
 1. When the RP uses a Request Object, the OP MUST also apply Section 6.3 of [OIDC].
 1. For authorization code issuance and redemption, the OP MUST apply Sections 4.1.2 and
    4.1.3 of [RFC6749] and the Token Request validation rules in Section 3.1.3.2 of [OIDC].
@@ -877,7 +877,8 @@ requires an extension. The RP applies its own freshness policy as described in
 1. The OP MUST apply Sections 4.4 and 4.6 of [RFC7636] and Section 4.8.2 of [RFC9700] for
    PKCE binding, verification, and downgrade protection.
 1. The RP MUST apply the client requirements for preventing CSRF and authorization code
-   injection in Section 2.1 of [RFC9700], as applicable to its flow.
+   injection in Section 2.1 of [RFC9700] for the flow it uses, including the PKCE
+   requirements in Section 2.1.1 when the flow issues an authorization code.
 1. A confidential RP using the OIDC `nonce` instead of PKCE MUST apply the additional
    requirements in Section 4.5.3.2 of [RFC9700].
 
