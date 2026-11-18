@@ -303,13 +303,13 @@ The Subject directs the OP to collect those claims and can authorize storage for
 The OP can combine claims from several sources for disclosure under the Subject's direction.
 The Subject can authorize collection before choosing which RPs will receive the claims.
 The Subject can let an RP request claims from the OP to obtain a service.
-The Subject controls what the OP discloses to each RP.
+(#subject-granting) describes how the Subject authorizes disclosure to an RP.
 
 ## RP
 
 An RP typically provides a service to the Subject.
 It requests claims about the Subject from the OP to provide that service.
-Lawful bases for processing these claims can include performance of a contract or consent.
+The RP can rely on contract performance, consent, or another lawful basis to process the claims.
 
 ## CP
 
