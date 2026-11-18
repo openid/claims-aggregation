@@ -8,6 +8,7 @@ Providers and returns them to a Relying Party as aggregated claims.
 ## Specification
 
 - [Published draft](https://openid.net/specs/openid-connect-claims-aggregation-1_0.html)
+- [Editor's Draft (WG review preview)](https://openid.github.io/claims-aggregation/)
 - [Editor's draft source](openid-connect-claims-aggregation-1_0.md)
 
 ### Build the Editor's Draft locally
