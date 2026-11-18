@@ -780,208 +780,165 @@ This profile adds the following PKCE requirements.
 
 ## Subject Granting
 
-1. After verifying the request, the OP MUST authenticate the Subject if necessary and obtain
-   the Subject's authorization to disclose claims to the requesting RP.
-1. The OP MUST obtain that RP-specific authorization before initiating a CP authorization
-   request on behalf of that RP and, in all cases, before disclosing claims, including
-   previously collected Claim Sets.
-1. When obtaining consent, the OP MUST show the Subject a dialogue.
-1. In the dialogue, the OP MUST identify the requesting RP by its `client_id` and, if present,
-   its `client_name` from the client metadata registered or resolved for that `client_id`.
-1. In the dialogue, the OP MUST identify each claim's CP source based on its validated Issuer
-   Identifier.
-1. The OP MUST show the claims it will disclose to the RP, including any additional claims in
-   an embedded JWT as described in (#claims-delivery).
-1. The OP MUST tell the Subject that it will disclose the CP's Issuer Identifier and any
-   identifying attributes in that JWT to the RP. The OP-facing account reference is not
-   disclosed by this profile.
-1. The OP MUST link to the RP's `policy_uri` from that client metadata.
-1. The OP MUST obtain the Subject's consent through explicit action.
-1. The OP SHOULD prefer RP identity information verified under the applicable trust framework
-   when presenting the RP to the Subject.
+[OIDC] governs authentication and `prompt`. The OP validates the request before seeking consent.
 
-Such information can include `organization_name` verified through Federation metadata policy
-or an applicable Trust Mark attesting to that identity information. Resolving signed
-metadata or validating a Trust Mark does not by itself verify every displayed name.
+1. The OP MUST obtain the Subject's RP-specific authorization before requesting CP authorization on that RP's behalf.
+2. The OP MUST obtain the Subject's RP-specific authorization before disclosing any claims to that RP.
+3. The OP MUST show a dialogue when it seeks new consent.
 
-11. The OP MUST NOT present an unverified `client_name` or other self-asserted identity
-    information as verified.
-1. The OP SHOULD select language-tagged display values, such as `client_name#ja`, according
-   to the Subject's language preferences, with fallback as described in Section 2.1 of
-   [OpenID.Registration].
-1. The OP MAY remember a consent decision for the same authenticated Subject and RP
-   `client_id`, limited to the authorized claims and their CP sources identified by validated
-   Issuer Identifiers.
-1. The OP MUST NOT skip the dialogue based on consent given to a different RP or on the CP
-   grant authorizing the OP to collect claims.
-1. The OP MUST NOT use remembered consent after withdrawal, for claims outside its authorized
-   scope, or for a different CP source that the Subject has not authorized.
+The dialogue uses the client metadata that the OP registered or resolved for the RP's `client_id`.
 
-Withdrawal is handled as specified in (#authorization-withdrawal-and-grant-revocation).
+4. The OP MUST identify the requesting RP by its `client_id` in the dialogue.
+5. The OP MUST show the RP's `client_name` if that metadata includes it.
+6. The OP MUST identify each claim's CP source using the validated CP Issuer Identifier.
+7. The OP MUST show all claims it will disclose, including any additional claims in an embedded JWT.
+8. The OP MUST tell the Subject that it will disclose the CP Issuer Identifier to the RP.
+9. The OP MUST tell the Subject that it will disclose identifying attributes from the JWT to the RP.
+10. The OP MUST link to the RP's `policy_uri` from that metadata.
+11. The OP MUST obtain the Subject's consent through explicit action.
+12. The OP SHOULD prefer RP identity information that the applicable trust framework verifies.
+13. The OP MUST NOT present unverified RP identity information as verified.
+14. The OP SHOULD select language-tagged display values according to the Subject's language preferences.
 
-16. When the RP requests `prompt=consent`, the OP MUST obtain fresh consent through explicit
-    action.
-1. When `prompt=none` is requested, the OP MUST NOT display a dialogue.
-1. If valid consent covering the disclosure to that RP is unavailable, it MUST return
-   `consent_required` as defined in Section 3.1.2.6 of [OIDC].
+A verified `organization_name` or a Trust Mark that attests to the RP's identity can supply display information.
+Signed metadata or a valid Trust Mark alone does not verify every displayed name.
+[OpenID.Registration] governs language tags and the use of untagged values.
+The OP omits `account_ref` from Aggregated Claims as specified in (#claims-endpoint-response).
 
-Other authentication or interaction requirements are handled using the applicable errors in
-that section.
+15. The OP MAY remember a consent decision for the authenticated Subject and requesting RP.
+16. The OP MAY use remembered consent instead of a dialogue only for the same authenticated Subject and RP `client_id`.
+17. The OP MUST limit remembered consent to the claims that the Subject authorizes.
+18. The OP MUST limit remembered consent to authorized CP sources, identified by their validated Issuer Identifiers.
+19. The OP MUST NOT use remembered consent after the Subject withdraws it.
+20. The OP MUST NOT use the CP grant as consent for RP disclosure.
+21. The OP MUST obtain fresh consent for `prompt=consent`.
+22. For `prompt=none`, the OP MUST return `consent_required` if it lacks valid consent for the disclosure.
+
+(#authorization-withdrawal-and-grant-revocation) governs withdrawal.
+[OIDC] governs other authentication or interaction errors.
 
 ## Claims Collection
 
 ### Collection and Reuse
 
-1. The OP MAY collect Claim Sets before an RP requests them if the CP grant and the Subject's
-   authorization permit it.
-1. The OP MAY reuse a stored Claim Set if it still meets the applicable validity,
-   authorization, and account-binding requirements, including the OP's collection and storage
-   policies.
-1. The OP SHOULD provide a means for the authenticated Subject to request updated claims from
-   a selected CP.
-1. The OP MAY perform a new collection using the Subject's existing authorization and valid CP
-   tokens, or obtain the necessary authorization at the CP as described in (#setup-phase).
-1. The OP MAY apply privacy policies and rate limits to such updates.
+1. The OP MAY precollect Claim Sets when both the CP grant and the Subject's authorization permit it.
+2. The OP MAY reuse a stored Claim Set only if it meets all validation, authorization, binding, and policy requirements.
+3. The OP SHOULD let the authenticated Subject request updated claims from a selected CP.
+4. The OP MAY start a new collection using existing Subject authorization and valid CP tokens.
+5. The OP MAY apply privacy policies and rate limits to these updates.
+6. The OP MUST preserve the original CP-signed JWT when storing or disclosing a Claim Set.
+7. The OP SHOULD use the narrowest available access token scope for the claims it needs to collect.
 
-Renewing an access token alone does not update a stored Claim Set.
+The relevant policies include the OP's collection and storage policies.
+Access token renewal alone leaves the stored Claim Set unchanged.
 
-6. The OP MUST preserve the CP-signed JWT and its `iat` when storing and disclosing it.
-1. For a new collection, the OP SHOULD use an access token with the narrowest scope available
-   for the claims it needs.
-1. If the available access token grants broader access than needed, and a refresh token and a
-   suitable narrower scope are available, the OP SHOULD request a downscoped access token
-   using `grant_type=refresh_token` and `scope`, as described in Section 12 of [OIDC] and
-   Section 6 of [RFC6749].
-1. The OP MUST request a scope within the scope of the original grant.
-1. The OP MUST successfully reevaluate trust in the CP before continuing to make requests
-   after the Trust Chain expires, as specified in Section 12.3 of [OpenID.Federation].
-1. If a new collection is needed and the OP cannot obtain a suitable Claim Set using a valid
-   access token or a refresh token, it MUST obtain the necessary authorization from the
-   Subject at the CP or omit the affected claims.
+The downscoping recommendation applies when the OP has a refresh token and a suitable narrower scope.
+[OIDC] and [RFC6749] govern refresh and downscoping.
+
+8. The OP SHOULD request a downscoped access token when its current token grants more access than collection needs.
+9. The OP MUST reestablish trust in the CP before sending requests after the Trust Chain expires.
+
+[OpenID.Federation] governs Trust Chain reevaluation.
+The following requirement applies when the OP needs a new Claim Set but cannot obtain it through a valid access or refresh token.
+
+10. The OP MUST obtain the necessary authorization from the Subject at the CP or omit the affected claims.
+
+See (#setup-phase) for obtaining that authorization.
 
 ### Token and Claim Set Storage
 
-1. The OP MUST protect stored CP access tokens, refresh tokens, client authentication and
-   proof-of-possession private keys, and signed Claim Sets against unauthorized disclosure,
-   modification, and use.
-1. The OP MUST enforce the account and CP bindings in (#trust-model) when accessing stored
-   material.
-1. These protections MUST cover persistent stores, backups, and operational access.
-1. The OP MUST prevent tokens, private keys, and Claim Sets from being exposed through logs or
-   diagnostics accessible to unauthorized parties.
-1. The OP SHOULD encrypt sensitive stored material at rest and protect encryption keys
-   separately from the data.
-1. Key isolation and access controls SHOULD limit the impact of a compromised component.
-1. The OP MAY store signed Claim Sets under the controls in this section.
+Protected material includes stored CP access tokens, refresh tokens, and signed Claim Sets.
+It also includes private keys for client authentication and proof of possession.
 
-The storage architecture, including the use of Subject-controlled encryption keys, is an
-implementation choice. These safeguards do not impose a retention deadline on Claim Sets or
-change the Subject's control over their disclosure.
+1. The OP MUST prevent unauthorized disclosure of protected material.
+2. The OP MUST prevent unauthorized modification of protected material.
+3. The OP MUST prevent unauthorized use of protected material.
+4. The OP MUST enforce the account and CP bindings in (#trust-model) when accessing stored material.
+5. The OP MUST apply these protections to persistent stores, backups, and operational access.
+6. The OP MUST prevent unauthorized access to protected material through logs or diagnostics.
+7. The OP SHOULD encrypt sensitive stored material at rest.
+8. The OP SHOULD protect encryption keys separately from their encrypted data.
+9. The OP SHOULD use key isolation to limit the impact of a compromised component.
+10. The OP SHOULD use access controls to limit the impact of a compromised component.
+11. The OP MAY store signed Claim Sets under these controls.
+
+Deployments choose the storage architecture, including whether the Subject controls the encryption keys.
 
 ### Subject Control of Stored Claim Sets
 
-1. The OP MUST provide an authenticated Subject with a user interface to inspect stored Claim
-   Sets and their CP sources, delete selected stored Claim Sets, and review and withdraw the
-   OP's collection and RP-specific disclosure authorizations.
-1. The interface MUST distinguish deletion of stored data, stopping further collection,
-   stopping disclosure, and revoking a grant at the CP.
-1. The OP SHOULD direct the Subject to a CP's grant-management interface when one is
-   available.
+1. The OP MUST provide a Claim Set management user interface to the authenticated Subject.
+2. The OP MUST let the Subject inspect stored Claim Sets through that interface.
+3. The OP MUST show each stored Claim Set's CP source in that interface.
+4. The OP MUST let the Subject delete selected Claim Sets through that interface.
+5. The OP MUST let the Subject review collection and RP-specific disclosure authorizations through that interface.
+6. The OP MUST let the Subject withdraw collection and RP-specific disclosure authorizations through that interface.
+7. The OP MUST distinguish deletion, stopping collection, stopping disclosure, and CP grant revocation in the interface.
+8. The OP SHOULD direct the Subject to an available CP grant-management interface.
 
-No new grant-management URL metadata is defined by this specification.
+For a deletion request, the following requirements apply.
 
-4. When the Subject requests deletion, the OP MUST remove the selected Claim Sets from its
-   active stores.
-1. The OP MUST NOT disclose retained copies of those deleted Claim Sets.
-1. The OP MUST explain the scope and timing of deletion, including any backup retention, and
-   that deletion at the OP does not erase copies already delivered to RPs.
-1. Before returning backup data to active use, the OP MUST apply the Subject's recorded
-   deletion and withdrawal decisions so that restoration does not silently reactivate deleted
-   data or withdrawn permissions.
+9. The OP MUST remove the selected Claim Sets from active stores.
+10. The OP MUST NOT disclose retained copies of those deleted Claim Sets.
+11. The OP MUST explain the scope of deletion, including any backup retention.
+12. The OP MUST explain when deletion takes effect.
+13. The OP MUST tell the Subject that deletion at the OP cannot erase copies it already disclosed to RPs.
+14. The OP MUST explain that deleting Claim Sets alone leaves collection authorization in effect.
 
-Retained backups remain subject to (#token-and-claim-set-storage).
+A later authorized collection can obtain those claims again.
+(#authorization-withdrawal-and-grant-revocation) explains how the Subject can stop further collection and disclosure.
 
-Deletion alone does not withdraw collection authorization; a new authorized collection can
-obtain the claims again.
+15. The OP SHOULD NOT automatically recollect deleted claims from the same CP without a new explicit instruction from the Subject.
+16. The OP SHOULD offer one action to delete selected Claim Sets and withdraw their corresponding collection authorization.
 
-8. The OP MUST make that distinction clear and allow the Subject to stop further collection as
-   specified in (#authorization-withdrawal-and-grant-revocation).
+An RP request or remembered consent does not constitute that instruction.
+Backups remain subject to (#token-and-claim-set-storage).
 
-Withdrawal of disclosure authorization stops the corresponding disclosure, independently of
-whether the Subject retains a private copy. Revoking the CP grant governs further CP access,
-not the validity of previously issued Claim Sets.
+17. Before restoring backup data to active use, the OP MUST apply the Subject's recorded deletion decisions.
+18. Before restoring backup data to active use, the OP MUST apply the Subject's recorded withdrawal decisions.
 
-9. The OP SHOULD NOT automatically recollect claims deleted by the Subject from the same CP
-   without a subsequent explicit instruction from the Subject to collect those claims again.
+A disclosure history identifies the RP recipients, the disclosed Claim Sets, their CP sources, and the disclosure times.
 
-An RP request or previously remembered disclosure consent does not by itself constitute such
-an instruction.
+19. The OP SHOULD let the authenticated Subject review their disclosure history.
+20. The OP MUST protect all retained history, including legally retained records, under (#token-and-claim-set-storage).
+21. The OP SHOULD minimize the information it retains for disclosure history.
 
-10. The OP SHOULD offer a single operation to delete selected Claim Sets and withdraw the
-    corresponding collection authorization.
+For example, the OP can identify disclosed Claim Sets without retaining their complete signed JWTs.
+Applicable legal retention obligations qualify the history deletion and restoration requirements.
 
-Withdrawal through that operation is subject to
-(#authorization-withdrawal-and-grant-revocation).
+22. The OP MUST apply the Subject's deletion controls to disclosure history.
+23. The OP MUST apply the Subject's backup-restoration controls to disclosure history.
+24. The OP MUST exclude records it retains solely for legal obligations from ordinary viewing and disclosure.
+25. The OP MUST restrict access to those records to authorized purposes for meeting those obligations.
 
-11. The OP SHOULD let the authenticated Subject review disclosure history identifying which
-    RPs received which Claim Sets, their CP sources, and when disclosure occurred.
-1. The OP MUST protect any retained history according to (#token-and-claim-set-storage).
-1. The OP MUST apply the Subject's deletion and backup-restoration controls to the history,
-   subject to applicable legal retention obligations.
-1. The OP MUST exclude records retained solely to meet those obligations from ordinary
-   viewing and disclosure flows.
-1. The OP MUST apply the same storage protections to those records.
-1. The OP MUST restrict access to those records to authorized purposes for meeting those
-   obligations.
-1. The OP SHOULD minimize the information retained for that history rather than retain
-   complete signed JWTs solely to provide it.
-1. The OP MAY let the authenticated Subject export their stored CP-signed Claim Sets without
-   altering the signed JWTs.
+26. The OP MAY let the authenticated Subject export stored CP-signed Claim Sets unchanged.
+27. The OP SHOULD explain the correlation and onward-transfer risks of exporting Claim Sets.
 
-Such export does not change their audience, account-binding, or verification requirements.
-
-19. The OP SHOULD explain that exported artifacts remain transferable signed personal data
-    with the correlation and onward-transfer risks described in
-    (#correlation-and-transferable-signed-data).
-
-This specification does not impose a retention deadline on the Subject's stored Claim
-Sets. A Subject can choose to retain an expired Claim Set as a record; its retention does
-not permit accepting or disclosing it as valid after `exp`. The validation requirements in
-(#claims-verification) continue to apply. Storage and encryption architecture, including
-Subject-controlled archival keys, remain implementation choices.
+Exported Claim Sets remain transferable signed personal data. See (#correlation-and-transferable-signed-data).
+Their audience, account-binding, and verification requirements continue to apply.
+This profile sets no retention deadline for stored Claim Sets.
+The Subject can retain expired Claim Sets as records without treating them as valid.
+(#claims-verification) governs acceptance and disclosure of Claim Sets.
 
 ### Authorization Withdrawal and Grant Revocation
 
-1. The OP MUST preserve the association of stored Claim Sets with the authenticated OP account
-   and the CP identifiers established in (#trust-model).
+[RFC6749] and [RFC6750] govern grant and token validity for further collection.
+[RFC7009] governs token revocation when the CP supports it.
+Expiration or revocation of a CP token or grant does not itself invalidate an issued Claim Set.
+(#trust-model) governs the account and CP binding of stored Claim Sets.
 
-Further collection from the CP is governed by the OAuth grant and token validity
-requirements of [RFC6749] and [RFC6750]. Token revocation, when supported, follows
-[RFC7009].
+1. If further collection is necessary, the OP MUST handle token errors through the applicable recovery or reauthorization procedure.
+2. The OP MAY disclose an otherwise valid stored Claim Set while the Subject's disclosure authorization remains in effect.
+3. The OP MUST stop collection within the scope of the Subject's withdrawal until the Subject authorizes it again.
+4. The OP MUST stop disclosure within the scope of the Subject's withdrawal until the Subject authorizes it again.
 
-2. The OP MUST handle token errors through the applicable recovery or reauthorization
-   procedure when further collection is needed.
+A withdrawal limited to one RP applies to affected disclosures to that RP.
+The Subject can retain private copies after withdrawing disclosure authorization.
+The RP applies its own acceptance and freshness policies.
+Disclosing an otherwise acceptable stored Claim Set requires no new CP authorization or CP request.
 
-Expiration or revocation of a CP access token, refresh token, or grant does not by itself
-invalidate previously collected signed Claim Sets.
-
-3. The OP MAY continue to disclose a stored Claim Set under the Subject's authorization if it
-   satisfies the applicable signature, expiration, account-binding, and trust-policy
-   requirements.
-
-The RP applies its own acceptance and freshness policies to that Claim Set. Obtaining fresh
-CP authorization or successfully calling the CP again is not a prerequisite for such use.
-
-4. If the Subject withdraws authorization for collection or disclosure at the OP, the OP MUST
-   stop the corresponding collection or disclosure until the Subject authorizes it again.
-1. Withdrawal limited to a particular RP MUST stop disclosure of affected Claim Sets to that
-   RP, according to the scope of the withdrawal.
-
-The `invalid_token` error in [RFC6750] can indicate expiration, revocation, or other failure,
-and the `invalid_grant` error in [RFC6749] can also have several causes. Neither error alone
-establishes the scope of a revocation or the validity of a stored Claim Set. A failed
-collection or refresh attempt does not by itself require suspension of disclosure of an
-otherwise acceptable stored Claim Set.
+The errors `invalid_token` and `invalid_grant` can have several causes.
+Neither error alone establishes the scope of revocation or the validity of a stored Claim Set.
+A failed collection or refresh attempt alone does not require suspending disclosure of an otherwise acceptable stored Claim Set.
 
 
 ### Claims Endpoint Request
