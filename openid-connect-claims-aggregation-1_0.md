@@ -154,11 +154,17 @@ The following referenced documents are indispensable for the application of this
 [RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
 [RFC6750]: https://tools.ietf.org/html/rfc6750
 
+[RFC6838] - Media Type Specifications and Registration Procedures
+[RFC6838]: https://www.rfc-editor.org/rfc/rfc6838.html
+
 [RFC7009] - OAuth 2.0 Token Revocation
 [RFC7009]: https://www.rfc-editor.org/rfc/rfc7009.html
 
 [RFC7636] - Proof Key for Code Exchange by OAuth Public Clients
 [RFC7636]: https://www.rfc-editor.org/rfc/rfc7636.html
+
+[RFC8414] - OAuth 2.0 Authorization Server Metadata
+[RFC8414]: https://www.rfc-editor.org/rfc/rfc8414.html
 
 [RFC8705] - OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens
 [RFC8705]: https://www.rfc-editor.org/rfc/rfc8705.html
@@ -275,9 +281,12 @@ request and response are defined in (#claims-endpoint-request) and
 ### Signed Claim Set Format
 
 A Claim Set MUST be a compact, asymmetrically signed JWS containing a JSON object. Its
-protected header MUST contain `typ` with the value `claims-aggregation+jwt`. The CP MUST
-include `iss`, `aud`, `iat`, and `exp` in the payload. The `iss` MUST be the CP's validated
-Issuer Identifier. The `aud` MUST identify only the OP's Entity Identifier, which is both
+protected header MUST contain `typ` with the value `claims-aggregation+jwt`. This is the
+`application/`-omitted form of the media type `application/claims-aggregation+jwt`, as
+specified in Section 4.1.9 of [JWS]. This type identifies the inner signed Claim Set, not
+the JSON acquisition envelope or the OP's enclosing ID Token or UserInfo response.
+The CP MUST include `iss`, `aud`, `iat`, and `exp` in the payload. The `iss` MUST be the
+CP's validated Issuer Identifier. The `aud` MUST identify only the OP's Entity Identifier, which is both
 its `client_id` at the CP and its Issuer Identifier under (#client-configuration-phase),
 either as a string or as an array containing that string as its only element. The `iat` and `exp` MUST be
 NumericDate values as defined in [JWT], with `exp` later than `iat`. These timestamps describe
@@ -311,10 +320,12 @@ The name Claims Endpoint and the metadata names `claims_endpoint` and
 specification. This does not restore that draft's wire format: this profile separates
 OP-facing account binding from the signed JWT disclosed to the RP.
 
-[[ Editor's note: This draft defines the names and semantics of its endpoint, metadata,
-request/response members, and explicit JWT type. Registration considerations and formal
-registrations remain follow-up work before publication; previous use of a name in a draft
-does not establish its registration. ]]
+Registration requests for the two CP metadata names and the Claim Set media type are
+specified in (#iana-considerations).
+
+[[ Editor's note: The registration templates are defined below; formal registration has
+not yet been completed. Before submission, references must identify a stable, publicly
+available specification version. Previous use of a name in a draft is not a registration. ]]
 
 ## OP
 
@@ -413,21 +424,21 @@ as specified in [RFC7636]. Its `openid_provider` metadata MUST include `code` in
 publishes a configuration document using [OpenID.Discovery], it MUST advertise these
 capabilities and support for the authorization response `iss` parameter there as well.
 
-## Aggregated Claim Set Type Support
+## Claim Set Profile
 
-An aggregating OP MUST publish `aggregated_claim_set_types_supported` containing
-`claims-aggregation+jwt` in its `openid_provider` metadata and, if published, its
-[OpenID.Discovery] configuration document. An RP using this profile MUST include the same
-value in `aggregated_claim_set_types_supported` in its registered or resolved client
-metadata. This client metadata member is an array of supported Claim Set `typ` values.
+This specification defines one signed Claim Set profile, identified by the explicit JWT
+`typ` in (#signed-claim-set-format). It does not define a new RP capability metadata member
+or an Authentication Request parameter to negotiate that type. The OP advertises support
+for Aggregated Claims as described below. Deployments MAY establish OP/RP profile support
+through configuration, registration arrangements, or a trust framework, consistently with
+Section 5.6.2 of [OIDC].
 
-Before delivering this profile's Claim Sets, the OP MUST verify that the RP's client
-metadata declares that support. Absent support, it MUST omit those Claim Sets and apply the
-applicable required-claim and error handling rules. It MUST NOT silently substitute an old
-UserInfo JWT profile. Existing stored JWTs with `sub` do not conform to this profile and
-MUST NOT be accepted as `claims-aggregation+jwt`. A deployment supporting another profile
-needs explicit profile selection and separate validation rules; those rules are not defined
-here. No new RP Authentication Request parameter is introduced.
+The type requirement applies to Claim Sets issued by this specification's Claims Endpoint;
+it does not impose that type on every JWT used for Aggregated Claims under [OIDC]. Within
+this profile, the OP and RP MUST apply (#claims-verification) and MUST NOT silently fall
+back to accepting an ID Token, UserInfo JWT, or another profile when validation fails.
+Existing stored JWTs with `sub` do not conform to this profile. Support for another profile
+requires separate validation rules and deployment arrangements outside this specification.
 
 ## Aggregating OP Metadata
 
@@ -942,16 +953,22 @@ Content-Type: application/json
 ```
 
 The CP MUST limit returned attributes to those requested and authorized by the grant and
-Subject. It MAY omit unavailable claims. If none can be supplied, it MUST reject the request
-rather than return a Claim Set containing only protocol claims. Malformed or unsupported
-requests MUST receive HTTP 400 with `Content-Type: application/json` and a JSON object
-containing `"error": "invalid_request"`. If no requested attributes can be supplied, the CP
-MUST instead return HTTP 400 with the same content type and `"error": "claims_unavailable"`.
-These JSON error objects MAY include `error_description` as a human-readable string. Error
-responses MUST NOT disclose the account reference or claim values. Token and scope errors
-MUST use the applicable status and `WWW-Authenticate` response from Section 3 of [RFC6750]
-or the applicable error rules of [RFC9449]; the endpoint's JSON request errors do not replace
-those authentication challenges.
+Subject. It MAY omit requested attributes, including for privacy reasons. Omission is not
+an error and MUST NOT imply a particular reason such as absence, lack of verification, or
+withholding by the Subject. An unknown requested attribute name MUST NOT by itself make an
+otherwise valid request malformed. If no requested attributes are supplied, the CP MUST
+return the empty result defined in (#claims-endpoint-response), rather than issue a JWT
+containing only protocol claims.
+
+Malformed or unsupported requests, such as invalid request structure or an unsupported
+`signing_alg`, MUST receive HTTP 400 with `Content-Type: application/json` and a JSON object
+containing `"error": "invalid_request"`. This JSON error object MAY include
+`error_description` as a human-readable string. Error responses MUST NOT disclose the
+account reference, claim values, or sensitive reasons for withholding particular attributes.
+Token and scope errors MUST use the applicable status and `WWW-Authenticate` response from
+Section 3 of [RFC6750] or the applicable error rules of [RFC9449]; the endpoint's JSON
+request errors do not replace those authentication challenges.
+
 The OP repeats collection for each CP as necessary.
 
 ### Claims Endpoint Response
@@ -960,17 +977,20 @@ A successful response MUST use HTTP 200, `Content-Type: application/json`, and
 `Cache-Control: no-store`. Its body MUST be a JSON object with these members:
 
 `account_ref`
-: **Required**. The non-empty CP Subject Identifier for the account authorized by the access
-  token, using the same identifier as the CP ID Token issued to this OP during Setup.
-  The CP MUST derive it from the token's authorized account, not echo a caller-supplied
-  account reference.
+: **Required when `claim_set` is present; otherwise MUST be omitted**. A non-empty string
+  containing the CP Subject Identifier for the account authorized by the access token,
+  using the same identifier as the CP ID Token issued to this OP during Setup. The CP MUST
+  derive it from the token's authorized account, not echo a caller-supplied account reference.
 
 `nonce`
 : **Required**. The exact `nonce` from the request associated with this response.
 
 `claim_set`
-: **Required**. A string containing the CP-signed JWT defined in (#signed-claim-set-format).
+: **Required when one or more requested attributes are supplied; otherwise MUST be omitted**.
+  A non-empty string containing the CP-signed JWT defined in (#signed-claim-set-format).
   The CP MUST ensure that its attributes concern the account identified by `account_ref`.
+  `null`, an empty string, or a JWT containing only protocol claims MUST NOT represent an
+  empty result.
 
 For example (the compact JWS is abbreviated):
 
@@ -982,7 +1002,19 @@ For example (the compact JWS is abbreviated):
 }
 ```
 
-An illustrative decoded protected header and payload of `claim_set` are:
+If no requested attributes are supplied, the CP returns HTTP 200 with the same content
+type and cache directive, echoing only the operation nonce:
+
+```json
+{
+  "nonce": "request-specific-random-value"
+}
+```
+
+This empty result reports only that this collection supplied no attributes. It does not
+assert that the attributes do not exist or explain why they were not supplied.
+
+An illustrative decoded protected header and payload of a returned `claim_set` are:
 
 ```json
 {"typ":"claims-aggregation+jwt","alg":"RS256","kid":"cp-app-key-1"}
@@ -1004,16 +1036,23 @@ caching; it does not prohibit Subject-authorized storage under (#claims-collecti
 
 The OP MUST reject a purported successful response unless it has the required status,
 media type, and JSON members with the types specified above. It MUST NOT interpret an
-error response as a successful Claim Set response.
+error response, including a body containing `error`, as a successful result or an empty result.
 
 Before accepting the response, the OP MUST:
 
 1. Match `nonce` to the pending operation and accept that operation's response at most once.
    Retries or delayed responses MUST NOT bind a completed operation to a new account or
    operation. The CP echoes the nonce; it need not maintain a global used-nonce database.
-1. Match `account_ref` exactly to the CP `sub` from the validated Setup ID Token stored for
-   that operation's OP account and CP issuer. It MUST NOT derive or replace that expected
-   identifier from the new response or access token. A mismatch MUST fail collection;
+1. If `claim_set` is absent, require `account_ref` to be absent and process the response as
+   an empty result. No new Claim Set or account binding is established, and the remaining
+   Claim Set validation and storage steps below do not apply. The OP MUST NOT create or
+   change an account binding from that result, store or disclose it as a Claim Set, or
+   infer attribute absence, grant revocation, or Subject withdrawal from it. An empty
+   result alone MUST NOT invalidate or suspend use of a previously stored Claim Set that
+   still satisfies all applicable validation and authorization requirements.
+1. If `claim_set` is present, match `account_ref` exactly to the CP `sub` from the validated
+   Setup ID Token stored for that operation's OP account and CP issuer. It MUST NOT derive
+   or replace that expected identifier from the new response or access token. A mismatch MUST fail collection;
    account relinking requires the procedure in (#token-request-and-account-binding).
 1. Validate `claim_set` under (#claims-verification), including matching its `iss` to the
    operation's CP issuer and its `alg` to the selected `signing_alg`. It MUST verify that
@@ -1028,9 +1067,10 @@ Set. Omitting a claim from `_claim_names` cannot hide it from an RP receiving th
 For these checks, attributes exclude the JWT protocol claims `iss`, `aud`, `iat`, `exp`,
 `nbf`, and `jti`, whose validation is governed by (#claims-verification).
 
-The OP MUST preserve a protected record binding the actual JWT to the OP account, CP issuer,
-CP Subject Identifier, and the acquisition validation result and time. Protection MUST cover
-both record integrity and association with the correct JWT. A hash stored alongside
+For a response containing a valid Claim Set, the OP MUST preserve a protected record binding
+the actual JWT to the OP account, CP issuer, CP Subject Identifier, and the acquisition
+validation result and time. Protection MUST cover both record integrity and association
+with the correct JWT. A hash stored alongside
 unprotected data does not by itself provide that protection. A deployment crossing an
 untrusted processing or storage boundary needs integrity protection across that boundary.
 For example, an authenticated storage service can enforce this association, or a MAC or
@@ -1152,9 +1192,6 @@ After verifying the signature, the verifier MUST perform the following checks.
    MUST reject a JWT whose `iat` is in the future or whose `exp` has been reached. It MAY
    allow a small leeway for clock skew. If `nbf` is present, it MUST also validate that claim
    according to Section 4.1.5 of [JWT], with the same clock-skew allowance.
-
-The RP MUST check that the OP advertised support for `claims-aggregation+jwt` under
-(#aggregated-claim-set-type-support). Declaring support does not replace validation.
 
 The RP MUST also verify the `_claim_names` and `_claim_sources` structure according to
 Section 5.6.2 of [OIDC], including that each referenced JWT contains the claims mapped to it,
@@ -1517,9 +1554,90 @@ an issued artifact, but does not remove the transferability or correlation risks
 in (#correlation-and-transferable-signed-data).
 
 
+# IANA Considerations
+
+This specification requests registration of two OAuth Authorization Server Metadata
+parameters and one media type. The templates below do not indicate that registration has
+already been completed.
+
+## OAuth Authorization Server Metadata Registrations
+
+The following entries are requested in the OAuth Authorization Server Metadata registry
+[IANA.OAuth.Parameters], using the template in Section 7.1.1 of [RFC8414]. These metadata
+parameters apply to the CP's resolved `openid_provider` metadata and its OpenID Connect
+Discovery document as specified in (#discovery-phase).
+
+### claims_endpoint
+
+- Metadata Name: `claims_endpoint`
+- Metadata Description: HTTPS URL of the Claims Provider's Claims Endpoint.
+- Change Controller: OpenID Foundation Artifact Binding Working Group -
+  openid-specs-ab@lists.openid.net
+- Specification Document(s): This specification, (#discovery-phase) and
+  (#claims-endpoint-request).
+
+### claims_signing_alg_values_supported
+
+- Metadata Name: `claims_signing_alg_values_supported`
+- Metadata Description: JSON array of asymmetric JWS signing algorithms supported by the Claims
+  Provider for signed Claim Sets.
+- Change Controller: OpenID Foundation Artifact Binding Working Group -
+  openid-specs-ab@lists.openid.net
+- Specification Document(s): This specification, (#discovery-phase) and
+  (#signed-claim-set-format).
+
+## Media Type Registration
+
+The following registration is requested in the Media Types registry [IANA.MediaTypes],
+using the template in Section 5.6 of [RFC6838].
+
+- Type name: `application`
+- Subtype name: `claims-aggregation+jwt`
+- Required parameters: None.
+- Optional parameters: None.
+- Encoding considerations: binary; a compact JWS as defined in [JWS].
+- Security considerations: See (#security-considerations) and (#privacy-considerations).
+- Interoperability considerations: See (#signed-claim-set-format), (#claim-set-profile),
+  and (#claims-verification).
+- Published specification: This specification, (#signed-claim-set-format) and
+  (#claims-verification).
+- Applications that use this media type: Implementations of this specification.
+- Fragment identifier considerations: No fragment identifier syntax is defined for this media
+  type. The existing `+jwt` fragment identifier rules apply.
+- Additional information:
+    - Deprecated alias names for this type: None.
+    - Magic number(s): None.
+    - File extension(s): None.
+    - Macintosh file type code(s): None.
+- Person & email address to contact for further information: Nat Sakimura - nat@nat.consulting.
+- Intended usage: COMMON.
+- Restrictions on usage: None.
+- Author: Nat Sakimura and Edmund Jay.
+- Change controller: OpenID Foundation Artifact Binding Working Group -
+  openid-specs-ab@lists.openid.net
+- Provisional registration? No.
+
+## Other Protocol Elements
+
+The `account_ref`, `nonce`, `claims`, `signing_alg`, and `claim_set` members are defined
+within this API's JSON request and response objects. They are not new top-level JWT claims
+or new Authorization or Token Endpoint parameters, and this specification requests no
+registrations for them in those registries. Existing names in other registries do not
+supply their API semantics. No new JOSE header parameter, signing algorithm, or structured
+syntax suffix is defined. The existing `typ` header, RS256 algorithm, `+jwt` suffix, JWT
+claims, and OAuth token/error mechanisms are reused. No new client capability metadata or
+OAuth error value is registered by this specification.
+
+
 {backmatter}
 
 # Bibliography
+
+[IANA.OAuth.Parameters] - IANA OAuth Parameters
+[IANA.OAuth.Parameters]: https://www.iana.org/assignments/oauth-parameters/
+
+[IANA.MediaTypes] - IANA Media Types
+[IANA.MediaTypes]: https://www.iana.org/assignments/media-types/
 
 [SD-JWT] - RFC 9901 - Selective Disclosure for JSON Web Tokens
 [SD-JWT]: https://www.rfc-editor.org/rfc/rfc9901.html
@@ -1580,10 +1698,13 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Added registration templates for two CP metadata parameters and the signed Claim Set media type
+* Removed dedicated OP/RP type-support metadata while retaining explicit JWT typing
+* Defined an ordinary empty acquisition result without a new unavailable-claims error
 * Restored Claims Endpoint terminology and defined an explicit JWT type without `sub`
 * Required common RS256 signing and verification support for Claim Sets
 * Separated acquisition account binding from RP-facing signed attributes and protected stored bindings
-* Added endpoint and algorithm metadata, per-request signing selection, and explicit RP type support
+* Added endpoint and algorithm metadata and per-request signing selection
 * Explained Core Aggregated Claims implementation guidance and the limits of subless presentation
 * Defined Subject controls for stored Claim Set deletion and authorization review and withdrawal
 * Added deletion/recollection safeguards, disclosure history controls, and optional Subject export
