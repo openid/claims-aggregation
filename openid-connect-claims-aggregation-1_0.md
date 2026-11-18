@@ -1154,6 +1154,41 @@ in `_claim_names`. The OP MUST ensure that every claim it discloses in the embed
 authorized for disclosure to that RP. If a Claim Set includes claims the OP cannot disclose,
 the OP MUST obtain a suitable Claim Set from the CP or omit that JWT from the response.
 
+For individual claims requested with the `claims` parameter, the OP MUST honor the
+`id_token` and `userinfo` destinations in Section 5.5 of [OIDC] when returning those
+claims. If a claim is requested for both destinations, the OP applies the disclosure
+and availability checks to each response. For claims requested only through `scope`,
+the OP follows the delivery rules in Section 5.4 of [OIDC].
+
+If the OP cannot supply a requested aggregated claim in an authorized, valid Claim Set,
+it MUST omit the claim from `_claim_names` in that response. It MUST omit any
+`_claim_sources` entry that no remaining `_claim_names` entry references. If no
+aggregated claims remain, the OP MUST omit both members. A previously collected Claim
+Set may still be available under (#authorization-withdrawal-and-grant-revocation).
+
+The OP MUST apply the omission and error rules in Section 5.5.1 of [OIDC], including
+claim-specific requirements. The `essential` flag alone does not make an omitted claim
+an authentication error. This specification defines no RP-facing error or reason code
+for an omitted aggregated claim. The OP MUST NOT forward CP error details to explain
+an omission. The RP MUST enforce its application's required-claim policy before
+completing the requested operation, including when a claim is absent from an otherwise
+valid response.
+
+For example, the RP requests `birthdate` and `address` in the ID Token:
+
+```json
+{
+  "id_token": {
+    "birthdate": null,
+    "address": {"essential": true}
+  }
+}
+```
+
+The CP supplies only `birthdate`. The OP returns the following presentation with
+no mapping for `address` and no source for that omitted claim. If the RP requires
+`address` for its operation, it does not complete that operation.
+
 The decoded OP presentation below embeds the same CP-signed JWT received in
 `claim_set` in (#claims-endpoint-response), without changing its compact JWS
 serialization. The inner JWS is abbreviated here. When the OP returns the
