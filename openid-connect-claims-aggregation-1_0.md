@@ -87,9 +87,9 @@ OP-to-CP collection interface defined here.
 The Claims Endpoint separates OP-facing account-binding information from the CP-signed Claim
 Set disclosed to the RP. This permits a Claim Set without a `sub` claim: the OP verifies the CP
 account association when collecting it and preserves that association when storing and
-disclosing it. The RP relies on the OP for Subject binding under the L1 trust model
-described in (#trust-model). Omitting `sub` does not prevent correlation through reuse
-of the same JWT or through identifying attributes. The Subject can authorize reuse of
+disclosing it. As described in (#trust-model), the RP relies on the OP for Subject
+binding. Omitting `sub` does not prevent correlation through reuse of the same JWT or
+through identifying attributes. The Subject can authorize reuse of
 stored Claim Sets or request new issuance. Privacy Considerations describes the
 tradeoffs for privacy and availability.
 
@@ -219,11 +219,6 @@ For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RF
 representation defined in Section 5.6.2 of [OIDC]
 
 **Claim Set** – a CP-signed JWT containing claims issued through the CP's Claims Endpoint
-
-**L1 trust model** – trust model in which the RP relies on the OP to associate a
-CP-signed Claim Set with the Subject authenticated by the OP. The RP validates the
-OP's response and separately verifies the CP-signed Claim Set. The RP applies its
-own trust policy to decide whether to use the CP's claims. See (#trust-model).
 
 # Symbols and abbreviated terms
 
@@ -418,10 +413,9 @@ The OP acts as an OpenID Provider to the RP and as an OpenID Connect client to C
 
 # Trust Model
 
-This specification uses the L1 trust model. The RP relies on the OP to associate Claim Sets from
-CPs with the Subject authenticated by the OP. By including a Claim Set as a source of Aggregated
-Claims in an ID Token or UserInfo response, the OP asserts that the Claim Set is about the
-Subject identified by the `sub` in that response.
+The RP relies on the OP to link each CP-signed Claim Set to the authenticated Subject.
+The RP verifies each CP-signed Claim Set separately from its validation of the OP's response.
+The OP asserts that each included Claim Set concerns the Subject in the response's `sub` claim.
 
 1. The OP MUST bind the CP's Issuer Identifier and Subject Identifier (`iss`, `sub`), obtained
    from the validated CP ID Token during Setup, to the authenticated OP account that initiated
@@ -796,16 +790,10 @@ The following requirement applies to both procedures.
 
 ## Authorization Response Issuer Validation
 
-1. The CP MUST include the `iss` parameter in authorization responses as specified in
-   [RFC9207].
-1. For each authorization request, the OP MUST store the expected CP Issuer Identifier from
-   the validated CP metadata and bind it to the authorization transaction and the user-agent
-   session.
-1. On receiving the authorization response, the OP MUST compare the `iss` parameter to the
-   stored Issuer Identifier as specified in Section 2.4 of [RFC9207].
-1. The OP MUST reject the response if `iss` is missing or the values differ.
-1. The OP MUST perform this check before sending the authorization code to the Token Endpoint
-   associated with the original request.
+1. The CP MUST include the [RFC9207] `iss` parameter in every Setup authorization response.
+1. The OP MUST bind the expected issuer from validated CP metadata to the Setup transaction and user-agent session.
+1. The OP MUST validate the response `iss` against the bound issuer per [RFC9207] before code exchange.
+1. The OP MUST reject any Setup authorization response that omits `iss`.
 
 ## Token Request and Account Binding
 
@@ -869,56 +857,16 @@ requires an extension. The RP applies its own freshness policy as described in
 
 ## RP authentication and the request verification
 
-1. The OP MUST validate the Authentication Request according to [OIDC], including the
-   `client_id`, required parameters, and the client metadata registered or resolved for that
-   RP.
-1. When a Request Object is used, the OP MUST also apply the validation requirements in
-   Section 6.3 of [OIDC], including signature verification when it is signed.
+1. The OP MUST apply the redirect URI matching rules in [RFC9700].
+1. The OP MUST apply the authorization server requirements for PKCE in [RFC9700].
+1. The RP MUST apply the protections against CSRF and authorization code injection in [RFC9700].
 
-A valid signature does not replace the other request validation requirements.
+This profile adds the following PKCE requirements.
 
-3. The OP MUST compare the request's `redirect_uri` with the registered `redirect_uris` using
-   exact string matching, except for the native application loopback port exception described
-   in Section 4.1.3 of [RFC9700].
-
-This comparison is required even when the request is signed.
-
-4. If the `client_id` or `redirect_uri` is missing or invalid, the OP MUST NOT redirect the
-   user agent to that URI, including to return an error.
-1. The OP MUST handle other request errors using the applicable Authentication Error Response
-   in [OIDC].
-1. When an authorization code is issued, the OP MUST bind it to the RP's `client_id`, the
-   `redirect_uri` used in the Authentication Request, and the PKCE challenge and method, if
-   present.
-1. At the Token Endpoint, the OP MUST validate the code, its client and redirect URI
-   bindings, and any client authentication according to Section 3.1.3.2 of [OIDC] and
-   Sections 4.1.2 and 4.1.3 of [RFC6749], including rejecting expired or previously used
-   codes.
-1. A confidential RP MUST authenticate to the OP's Token Endpoint using the method registered
-   for its `client_id`.
-1. In a flow that issues an authorization code, a public RP MUST use PKCE.
-1. In that flow, a confidential RP SHOULD use PKCE.
-1. When using PKCE under this specification, the RP MUST use `S256` with a
-   transaction-specific verifier securely bound to the initiating client and user agent.
-1. The OP MUST reject a public RP's authorization request that would issue a code without an
-   `S256` challenge.
-1. For any RP, the OP MUST reject an authorization request containing `code_challenge` unless
-   `code_challenge_method` is explicitly `S256`, including when the method is omitted and
-   would default to `plain` under Section 4.3 of [RFC7636].
-1. When a challenge was supplied, the OP MUST reject the Token Request unless the verifier
-   matches that challenge.
-1. The OP MUST also reject a Token Request containing a `code_verifier` if no challenge was
-   present in the corresponding Authentication Request, as required by Section 4.8.2 of
-   [RFC9700].
-
-Client authentication does not replace these PKCE checks when PKCE is used.
-
-16. RPs MUST prevent CSRF and authorization code injection according to Section 2.1 of
-    [RFC9700].
-1. A confidential RP using the OIDC `nonce` alternative to PKCE MUST meet the additional
-   requirements in Section 4.5.3.2 of [RFC9700], including transaction and user-agent binding
-   and validation of the `nonce` in the ID Token returned from the Token Endpoint before
-   using any issued tokens.
+4. The RP MUST use `S256` whenever it uses PKCE.
+1. The RP MUST securely bind its transaction-specific PKCE verifier to the initiating client and user agent.
+1. The OP MUST reject a public RP's request for an authorization code without an `S256` challenge.
+1. The OP MUST reject requests with `code_challenge` unless `code_challenge_method` is explicitly `S256`.
 
 ## Subject Granting
 
@@ -1703,15 +1651,12 @@ authenticated OP account. A valid `state` received through a URL is insufficient
 session validation. Comparing a previously stored CP subject identifier detects account
 changes. Checking for the same CP (`iss`, `sub`) on another OP account can also detect an
 attempted new binding when that CP identity is already known to the OP. Neither check
-establishes a relationship for a CP identity that has never been linked at the OP. The L1
-trust assumptions in (#trust-model) continue to apply.
+establishes a relationship for a CP identity that has never been linked at the OP. The trust
+assumptions in (#trust-model) continue to apply.
 
 ## RP Request Integrity and Broker-Side Consent
 
-The requirements in (#rp-authentication-and-the-request-verification) apply to signed and
-unsigned requests. Request signatures do not replace redirect URI validation, authorization
-code binding, or the applicable Token Endpoint authentication and PKCE checks. PKCE proves
-possession of a transaction-specific verifier; it is not client authentication.
+The checks in (#rp-authentication-and-the-request-verification) apply to signed and unsigned requests.
 
 The OP acts as the broker between downstream RPs and upstream CPs in the topology described
 in Section 2.4 of [OAuth.Security.Update]. This specification uses the broker-side consent
@@ -1835,7 +1780,7 @@ the CP signed, the existing Claim Set signature already supplies that evidence. 
 receipt is useful for the additional association only when evidence from the CP is required.
 This audit use is separate from normal RP disclosure; access to stable CP account references and
 acquisition records requires its own authorized purpose, minimization, and retention controls.
-It does not change the L1 trust model.
+Normal RP disclosure continues to use the trust model in (#trust-model).
 
 ### Receipt Scope and Reuse Limits
 
@@ -1856,9 +1801,9 @@ not prove that the CP transmitted an HTTP response, that the OP received or vali
 the CP's account association is truthful, or that the Subject consented to a later RP
 disclosure. An issuance timestamp is not proof of delivery or of a new identity-verification
 process. The protected OP account binding remains necessary; a receipt cannot by itself
-reconstruct a lost association with an authenticated OP account. It also does not prevent a
-malicious OP from violating the L1 trust assumptions, misuse of stolen tokens, suppression of
-responses, or rollback of authorization state.
+reconstruct a lost association with an authenticated OP account. A receipt cannot prevent a
+malicious OP from violating the trust assumptions in (#trust-model). It also cannot prevent
+misuse of stolen tokens, suppression of responses, or rollback of authorization state.
 
 A signature provides integrity and origin evidence, not confidentiality. Public-key encryption
 to the OP alone does not establish CP origin, since another party can encrypt to that public
@@ -1923,7 +1868,7 @@ account-binding trust, and Claim Set verification rules in (#claims-verification
 of the embedded JWT alone does not authenticate the Subject. Short Claim Set lifetimes
 limit the exposure period but do not prevent copying or reuse before expiration.
 
-The L1 model therefore continues to rely on the OP's account binding and disclosure
+Under the trust model in (#trust-model), the RP relies on the OP's account binding and disclosure
 controls. These protections neither require per-presentation CP contact nor cause CP grant
 revocation to invalidate stored Claim Sets. Storage remains under the Subject's control
 within the limits described in (#freshness-and-revocation-limits).
@@ -2266,7 +2211,7 @@ We would like to thank the following people for their valuable feedback and cont
 * Bound CP endpoint resolution and code exchange to the selected issuer and connection context
 * Clarified downscoping, offline access, and the use of stored Claim Sets
 * Anti RP-RP' Linkability provision added
-* Stated the L1 trust model and described the risk of cross-user claim substitution
+* Defined the OP's role in Subject binding and described the risk of cross-user claim substitution
 * Clarified how RPs request claims and how the aggregating OP advertises support
 
 -03
