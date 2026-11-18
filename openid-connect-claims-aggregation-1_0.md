@@ -34,18 +34,22 @@ organization="Illumila"
 
 %%%
 
-.# Abstract 
+.# Abstract
 
-OpenID Providers within OpenID Connect assume many roles, one of these is providing End-User claims to relying parties at the consent of the End-User such as their name or date of birth. OpenID Connect defines multiple models under which claims are provided and relied upon by a relying parties, including simple, aggregated and distributed claims. This document focuses on elaborating upon the aggregated model outlined in section 5.6.2 of OpenID Connect core by defining the full life-cycle of aggregated claims and the new roles of the entities involved in an aggregated claims model.
+An OpenID Provider (OP) can disclose claims about an End-User, such as a name
+or date of birth, to a Relying Party (RP) with the End-User's consent. This
+document profiles the Aggregated Claims model defined in Section 5.6.2 of
+OpenID Connect Core 1.0 [OIDC]. In this model, the OP returns claims asserted
+by one or more Claims Providers (CPs).
 
-This document specifies the methods for
+This document specifies the following interactions.
 
-* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
-* the OP to establish itself as a client of the Claims Provider;
-* the OP to obtain claims from the Claims Provider; 
-* an RP to ask for verified claims to the OP;  
-* the OP to return obtained claims from CP to the RP; and 
-* the RP to verify the claims.
+* The OP discovers CP metadata.
+* The OP establishes itself as a client of the CP.
+* The OP obtains claims from the CP.
+* The RP requests claims from the OP.
+* The OP returns claims from the CP to the RP as Aggregated Claims.
+* The RP verifies the returned claims.
 
 .# Warning
 
@@ -55,7 +59,7 @@ Recipients of this draft are invited to submit, with their comments, notificatio
 
 .# Foreword
 
-The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it is comprised by over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established has the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.
+The OpenID Foundation (OIDF) promotes, protects and nurtures the OpenID community and technologies. As a non-profit international standardizing body, it comprises over 160 participating entities (workgroup participants). The work of preparing implementer drafts and final international standards is carried out through OIDF workgroups in accordance with the OpenID Process. Participants interested in a subject for which a workgroup has been established have the right to be represented in that workgroup. International organizations, governmental and non-governmental, in liaison with OIDF, also take part in the work. OIDF collaborates closely with other standardizing bodies in the related fields.
 
 .# Introduction
 
@@ -66,15 +70,10 @@ other claims selected by the subject as well.
 An OpenID Connect response can include claims from several sources. These sources can be authoritative
 or corroborative. The roles in the Aggregated Claims model are described in (#actors).
 
-An OP can provide an RP the claims by value or by reference. 
-
-By value is the case where an OP collects claims and their values 
-from CPs and aggregate them in one package to provide to the RP. 
-This model is called Aggregated Claims Model. 
-
-By reference is the case where the OP does not collect and provide the value 
-but just provide the reference and its access information to the RP. 
-This model is called Distributed Claims Model. 
+An OP can return claims from CPs to an RP by value or by reference. With
+Aggregated Claims, the OP obtains the claims from the CPs and returns them
+by value. With Distributed Claims, the OP returns references and access
+information so that the RP can obtain the claim values.
 
 OpenID Connect Core defines the representation of Aggregated Claims returned by an OpenID
 Provider to a Relying Party, but does not prescribe the OP-to-CP protocol for obtaining the JWT
@@ -102,23 +101,23 @@ This is done through one "OP User Setup Phase" per CP that the OP obtains the co
 from the subject to obtain claims from the CP for the purpose of creating aggregated 
 claims response for future RP requests in which OP will collect a new consent from the subject. 
 
-The OP obtains an access token and, if needed and granted, a refresh token. The CP's Claim Set
+The OP obtains an access token and, if needed and granted, a refresh token. The CP's Claims
 Endpoint returns signed Claim Sets separately from OP-facing account-binding information.
 Profiles and trust frameworks may require the use of refresh tokens.
 
 
-There are four phases defined in this document. 
+The specification has four phases.
 
-1. CP Discovery Phase: OP discovers CP metadata. 
-1. Client Configuration Phase: OP establishes itself as a client of the CP.
-1. Setup Phase: The Subject authorizes the OP to obtain claims from the CP. The OP obtains an access token and may obtain a refresh token.
-1. RP Phase: 
-    1. RP makes authentication and claims request, 
-	1. OP fetches relevant claim sets from CPs, 
-	1. OP respond to the RP
-	1. the RP verifies the response. 
+1. Discovery Phase. The OP discovers CP metadata.
+1. Client Configuration Phase. The OP establishes itself as a client of the CP.
+1. Setup Phase. The Subject authorizes the OP to obtain claims from the CP. The OP
+   obtains an access token and may obtain a refresh token.
+1. Delivery Phase (RP Phase). The RP sends an authentication and claims request to
+   the OP. The OP obtains any needed Claim Sets from the CPs and returns Aggregated
+   Claims. The RP verifies the response.
 
-Intended reader of this document is the developer and systems architect who builds attributes and claims base systems. 
+This document is intended for developers and systems architects who build
+systems that use attributes and claims.
 
 
 
@@ -134,13 +133,14 @@ capitals, as shown here.
 
 # Scope
 
-This document specifies the methods for
+This document specifies the following interactions.
 
-* an OP acting as a client of Claims Provider (CP) to perform discovery for a Claims Provider Metadata;
-* the OP to establish itself as a client of the Claims Provider;
-* the OP to obtain claims from the Claims Provider; 
-* the OP to return obtained claims from CP to the RP; and 
-* the RP to verify the claims.
+* The OP discovers CP metadata.
+* The OP establishes itself as a client of the CP.
+* The OP obtains claims from the CP.
+* The RP requests claims from the OP.
+* The OP returns claims from the CP to the RP as Aggregated Claims.
+* The RP verifies the returned claims.
 
 # Normative references
 The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
@@ -211,7 +211,10 @@ The following referenced documents are indispensable for the application of this
 # Terms and definitions
 For the purpose of this document, the terms defined in [RFC6749], [RFC6750], [RFC7636], [OpenID Connect Core][OIDC] and the following apply.
 
-**Claim Set** – a set of claims issued by a Claims Provider
+**Aggregated Claims** – claims asserted by a CP and returned by an OP using the
+representation defined in Section 5.6.2 of [OIDC]
+
+**Claim Set** – a CP-signed JWT containing claims issued through the CP's Claims Endpoint
 
 
 # Symbols and abbreviated terms
@@ -346,9 +349,9 @@ The provision for the OP is as follows:
 # Trust Model
 
 This specification uses the L1 trust model. The RP relies on the OP to associate Claim Sets from
-CPs with the Subject authenticated by the OP. By including an Aggregated Claim Set in an ID Token
-or UserInfo response, the OP asserts that the Claim Set is about the Subject identified by the
-`sub` in that response.
+CPs with the Subject authenticated by the OP. By including a Claim Set as a source of Aggregated
+Claims in an ID Token or UserInfo response, the OP asserts that the Claim Set is about the
+Subject identified by the `sub` in that response.
 
 The OP MUST bind the CP's Issuer Identifier and Subject Identifier (`iss`, `sub`), obtained from
 the validated CP ID Token during Setup, to the authenticated OP account that initiated Setup.
@@ -535,6 +538,8 @@ also satisfy the requirements in Section 12.1.1.2 of [OpenID.Federation].
 
 # Setup Phase
 
+## OP Collection Authorization
+
 The OP obtains the Subject's authorization to collect claims from each CP it will use. The OP
 MUST use the OpenID Connect Authorization Code Flow with `response_type=code` to obtain the grant.
 It SHOULD identify the requested claims and collection permissions using scopes supported
@@ -553,6 +558,8 @@ When requesting a refresh token for offline access, the OP MUST include `offline
 `scope`. The OP and CP MUST follow the consent requirements in Section 11 of [OIDC], including
 `prompt=consent` unless other conditions permitting offline access are in place.
 
+## CP Consent Dialogue
+
 The CP MUST show the Subject a dialogue explaining that the OP will obtain signed Claim Sets
 to provide claims to RPs at the Subject's direction. The dialogue MUST include a link to the
 `policy_uri` in the OP's client metadata. Granting access MUST involve active user interaction.
@@ -565,7 +572,7 @@ described in (#authorization-withdrawal-and-grant-revocation).
 
 The CP SHOULD issue short-lived access tokens, choosing lifetimes according to the exposure
 and sensitivity of the authorized claims. It SHOULD restrict each access token to its
-Claim Set resource and the claims and operations authorized by the Subject. The Claim Set
+Claims Endpoint and the claims and operations authorized by the Subject. The Claims
 Endpoint MUST verify that a presented token is intended for that resource and permits the
 requested access. These restrictions do not require access tokens to use a JWT format.
 
@@ -677,14 +684,17 @@ policy.
 
 # Delivery Phase (RP Phase)
 
-In Delivery Phase, the claims are delivered to RP. 
-To do so, it typically goes through the following steps: 
+The Delivery Phase typically includes the following steps.
 
 1. (Claims Request) The RP sends an OpenID Connect Authentication Request to the OP.
-1. (Request Verification) The OP verifies if the request is valid. 
-1. (Subject Granting) The OP shows dialogue to the Authenticated Subject if it grants the access to the claims and obtains grant from the Subject. 
-1. (Claims Collection) The OP accesses relevant Claims Providers' Claims Endpoints with Access Tokens to collect signed claims
-1. (Claims Verification) The RP verifies the received response. 
+1. (Request Verification) The OP validates the request.
+1. (Subject Granting) The OP establishes the Subject's authorization for disclosure
+   to the RP as described in (#subject-granting).
+1. (Claims Collection) The OP obtains suitable Claim Sets as described in
+   (#claims-collection).
+1. (Claims Delivery) The OP returns the authorized Aggregated Claims to the RP as
+   described in (#claims-delivery).
+1. (Claims Verification) The RP verifies the response.
 
 ## Claims Request by RP to OP
 
@@ -1123,7 +1133,7 @@ under (#claims-verification), and the current authorization, deletion, and withd
 A successful acquisition does not waive later key, trust, expiration, or freshness checks.
 Reusing a stored Claim Set does not require a new CP operation nonce or CP contact.
 The OP MUST NOT disclose the acquisition envelope, `account_ref`, or operation `nonce` to
-the RP as part of the Aggregated Claim Set.
+the RP as part of the Aggregated Claims response.
 
 ### JSON Member Handling Examples
 
