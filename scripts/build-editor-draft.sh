@@ -7,6 +7,7 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 fi
 
 spec=openid-connect-claims-aggregation-1_0
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 revision=$(git rev-parse --verify --end-of-options "${2:-HEAD}^{commit}")
 build_dir=$(mktemp -d)
 trap 'rm -rf "$build_dir"' EXIT
@@ -17,6 +18,7 @@ git show "$revision:$spec.md" > "$build_dir/$spec.md"
 mmark "$build_dir/$spec.md" > "$build_dir/$spec.xml"
 xml2rfc --html --no-network --cache "$build_dir/cache" \
     -o "$build_dir/$spec.html" "$build_dir/$spec.xml"
+python3 "$script_dir/render-mermaid.py" "$build_dir/$spec.html"
 
 cat > "$build_dir/index.html" <<EOF
 <!doctype html>
