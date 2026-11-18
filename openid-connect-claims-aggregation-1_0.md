@@ -456,10 +456,10 @@ A CP that only issues Claim Sets to OPs has no obligation to advertise `aggregat
 ## Automatic Registration
 
 The OP acts as an OpenID Connect client of the CP.
-[OpenID.Federation] governs Automatic Registration, including Trust Chain validation and metadata resolution.
+Automatic Registration includes Trust Chain validation and metadata resolution.
 
-1. The OP MUST use Automatic Registration with the CP.
-2. The CP MUST use Automatic Registration for the OP.
+1. The OP MUST use Automatic Registration with the CP as specified in [OpenID.Federation].
+2. The CP MUST use Automatic Registration for the OP as specified in [OpenID.Federation].
 3. The OP MUST publish `openid_provider` metadata in its Entity Configuration.
 4. The OP MUST publish `openid_relying_party` metadata in the same Entity Configuration.
 5. The OP MUST use its Entity Identifier as both its Issuer Identifier and its `client_id` at the CP.
@@ -539,8 +539,8 @@ A UserInfo-only token does not authorize Claims Endpoint access.
 (#trust-model) governs the binding of the grant and tokens to the OP account.
 
 6. When requesting a refresh token for offline collection, the OP MUST include `offline_access` in `scope`.
-
-[OIDC] governs consent for this use of offline access.
+7. The OP MUST follow the [OIDC] consent rules when requesting offline collection.
+8. The CP MUST follow the [OIDC] consent rules when authorizing offline collection.
 
 ## CP Consent Dialogue
 
