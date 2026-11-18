@@ -952,6 +952,16 @@ Content-Type: application/json
 }
 ```
 
+The base request selects top-level claims, not nested fields within a compound claim.
+For example, `"claims": {"verified_claims": null}` requests that top-level claim; it does
+not convey a selection of particular attributes, evidence, or timestamps within it. A CP
+or trust framework can define narrow scopes or output sets for specific uses, but this
+specification does not define a general nested query syntax for the Claims Endpoint.
+The OP cannot remove nested fields from an already signed Claim Set while preserving the
+CP signature. All disclosed contents remain subject to (#subject-granting) and
+(#claims-delivery); the OP obtains a suitable Claim Set or omits it when those requirements
+cannot be met.
+
 The CP MUST limit returned attributes to those requested and authorized by the grant and
 Subject. It MAY omit requested attributes, including for privacy reasons. Omission is not
 an error and MUST NOT imply a particular reason such as absence, lack of verification, or
@@ -1217,25 +1227,36 @@ can retry the RP interaction using the existing OpenID Connect flow. Retrying au
 alone does not require the OP to recollect CP claims. The RP MUST validate the returned
 Claim Sets and apply its freshness policy again after an update.
 
-Applications requiring constraints on the age of identity verification or evidence can use
-the existing request and validation mechanisms in [OpenID4IDA] with supporting providers.
-For example, the `max_age` query member in Section 5.5.2 constrains `verification.time` or
-another requested date or timestamp. When using these constraints, the RP MUST evaluate the
-returned verification or evidence timestamps against its requirements according to the
-query semantics in [OpenID4IDA], separately from the JWT's `iat`.
+Identity assurance data can be represented using the `verified_claims` structure defined
+in [IDA.Schema]. The data structure, the RP's query syntax, and the signed external
+assertion format are separate concerns. Using that structure in a Claim Set does not by
+itself implement the query protocol or external assertion profile in [OpenID4IDA].
 
-Under this specification, the OP MAY reflect supported `verified_claims` constraints,
-including `max_age`, in requests to a CP, or use them to select stored Claim Sets. Neither
-forwarding those constraints nor filtering stored Claim Sets against them is required by
-this specification. The RP MUST perform its acceptance checks after receipt regardless of
-whether the OP performs either operation. An OP that separately implements [OpenID4IDA]
-remains subject to that specification's applicable OP requirements. Its external assertion
-format in Section 6.1 requires `sub` and prohibits `aud` and `exp`; that format is not the
-signed Claim Set profile defined here. A CP can supply supported
-`verified_claims` data in this profile, but that alone does not establish conformance to
-that external assertion format. Mapping its request constraints into this endpoint requires
-an extension; the base `claims` object accepts only `null` values. The OP MUST NOT rewrite
-an existing signed assertion to convert it to this profile.
+At the RP-to-OP interface, implementations that separately support [OpenID4IDA] can use
+its existing request and validation mechanisms. For example, the `max_age` query member
+in Section 5.5.2 of [OpenID4IDA] constrains `verification.time` or another requested date
+or timestamp.
+When using these constraints, the RP MUST evaluate the returned verification or evidence
+timestamps against its requirements according to those query semantics, separately from
+the JWT's `iat`. A newly issued JWT does not by itself show that identity verification was
+performed again; fulfilling a verification-age requirement can require a new verification
+process at the CP.
+
+The OP MAY use supported constraints to select stored Claim Sets. Mapping them into a
+Claims Endpoint request requires a separately defined extension or profile; the base
+`claims` object accepts only `null` values. An RP's nested query is not automatically a
+valid CP acquisition request. This specification requires neither forwarding those
+constraints nor selecting stored Claim Sets against them. The RP MUST perform its
+acceptance checks after receipt regardless of whether the OP performs such selection.
+An OP that separately implements [OpenID4IDA] remains subject to that specification's
+applicable OP requirements, including its restriction and omission rules; RP-side checks
+do not excuse returning data contrary to those requirements.
+
+The external assertion format in Section 6.1 of [OpenID4IDA] requires
+`typ=provided-claims+jwt` and `sub`, and prohibits `aud` and `exp`. It is not the signed
+Claim Set profile defined here. The OP MUST NOT rewrite an existing signed assertion to
+convert it to this profile. Full interoperability with that external assertion format
+requires a separate profile and is not claimed by this specification.
 
 
 # Security Considerations
@@ -1633,6 +1654,9 @@ OAuth error value is registered by this specification.
 
 # Bibliography
 
+[IDA.Schema] - OpenID Identity Assurance Schema Definition 1.0 incorporating errata set 1
+[IDA.Schema]: https://openid.net/specs/openid-ida-verified-claims-1_0.html
+
 [IANA.OAuth.Parameters] - IANA OAuth Parameters
 [IANA.OAuth.Parameters]: https://www.iana.org/assignments/oauth-parameters/
 
@@ -1698,6 +1722,7 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
+* Clarified compound-claim selection and the boundaries of identity assurance schema, queries, and assertions
 * Added registration templates for two CP metadata parameters and the signed Claim Set media type
 * Removed dedicated OP/RP type-support metadata while retaining explicit JWT typing
 * Defined an ordinary empty acquisition result without a new unavailable-claims error
