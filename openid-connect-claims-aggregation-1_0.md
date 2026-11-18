@@ -196,6 +196,9 @@ The following referenced documents are indispensable for the application of this
 [RFC9700] - Best Current Practice for OAuth 2.0 Security
 [RFC9700]: https://www.rfc-editor.org/rfc/rfc9700.html
 
+[RFC10070] - Updates to OAuth 2.0 JSON Web Token (JWT) Client Authentication and Assertion-Based Authorization Grants
+[RFC10070]: https://www.rfc-editor.org/rfc/rfc10070.html
+
 [OpenID.Core] - OpenID Connect Core 1.0 incorporating errata set 2
 [OpenID.Core]: https://openid.net/specs/openid-connect-core-1_0.html
 
@@ -507,7 +510,8 @@ The following requirements also apply to any [OpenID.Discovery] configuration do
 
 The following requirements apply to `private_key_jwt` at each CP endpoint that uses it.
 Examples include the Token, PAR, and revocation endpoints.
-[OAuth.Security.Update] defines the audience restriction.
+Sections 4 and 5 of [RFC10070] specify the audience restriction for JWT client
+authentication at the Token and PAR endpoints.
 
 13. The OP MUST set `aud` to the validated CP Issuer Identifier as a string or single-element array.
 1. The OP MUST obtain that identifier as specified in (#discovery-phase).
@@ -1993,9 +1997,7 @@ specification.
 
 # Acknowledgements
 
-We would like to thank the following people for their valuable feedback and contributions that helped to evolve this specification.
-
-[[TBD]]
+The editors thank Michael B. Jones for his feedback and contributions.
 
 # Document History
 
@@ -2003,37 +2005,31 @@ We would like to thank the following people for their valuable feedback and cont
 
 -04
 
-* Clarified Claims Endpoint JSON member handling and nonce generation
-* Explained acquisition trust boundaries, optional CP-origin evidence, and receipt limitations
-* Clarified compound-claim selection and the boundaries of identity assurance schema, queries, and assertions
-* Added registration templates for two CP metadata parameters and the signed Claim Set media type
-* Removed dedicated OP/RP type-support metadata while retaining explicit JWT typing
-* Defined an ordinary empty acquisition result without a new unavailable-claims error
-* Restored Claims Endpoint terminology and defined an explicit JWT type without `sub`
-* Required common RS256 signing and verification support for Claim Sets
-* Separated acquisition account binding from RP-facing signed attributes and protected stored bindings
-* Added endpoint and algorithm metadata and per-request signing selection
-* Explained Core Aggregated Claims implementation guidance and the limits of subless presentation
-* Defined Subject controls for stored Claim Set deletion and authorization review and withdrawal
-* Added deletion/recollection safeguards, disclosure history controls, and optional Subject export
-* Recommended CP grant-management interfaces and described OP visibility and transferable signed data
-* Explained correlation and the tradeoffs of stored, batch-issued, and on-demand credentials
-* Required confidential OP clients with `private_key_jwt` support and optional mTLS authentication
-* Bound client assertion audiences to the CP issuer and defined token and storage protections
-* Explained the limits of sender-constraining and replay protection for stored Claim Sets
-* Defined RP request validation, authorization code and PKCE checks, and per-RP consent
-* Required RP `policy_uri` metadata and corrected its use in the consent dialogue
-* Bound remembered consent to CP sources and distinguished verified RP display information
-* Recommended back-channel delivery of Aggregated Claims to limit front-channel exposure
-* Defined local freshness policies, user-directed updates, and authorization withdrawal and revocation handling
-* Defined CP signing algorithm selection, verification key resolution, and Claim Set validation
-* Required issuance and expiration timestamps in CP-signed UserInfo JWTs
-* Required Authorization Code Flow, PKCE S256, and transaction and session validation during Setup
-* Bound CP endpoint resolution and code exchange to the selected issuer and connection context
-* Clarified downscoping, offline access, and the use of stored Claim Sets
-* Anti RP-RP' Linkability provision added
-* Defined the OP's role in Subject binding and described the risk of cross-user claim substitution
-* Clarified how RPs request claims and how the aggregating OP advertises support
+* Replaced signed UserInfo collection with a dedicated Claims Endpoint. Added CP
+  endpoint and signing-algorithm metadata, strict JSON handling, operation nonces,
+  and partial and empty results.
+* Defined a signed Claim Set JWT without a CP Subject Identifier. Required RS256
+  support and specified algorithm selection, verification key resolution, and OP
+  and RP validation.
+* Defined the OP's responsibility for Subject binding. Kept the CP account
+  reference in the acquisition response and specified how the OP protects its
+  association with the exact JWT through storage and redisclosure.
+* Required OpenID Federation Automatic Registration and confidential OP client
+  authentication with `private_key_jwt` in the base profile. Bound client assertion
+  audiences to the CP issuer.
+* Required Authorization Code Flow, PKCE S256, authorization response issuer
+  validation, and transaction and session binding during Setup. Defined CP consent,
+  token handling, and account relinking.
+* Clarified how RPs request and receive Aggregated Claims. Defined RP-specific
+  consent, claim omission, local freshness policy, and user-directed updates.
+  Recommended back-channel delivery.
+* Defined Subject controls for stored Claim Set deletion and authorization
+  withdrawal. Clarified how those controls interact with CP grant revocation and
+  backup restoration.
+* Documented acquisition trust boundaries, optional CP-origin evidence,
+  correlation and replay risks, and the limits of identity assurance query support.
+* Added IANA registration templates for the two CP metadata parameters and the
+  Claim Set media type.
 
 -03
 
