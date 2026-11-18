@@ -1449,13 +1449,13 @@ multiple CPs. (#cp-discovery-and-metadata) binds metadata to the selected issuer
 That check also addresses the mix-up risk in [RFC9700].
 (#token-request-and-account-binding) preserves the selected client and any connection or tenant context.
 
-PKCE binds an authorization code to the OP's token request. An attacker can still initiate
-Setup for the attacker's OP account and induce a victim to authorize access to the victim's CP
-account. PKCE alone does not detect this cross-user session fixation attack, described in
+PKCE binds the code to the OP's token request under (#authorization-request-and-transaction-binding).
+An attacker can still initiate Setup for the attacker's OP account and induce a victim to
+authorize access to the victim's CP account. PKCE alone does not detect this cross-user session fixation attack, described in
 Section 2.3 of [OAuth.Security.Update], with countermeasures in Section 2.3.2. Before
-exchanging the code, the OP verifies the completion session's binding to the initiating
-authenticated OP account. A valid `state` received through a URL is insufficient without this
-session validation. Comparing a previously stored CP subject identifier detects account
+exchanging the code, the OP verifies the completion session's binding under
+(#authorization-response-session-validation). A valid `state` received through a URL is insufficient
+without this session validation. Comparing a previously stored CP subject identifier detects account
 changes. Checking for the same CP (`iss`, `sub`) on another OP account can also detect an
 attempted new binding when that CP identity is already known to the OP. Neither check
 establishes a relationship for a CP identity that has never been linked at the OP. The trust
@@ -1678,17 +1678,18 @@ freshness of identity verification or evidence can use the corresponding signed 
 validation rules in [OpenID4IDA], as described in
 (#local-freshness-policy-and-user-directed-updates).
 
-The Subject controls a signed Claim Set held by the OP. CP grant or token revocation
-affects future collection. The Subject can continue to present previously issued Claim
-Sets until expiration, subject to this profile's validation and acceptance rules.
+The Subject controls a signed Claim Set held by the OP. CP grant or token revocation,
+including unilateral revocation, affects future collection. The Subject can continue to
+present previously issued Claim Sets until expiration, subject to this profile's validation and acceptance rules.
 (#authorization-withdrawal-and-grant-revocation) describes the Subject's control over
 further disclosure at the OP.
 
 A CP can choose a short lifetime when the underlying attributes can change quickly.
 An application that needs prompt status updates, such as for a revoked driver's license,
 can use a separate authenticated status mechanism and an acceptance policy for the issued
-Claim Set. Offline verification checks the signed artifact. A current status check
-supplements that verification and concerns the artifact rather than the collection grant.
+Claim Set. Offline verification checks the signed artifact. It cannot establish that the
+attributes still reflect the current state. A current status check supplements that verification
+and concerns the artifact rather than the collection grant.
 
 # Privacy Considerations
 
@@ -1754,8 +1755,7 @@ of the Subject's interactions with RPs. Updating claims in response to an RP's r
 fresher information can trigger CP Claims Endpoint calls whose timing and frequency may be
 correlated with downstream activity.
 
-The following recommendations apply when the OP obtains authorization for collection
-and disclosure.
+The following recommendations apply when the OP seeks the Subject's collection or disclosure authorization.
 
 1. The OP SHOULD explain that reusing a signed JWT can link presentations.
 2. The OP SHOULD explain that updates can reveal RP activity timing to the CP.
@@ -1764,9 +1764,9 @@ The Subject can then choose whether to authorize reuse or request an update, sub
 RP's acceptance policy. (#collection-and-reuse) describes privacy policies and rate limits
 for user-directed updates.
 
-Reuse avoids a Claims Endpoint call for each presentation. RP-CP information sharing and retrieval of metadata,
-verification keys, or status information can create other observation paths. Valid metadata
-and key caches tied to the issuer can reduce some such contact, subject to the requirements
+Reuse avoids a Claims Endpoint call for each presentation. The CP can still observe activity
+through information shared by RPs or retrieval of metadata, verification keys, or status.
+Valid metadata and key caches tied to the issuer can reduce some such contact, subject to the requirements
 in (#cp-metadata-and-verification-keys).
 
 An alternative design can pre-issue a batch of distinct credentials for one-time use,
