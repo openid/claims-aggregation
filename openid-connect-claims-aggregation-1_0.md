@@ -261,7 +261,7 @@ sequenceDiagram
         CP-->>OP: Authorization response via user agent<br/>(code, state, iss)
         OP->>CP: Token request<br/>(code, code_verifier, client authentication)
         CP-->>OP: ID Token and access token<br/>(optional refresh token)
-        Note over CP,OP: Validate the ID Token and bind the CP account
+        OP->>OP: Validate the ID Token and bind the CP account
     end
 
     rect rgb(243, 245, 248)
@@ -272,26 +272,26 @@ sequenceDiagram
             S-->>OP: Authorize disclosure to the RP
         end
         alt Suitable stored Claim Set
-            Note over OP,RP: Check the stored Claim Set and current authorization
+            OP->>OP: Check the stored Claim Set and current authorization
         else New collection needed (successful result shown)
             OP->>CP: POST to Claims Endpoint<br/>(access token, nonce, claims, signing_alg)
             CP-->>OP: Collection response<br/>(nonce, account_ref, claim_set)
-            Note over CP,OP: Validate the response and preserve the binding
+            OP->>OP: Validate the response and preserve the binding
         end
         OP-->>RP: ID Token or UserInfo response<br/>(signed Claim Set in _claim_sources)
-        Note over OP,RP: RP validates the OP response and Claim Set
+        RP->>RP: Validate the OP response and Claim Set
     end
 ~~~
 Figure: Example of Setup, Claim Set collection, and delivery
 
-Messages 1–6 illustrate (#setup-phase).
+Messages 1–7 illustrate (#setup-phase).
 
-Messages 7–9 illustrate (#claims-request-by-rp-to-op) and (#subject-granting).
+Messages 8–10 illustrate (#claims-request-by-rp-to-op) and (#subject-granting).
 
-Messages 10–11 illustrate (#claims-endpoint-request) and (#claims-endpoint-response).
-See (#claims-collection) for the alternative that uses a stored Claim Set.
+Message 11 illustrates reuse of a stored Claim Set under (#claims-collection).
+Messages 12–14 illustrate (#claims-endpoint-request) and (#claims-endpoint-response).
 
-Message 12 illustrates (#claims-delivery). The RP's checks are in (#claims-verification).
+Message 15 illustrates (#claims-delivery). Message 16 illustrates (#claims-verification).
 
 
 ## Subject (User)
