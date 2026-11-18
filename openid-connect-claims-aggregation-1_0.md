@@ -145,14 +145,14 @@ This document specifies the methods for
 # Normative references
 The following referenced documents are indispensable for the application of this document. For dated references, only the edition cited applied. For undated references, the latest edition of the referenced document (including any amendments) applies.
 
-[BCP14] - Key words for use in RFCs to Indicate Requirement Levels
-[BCP14]: https://tools.ietf.org/html/bcp14
+[RFC2119] - Key words for use in RFCs to Indicate Requirement Levels
+[RFC2119]: https://www.rfc-editor.org/rfc/rfc2119.html
 
 [RFC6749] - The OAuth 2.0 Authorization Framework
-[RFC6749]: https://tools.ietf.org/html/rfc6749
+[RFC6749]: https://www.rfc-editor.org/rfc/rfc6749.html
 
 [RFC6750] - The OAuth 2.0 Authorization Framework: Bearer Token Usage
-[RFC6750]: https://tools.ietf.org/html/rfc6750
+[RFC6750]: https://www.rfc-editor.org/rfc/rfc6750.html
 
 [RFC6838] - Media Type Specifications and Registration Procedures
 [RFC6838]: https://www.rfc-editor.org/rfc/rfc6838.html
@@ -162,6 +162,9 @@ The following referenced documents are indispensable for the application of this
 
 [RFC7636] - Proof Key for Code Exchange by OAuth Public Clients
 [RFC7636]: https://www.rfc-editor.org/rfc/rfc7636.html
+
+[RFC8174] - Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words
+[RFC8174]: https://www.rfc-editor.org/rfc/rfc8174.html
 
 [RFC8414] - OAuth 2.0 Authorization Server Metadata
 [RFC8414]: https://www.rfc-editor.org/rfc/rfc8414.html
@@ -201,9 +204,6 @@ The following referenced documents are indispensable for the application of this
 
 [JWS] - JSON Web Signature
 [JWS]: https://www.rfc-editor.org/rfc/rfc7515.html
-
-[JWE] - JSON Web Encryption
-[JWE]: http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption
 
 [JWA] - JSON Web Algorithms
 [JWA]: https://www.rfc-editor.org/rfc/rfc7518.html
